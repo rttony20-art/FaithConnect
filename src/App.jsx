@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
-import { Heart, MessageCircle, Phone, Video, Mic, MicOff, PhoneOff, Send, User, ChevronLeft, Check, X, Camera, VideoOff, Square, SkipForward, Menu, LogOut, Info, Shield, HelpCircle } from "lucide-react";
+import { Heart, MessageCircle, Phone, Video, Mic, MicOff, PhoneOff, Send, User, ChevronLeft, Check, X, Camera, VideoOff, Square, SkipForward, Menu, LogOut, Info, Shield, HelpCircle, Eye, EyeOff } from "lucide-react";
 
 /* ---------- design tokens ----------
 Ink Navy #16233F (dark surfaces), Ivory #F8F4EA (light surfaces),
@@ -139,6 +139,25 @@ function scoreMatch(me, them) {
   return { pct, faith, values, goals, hobbies, looks };
 }
 
+function PasswordInput({ value, onChange, onKeyDown, placeholder, style }) {
+  const [show, setShow] = useState(false);
+  return (
+    <div style={{ position:"relative" }}>
+      <input
+        type={show ? "text" : "password"}
+        value={value}
+        onChange={onChange}
+        onKeyDown={onKeyDown}
+        placeholder={placeholder}
+        style={{ ...style, paddingRight:38, width: style?.width || "100%", boxSizing:"border-box" }}
+      />
+      <button type="button" onClick={() => setShow(s => !s)} style={{ position:"absolute", right:10, top:"50%", transform:"translateY(-50%)", background:"none", border:"none", cursor:"pointer", padding:2, display:"flex" }}>
+        {show ? <EyeOff size={17} color="#8A8578" /> : <Eye size={17} color="#8A8578" />}
+      </button>
+    </div>
+  );
+}
+
 function Chip({ label, active, onClick }) {
   return (
     <button type="button" onClick={onClick} style={{
@@ -214,11 +233,30 @@ export default function App() {
     if (!uname) { setErr("Please choose a username."); return; }
     setErr("Creating your account…");
     try {
-      const data = await supaAuth("signup", { email: usernameToEmail(uname), password: form.password });
-      const user = data.user || data;
-      if (!user || !user.id) { setErr("Something went wrong creating your account — try again."); return; }
+      let data, user, token;
+      try {
+        data = await supaAuth("signup", { email: usernameToEmail(uname), password: form.password });
+        user = data.user || data;
+        token = data.access_token;
+      } catch (signupErr) {
+        // account already exists — if these are YOUR credentials (e.g. a profile save got interrupted earlier), recover it instead of blocking you
+        if (/registered|exists|duplicate/i.test(signupErr.message)) {
+          try {
+            data = await supaAuth("token?grant_type=password", { email: usernameToEmail(uname), password: form.password });
+            user = data.user; token = data.access_token;
+          } catch {
+            setErr("That username is taken — try another.");
+            return;
+          }
+        } else { throw signupErr; }
+      }
+      if (!token) {
+        data = await supaAuth("token?grant_type=password", { email: usernameToEmail(uname), password: form.password });
+        user = data.user; token = data.access_token;
+      }
+      if (!user || !user.id || !token) { setErr("Something went wrong creating your account — try again."); return; }
       const profile = { ...form, id: user.id, age: Number(form.age), username: uname };
-      await supaRest("profiles", { method: "POST", token: data.access_token, body: profileToDb(profile), extraHeaders: { Prefer: "return=minimal" } });
+      await supaRest("profiles", { method: "POST", token, body: profileToDb(profile), extraHeaders: { Prefer: "return=minimal" } });
       await saveSupaSession(data);
       setErr("");
       setMyId(user.id);
@@ -328,7 +366,7 @@ export default function App() {
           <div style={{ marginTop:30, maxWidth:340, background:"#1D2C4D", border:"1.5px solid #3A4A6E", borderRadius:16, padding:18 }}>
             <label style={{ fontFamily:"Inter, sans-serif", fontSize:13, color:"#C9C2AF", display:"block", marginBottom:8 }}>Log in with your username</label>
             <input value={loginUser} onChange={e=>setLoginUser(e.target.value)} placeholder="Username" style={{ ...input, background:"#22304F", color:"#F8F4EA", border:"1.5px solid #3A4A6E", marginBottom:8 }} />
-            <input type="password" value={loginPass} onChange={e=>setLoginPass(e.target.value)} onKeyDown={e => e.key === "Enter" && logIn()} placeholder="Password" style={{ ...input, background:"#22304F", color:"#F8F4EA", border:"1.5px solid #3A4A6E", marginBottom:8 }} />
+            <PasswordInput value={loginPass} onChange={e=>setLoginPass(e.target.value)} onKeyDown={e => e.key === "Enter" && logIn()} placeholder="Password" style={{ ...input, background:"#22304F", color:"#F8F4EA", border:"1.5px solid #3A4A6E", marginBottom:8 }} />
             <button onClick={logIn} disabled={loginBusy} style={{ ...primaryBtn, width:"100%" }}>{loginBusy ? "Logging in…" : "Log in"}</button>
             {loginErr && <div style={{ color:"#E3A6A6", fontSize:13, fontFamily:"Inter, sans-serif", marginTop:8 }}>{loginErr}</div>}
           </div>
@@ -352,7 +390,7 @@ export default function App() {
             <input style={input} value={form.username||""} onChange={e=>setForm({...form,username:e.target.value})} placeholder="e.g. tony_j24" />
           </Field>
           <Field label="Password (min. 6 characters)">
-            <input type="password" style={input} value={form.password||""} onChange={e=>setForm({...form,password:e.target.value})} placeholder="Choose a password" />
+            <PasswordInput style={input} value={form.password||""} onChange={e=>setForm({...form,password:e.target.value})} placeholder="Choose a password" />
           </Field>
           <Field label="Name"><input style={input} value={form.name} onChange={e=>setForm({...form,name:e.target.value})} /></Field>
           <div style={{ display:"flex", gap: 10 }}>
@@ -1215,3 +1253,4 @@ const iconBtn = { background:"rgba(255,255,255,.1)", border:"none", borderRadius
 const composer = { display:"flex", alignItems:"center", gap:8, padding:"10px 12px", background:"#fff", borderTop:"1px solid #E5DFD1" };
 const iconBtnLight = { width:38, height:38, borderRadius:"50%", border:"none", background:"#EFE9DC", display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", flexShrink:0 };
 const callBtn = bg => ({ width:58, height:58, borderRadius:"50%", background:bg, border:"none", display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer" });
+
