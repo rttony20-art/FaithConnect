@@ -467,6 +467,16 @@ export default function App() {
           <p style={{ fontFamily:"Inter, sans-serif", fontSize:13, color:"#8A8578", lineHeight:1.5, marginTop:-8, marginBottom:18 }}>
             What you share on this page is how we match you with someone else — other members can see it to find out if you're a good match.
           </p>
+          <div style={{ display:"flex", justifyContent:"center", marginBottom:8 }}>
+            <PhotoSlot label="Profile photo" preview={avatarPreview} existingUrl={form.avatarUrl} onPick={pickAvatar} big />
+          </div>
+          <Field label="Add three pictures of yourself for others to view — optional">
+            <div style={{ display:"flex", gap:14, flexWrap:"wrap" }}>
+              {[0,1,2].map(i => (
+                <PhotoSlot key={i} label={`Photo ${i+1}`} preview={photoPreviews[i]} existingUrl={form.photoUrls?.[i]} onPick={e=>pickPhoto(i,e)} />
+              ))}
+            </div>
+          </Field>
           <Field label="Username (unique — this is how you log back in)">
             <input style={input} value={form.username||""} onChange={e=>setForm({...form,username:e.target.value})} placeholder="e.g. tony_j24" />
           </Field>
@@ -474,14 +484,6 @@ export default function App() {
             <PasswordInput style={input} value={form.password||""} onChange={e=>setForm({...form,password:e.target.value})} placeholder="Choose a password" />
           </Field>
           <Field label="Name"><input style={input} value={form.name} onChange={e=>setForm({...form,name:e.target.value})} /></Field>
-          <Field label="Photos (optional) — this is what others will see of you">
-            <div style={{ display:"flex", gap:14, flexWrap:"wrap", alignItems:"flex-start" }}>
-              <PhotoSlot label="Profile photo" preview={avatarPreview} existingUrl={form.avatarUrl} onPick={pickAvatar} big />
-              {[0,1,2].map(i => (
-                <PhotoSlot key={i} label={`Photo ${i+1}`} preview={photoPreviews[i]} existingUrl={form.photoUrls?.[i]} onPick={e=>pickPhoto(i,e)} />
-              ))}
-            </div>
-          </Field>
           <div style={{ display:"flex", gap: 10 }}>
             <Field label="Age" style={{flex:1}}><input type="number" style={input} value={form.age} onChange={e=>setForm({...form,age:e.target.value})} /></Field>
             <Field label="City" style={{flex:2}}><input style={input} value={form.city} onChange={e=>setForm({...form,city:e.target.value})} /></Field>
@@ -558,15 +560,17 @@ export default function App() {
         <div style={{ flex: 1, overflowY: "auto", padding: "20px 22px 100px", background: "#FAF7F0" }}>
           <button onClick={()=>setScreen("profile")} style={backBtn}><ChevronLeft size={18}/> Back</button>
           <h2 style={heading}>Edit your profile</h2>
-          <Field label="Name"><input style={input} value={form.name} onChange={e=>setForm({...form,name:e.target.value})} /></Field>
-          <Field label="Photos — this is what others will see of you">
-            <div style={{ display:"flex", gap:14, flexWrap:"wrap", alignItems:"flex-start" }}>
-              <PhotoSlot label="Profile photo" preview={avatarPreview} existingUrl={form.avatarUrl} onPick={pickAvatar} big />
+          <div style={{ display:"flex", justifyContent:"center", marginBottom:8 }}>
+            <PhotoSlot label="Profile photo" preview={avatarPreview} existingUrl={form.avatarUrl} onPick={pickAvatar} big />
+          </div>
+          <Field label="Add three pictures of yourself for others to view — optional">
+            <div style={{ display:"flex", gap:14, flexWrap:"wrap" }}>
               {[0,1,2].map(i => (
                 <PhotoSlot key={i} label={`Photo ${i+1}`} preview={photoPreviews[i]} existingUrl={form.photoUrls?.[i]} onPick={e=>pickPhoto(i,e)} />
               ))}
             </div>
           </Field>
+          <Field label="Name"><input style={input} value={form.name} onChange={e=>setForm({...form,name:e.target.value})} /></Field>
           <Field label="Bio"><textarea style={{...input, height:80, resize:"none"}} value={form.bio} onChange={e=>setForm({...form,bio:e.target.value})} /></Field>
           <Field label="What matters most to you"><Chips list={VALUES} sel={form.values} onToggle={v=>toggle("values",v)} /></Field>
           <Field label="Hobbies & interests"><Chips list={HOBBIES} sel={form.hobbies} onToggle={v=>toggle("hobbies",v)} /></Field>
