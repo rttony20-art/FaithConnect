@@ -11,7 +11,7 @@ Serif: "Lora" for headings. Sans: "Inter" for body & UI.
 const VALUES = ["Family-focused","Faith & prayer","Service to others","Financial stewardship","Career-driven","Community-minded","Simplicity","Adventure & travel"];
 const HOBBIES = ["Hiking","Cooking","Reading","Worship music","Sports","Board games","Volunteering","Art & design","Gardening","Fitness","Movies","Traveling"];
 const GOALS = ["Marriage-minded","Dating intentionally","Getting to know people","Friendship first","Open to see where it goes"];
-const APPEARANCE = ["Petite","Athletic build","Average build","Curvy build","Tall","Short","Long hair","Short hair","Beard","Clean-shaven","Casual style","Classic style"];
+const PERSONALITY = ["Introvert","Extrovert","Quiet","Talkative","Morning person","Night owl","Homebody","Adventurous","Easygoing","Organized","Spontaneous","Analytical","Empathetic","Funny & playful","Reserved","Outgoing","Family-oriented","Independent","Romantic","Practical","Optimistic","Deep thinker","Affectionate","Straightforward"];
 const DENOMS = ["Non-denominational","Baptist","Catholic","Methodist","Pentecostal","Presbyterian","Lutheran","Orthodox","Anglican / Episcopal","Just Christian"];
 
 function genId() { return Math.random().toString(36).slice(2, 10); }
@@ -51,6 +51,15 @@ async function supaRest(path, { method = "GET", token, body, extraHeaders = {} }
   const txt = await res.text();
   return txt ? JSON.parse(txt) : null;
 }
+async function supaUpload(bucket, path, file, token) {
+  const res = await fetch(`${SUPABASE_URL}/storage/v1/object/${bucket}/${path}`, {
+    method: "POST",
+    headers: { "apikey": SUPABASE_ANON_KEY, "Authorization": `Bearer ${token}`, "Content-Type": file.type || "application/octet-stream", "x-upsert": "true" },
+    body: file
+  });
+  if (!res.ok) { const t = await res.text().catch(() => ""); throw new Error(t || `Photo upload failed (${res.status})`); }
+  return `${SUPABASE_URL}/storage/v1/object/public/${bucket}/${path}`;
+}
 async function restoreSupaSession() {
   const sess = await sget("supabase-session", false);
   if (!sess || !sess.refresh_token) return null;
@@ -71,7 +80,8 @@ function profileFromDb(row) {
     id: row.id, username: row.username, name: row.name, age: row.age, gender: row.gender, seeking: row.seeking,
     city: row.city, denom: row.denom, faithLevel: row.faith_level, bio: row.bio,
     values: row.core_values || [], hobbies: row.hobbies || [], goals: row.goals || [],
-    appearance: row.appearance || [], lookPref: row.look_pref || []
+    appearance: row.appearance || [], lookPref: row.look_pref || [],
+    avatarUrl: row.avatar_url || null, photoUrls: row.photo_urls || []
   };
 }
 function profileToDb(p) {
@@ -79,7 +89,8 @@ function profileToDb(p) {
     id: p.id, username: p.username, name: p.name, age: Number(p.age), gender: p.gender, seeking: p.seeking,
     city: p.city, denom: p.denom, faith_level: p.faithLevel, bio: p.bio,
     core_values: p.values || [], hobbies: p.hobbies || [], goals: p.goals || [],
-    appearance: p.appearance || [], look_pref: p.lookPref || []
+    appearance: p.appearance || [], look_pref: p.lookPref || [],
+    avatar_url: p.avatarUrl || null, photo_urls: p.photoUrls || []
   };
 }
 
@@ -158,6 +169,23 @@ function PasswordInput({ value, onChange, onKeyDown, placeholder, style }) {
   );
 }
 
+function PhotoSlot({ label, preview, existingUrl, onPick, big }) {
+  const img = preview || existingUrl;
+  const size = big ? 96 : 76;
+  return (
+    <label style={{ display:"flex", flexDirection:"column", alignItems:"center", gap:6, cursor:"pointer" }}>
+      <div style={{
+        width:size, height:size, borderRadius: big ? "50%" : 14, background: img ? `center/cover url(${img})` : "#EFE9DC",
+        border:"1.5px dashed #C9A227", display:"flex", alignItems:"center", justifyContent:"center", overflow:"hidden"
+      }}>
+        {!img && <Camera size={big ? 26 : 20} color="#B8935F" />}
+      </div>
+      <span style={{ fontFamily:"Inter, sans-serif", fontSize:11.5, color:"#8A8578" }}>{label}</span>
+      <input type="file" accept="image/*" onChange={onPick} style={{ display:"none" }} />
+    </label>
+  );
+}
+
 function Chip({ label, active, onClick }) {
   return (
     <button type="button" onClick={onClick} style={{
@@ -173,7 +201,11 @@ export default function App() {
   const [screen, setScreen] = useState("loading"); // loading, welcome, profile, matches, chat, messages
   const [myId, setMyId] = useState(null);
   const [myProfile, setMyProfile] = useState(null);
-  const [form, setForm] = useState({ name:"", age:"", gender:"Female", seeking:"Male", city:"", denom: DENOMS[0], faithLevel:3, bio:"", values:[], hobbies:[], goals:[], appearance:[], lookPref:[], username:"", password:"" });
+  const [form, setForm] = useState({ name:"", age:"", gender:"Female", seeking:"Male", city:"", denom: DENOMS[0], faithLevel:3, bio:"", values:[], hobbies:[], goals:[], appearance:[], lookPref:[], username:"", password:"", avatarUrl:null, photoUrls:[] });
+  const [avatarFile, setAvatarFile] = useState(null);
+  const [avatarPreview, setAvatarPreview] = useState(null);
+  const [photoFiles, setPhotoFiles] = useState([null, null, null]);
+  const [photoPreviews, setPhotoPreviews] = useState([null, null, null]);
   const [matches, setMatches] = useState([]);
   const [activeConvo, setActiveConvo] = useState(null); // {otherId, otherProfile}
   const [conversations, setConversations] = useState([]);
@@ -190,7 +222,8 @@ export default function App() {
     try { await sdel("supabase-session", false); } catch {}
     setMyId(null);
     setMyProfile(null);
-    setForm({ name:"", age:"", gender:"Female", seeking:"Male", city:"", denom: DENOMS[0], faithLevel:3, bio:"", values:[], hobbies:[], goals:[], appearance:[], lookPref:[], username:"", password:"" });
+    setForm({ name:"", age:"", gender:"Female", seeking:"Male", city:"", denom: DENOMS[0], faithLevel:3, bio:"", values:[], hobbies:[], goals:[], appearance:[], lookPref:[], username:"", password:"", avatarUrl:null, photoUrls:[] });
+    setAvatarFile(null); setAvatarPreview(null); setPhotoFiles([null,null,null]); setPhotoPreviews([null,null,null]);
     setMenuOpen(false);
     setScreen("welcome");
   }
@@ -225,8 +258,54 @@ export default function App() {
     setScreen("welcome");
   }
 
+  function pickAvatar(e) {
+    const f = e.target.files && e.target.files[0];
+    if (!f) return;
+    setAvatarFile(f);
+    setAvatarPreview(URL.createObjectURL(f));
+  }
+  function pickPhoto(i, e) {
+    const f = e.target.files && e.target.files[0];
+    if (!f) return;
+    setPhotoFiles(arr => { const a = [...arr]; a[i] = f; return a; });
+    setPhotoPreviews(arr => { const a = [...arr]; a[i] = URL.createObjectURL(f); return a; });
+  }
+  async function uploadSelectedPhotos(userId, token) {
+    let avatarUrl = form.avatarUrl || null;
+    let photoUrls = form.photoUrls || [];
+    if (avatarFile) {
+      avatarUrl = await supaUpload("profile-photos", `${userId}/avatar-${Date.now()}.jpg`, avatarFile, token);
+    }
+    const newPhotoUrls = [...photoUrls];
+    for (let i = 0; i < photoFiles.length; i++) {
+      if (photoFiles[i]) {
+        const url = await supaUpload("profile-photos", `${userId}/photo${i}-${Date.now()}.jpg`, photoFiles[i], token);
+        newPhotoUrls[i] = url;
+      }
+    }
+    return { avatarUrl, photoUrls: newPhotoUrls.filter(Boolean) };
+  }
+
   async function saveProfile() {
     if (!form.name || !form.age) { setErr("Please add your name and age."); return; }
+    // editing an already-logged-in profile — update, don't sign up again
+    if (myId && myProfile) {
+      setErr("Saving changes…");
+      try {
+        const session = await restoreSupaSession();
+        if (!session || !session.access_token) { setErr("Your session expired — please log in again."); return; }
+        const { avatarUrl, photoUrls } = await uploadSelectedPhotos(myId, session.access_token);
+        const updated = { ...myProfile, ...form, id: myId, age: Number(form.age), avatarUrl, photoUrls };
+        await supaRest(`profiles?id=eq.${myId}`, { method: "PATCH", token: session.access_token, body: profileToDb(updated), extraHeaders: { Prefer: "return=minimal" } });
+        setErr("");
+        setMyProfile(updated);
+        setAvatarFile(null); setPhotoFiles([null,null,null]);
+        setScreen("profile");
+      } catch (e) {
+        setErr("Couldn't save changes: " + e.message);
+      }
+      return;
+    }
     if (!form.username || !form.username.trim()) { setErr("Please choose a username."); return; }
     if (!form.password || form.password.length < 6) { setErr("Password must be at least 6 characters."); return; }
     const uname = form.username.trim().toLowerCase().replace(/\s+/g, "");
@@ -255,7 +334,9 @@ export default function App() {
         user = data.user; token = data.access_token;
       }
       if (!user || !user.id || !token) { setErr("Something went wrong creating your account — try again."); return; }
-      const profile = { ...form, id: user.id, age: Number(form.age), username: uname };
+      setErr("Uploading photos…");
+      const { avatarUrl, photoUrls } = await uploadSelectedPhotos(user.id, token);
+      const profile = { ...form, id: user.id, age: Number(form.age), username: uname, avatarUrl, photoUrls };
       await supaRest("profiles", { method: "POST", token, body: profileToDb(profile), extraHeaders: { Prefer: "return=minimal" } });
       await saveSupaSession(data);
       setErr("");
@@ -393,6 +474,14 @@ export default function App() {
             <PasswordInput style={input} value={form.password||""} onChange={e=>setForm({...form,password:e.target.value})} placeholder="Choose a password" />
           </Field>
           <Field label="Name"><input style={input} value={form.name} onChange={e=>setForm({...form,name:e.target.value})} /></Field>
+          <Field label="Photos (optional) — this is what others will see of you">
+            <div style={{ display:"flex", gap:14, flexWrap:"wrap", alignItems:"flex-start" }}>
+              <PhotoSlot label="Profile photo" preview={avatarPreview} existingUrl={form.avatarUrl} onPick={pickAvatar} big />
+              {[0,1,2].map(i => (
+                <PhotoSlot key={i} label={`Photo ${i+1}`} preview={photoPreviews[i]} existingUrl={form.photoUrls?.[i]} onPick={e=>pickPhoto(i,e)} />
+              ))}
+            </div>
+          </Field>
           <div style={{ display:"flex", gap: 10 }}>
             <Field label="Age" style={{flex:1}}><input type="number" style={input} value={form.age} onChange={e=>setForm({...form,age:e.target.value})} /></Field>
             <Field label="City" style={{flex:2}}><input style={input} value={form.city} onChange={e=>setForm({...form,city:e.target.value})} /></Field>
@@ -416,8 +505,8 @@ export default function App() {
           <Field label="What matters most to you"><Chips list={VALUES} sel={form.values} onToggle={v=>toggle("values",v)} /></Field>
           <Field label="Hobbies & interests"><Chips list={HOBBIES} sel={form.hobbies} onToggle={v=>toggle("hobbies",v)} /></Field>
           <Field label="What are you looking for"><Chips list={GOALS} sel={form.goals} onToggle={v=>toggle("goals",v)} /></Field>
-          <Field label="Describe yourself"><Chips list={APPEARANCE} sel={form.appearance} onToggle={v=>toggle("appearance",v)} /></Field>
-          <Field label="What you're drawn to in a partner"><Chips list={APPEARANCE} sel={form.lookPref} onToggle={v=>toggle("lookPref",v)} /></Field>
+          <Field label="Your personality — pick what fits you"><Chips list={PERSONALITY} sel={form.appearance} onToggle={v=>toggle("appearance",v)} /></Field>
+          <Field label="Personality you're drawn to in a partner"><Chips list={PERSONALITY} sel={form.lookPref} onToggle={v=>toggle("lookPref",v)} /></Field>
           {err && <div style={{color:"#B5616B", fontSize:13, marginTop:6}}>{err}</div>}
           <button onClick={saveProfile} style={{...primaryBtn, width:"100%", marginTop: 20}}>Save & find matches</button>
         </div>
@@ -440,11 +529,16 @@ export default function App() {
         <TopBar onMenu={() => setMenuOpen(true)} dark={false} />
         <MenuDrawer open={menuOpen} onClose={() => setMenuOpen(false)} onLogOut={logOut} />
         <div style={{ flex:1, overflowY:"auto", padding:"8px 22px 100px", background:"#FAF7F0" }}>
-          <div style={{ width:74, height:74, borderRadius:"50%", background:"#B8935F", color:"#FAF7F0", display:"flex", alignItems:"center", justifyContent:"center", fontFamily:"Lora, serif", fontSize:28, margin:"0 auto 14px" }}>
-            {myProfile.name[0]?.toUpperCase()}
+          <div style={{ width:74, height:74, borderRadius:"50%", background: myProfile.avatarUrl ? `center/cover url(${myProfile.avatarUrl})` : "#B8935F", color:"#FAF7F0", display:"flex", alignItems:"center", justifyContent:"center", fontFamily:"Lora, serif", fontSize:28, margin:"0 auto 14px" }}>
+            {!myProfile.avatarUrl && myProfile.name[0]?.toUpperCase()}
           </div>
           <h2 style={{...heading, textAlign:"center"}}>{myProfile.name}, {myProfile.age}</h2>
           <p style={{textAlign:"center", color:"#7A7568", fontFamily:"Inter, sans-serif", fontSize:14, marginTop:-8}}>{myProfile.city} · {myProfile.denom}</p>
+          {myProfile.photoUrls && myProfile.photoUrls.length > 0 && (
+            <div style={{ display:"flex", gap:8, marginTop:16, overflowX:"auto" }}>
+              {myProfile.photoUrls.map((u,i) => <img key={i} src={u} alt="" style={{ width:100, height:130, objectFit:"cover", borderRadius:12, flexShrink:0 }} />)}
+            </div>
+          )}
           <p style={{fontFamily:"Inter, sans-serif", fontSize:14.5, color:"#4A4A45", lineHeight:1.6, marginTop:18}}>{myProfile.bio}</p>
           <div style={{marginTop:18}}><Tag list={myProfile.values} /></div>
           <div style={{marginTop:8}}><Tag list={myProfile.hobbies} /></div>
@@ -465,10 +559,20 @@ export default function App() {
           <button onClick={()=>setScreen("profile")} style={backBtn}><ChevronLeft size={18}/> Back</button>
           <h2 style={heading}>Edit your profile</h2>
           <Field label="Name"><input style={input} value={form.name} onChange={e=>setForm({...form,name:e.target.value})} /></Field>
+          <Field label="Photos — this is what others will see of you">
+            <div style={{ display:"flex", gap:14, flexWrap:"wrap", alignItems:"flex-start" }}>
+              <PhotoSlot label="Profile photo" preview={avatarPreview} existingUrl={form.avatarUrl} onPick={pickAvatar} big />
+              {[0,1,2].map(i => (
+                <PhotoSlot key={i} label={`Photo ${i+1}`} preview={photoPreviews[i]} existingUrl={form.photoUrls?.[i]} onPick={e=>pickPhoto(i,e)} />
+              ))}
+            </div>
+          </Field>
           <Field label="Bio"><textarea style={{...input, height:80, resize:"none"}} value={form.bio} onChange={e=>setForm({...form,bio:e.target.value})} /></Field>
           <Field label="What matters most to you"><Chips list={VALUES} sel={form.values} onToggle={v=>toggle("values",v)} /></Field>
           <Field label="Hobbies & interests"><Chips list={HOBBIES} sel={form.hobbies} onToggle={v=>toggle("hobbies",v)} /></Field>
           <Field label="What are you looking for"><Chips list={GOALS} sel={form.goals} onToggle={v=>toggle("goals",v)} /></Field>
+          <Field label="Your personality"><Chips list={PERSONALITY} sel={form.appearance} onToggle={v=>toggle("appearance",v)} /></Field>
+          <Field label="Personality you're drawn to"><Chips list={PERSONALITY} sel={form.lookPref} onToggle={v=>toggle("lookPref",v)} /></Field>
           <button onClick={saveProfile} style={{...primaryBtn, width:"100%", marginTop:20}}>Save changes</button>
         </div>
       </div>
@@ -520,7 +624,7 @@ export default function App() {
         {matches.map(({ profile, score }) => (
           <div key={profile.id} style={matchCard}>
             <div style={{display:"flex", gap:14}}>
-              <div style={avatarMd}>{profile.name?.[0]?.toUpperCase()}</div>
+              <div style={{...avatarMd, background: profile.avatarUrl ? `center/cover url(${profile.avatarUrl})` : avatarMd.background}}>{!profile.avatarUrl && profile.name?.[0]?.toUpperCase()}</div>
               <div style={{flex:1}}>
                 <div style={{display:"flex", justifyContent:"space-between", alignItems:"baseline"}}>
                   <div style={{fontFamily:"Lora, serif", fontSize:17, color:"#22252B"}}>{profile.name}, {profile.age}</div>
