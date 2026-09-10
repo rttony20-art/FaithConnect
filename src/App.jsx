@@ -11,7 +11,7 @@ Serif: "Lora" for headings. Sans: "Inter" for body & UI.
 const VALUES = ["Family-focused","Faith & prayer","Service to others","Financial stewardship","Career-driven","Community-minded","Simplicity","Adventure & travel"];
 const HOBBIES = ["Hiking","Cooking","Reading","Worship music","Sports","Board games","Volunteering","Art & design","Gardening","Fitness","Movies","Traveling"];
 const GOALS = ["Marriage-minded","Dating intentionally","Getting to know people","Friendship first","Open to see where it goes"];
-const PERSONALITY = ["Introvert","Extrovert","Quiet","Talkative","Morning person","Night owl","Homebody","Adventurous","Easygoing","Organized","Spontaneous","Analytical","Empathetic","Funny & playful","Reserved","Outgoing","Family-oriented","Independent","Romantic","Practical","Optimistic","Deep thinker","Affectionate","Straightforward"];
+const PERSONALITY = ["Introvert","Extrovert","Quiet","Social","Morning person","Night owl","Homebody","Adventurous","Easygoing","Organized","Spontaneous","Analytical","Empathetic","Funny & playful","Reserved","Outgoing","Family-oriented","Independent","Romantic","Practical","Optimistic","Deep thinker","Affectionate","Straightforward"];
 const DENOMS = ["Non-denominational","Baptist","Catholic","Methodist","Pentecostal","Presbyterian","Lutheran","Orthodox","Anglican / Episcopal","Just Christian"];
 
 function genId() { return Math.random().toString(36).slice(2, 10); }
