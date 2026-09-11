@@ -623,7 +623,7 @@ export default function App() {
           <MenuDrawer open={menuOpen} onClose={() => setMenuOpen(false)} onLogOut={logOut} onNavigate={setScreen} />
           <MatchHero count={matches.length} onMeetSomeone={() => setScreen("meetSomeone")} />
         </div>
-        <div style={{ background:"#1F3326", paddingBottom:100 }}>
+        <div style={{ background:"#16233F", paddingBottom:100 }}>
           <div style={{ padding: "28px 16px 0" }}>
             <IronSharpensIronCard onOpen={() => setScreen("fellowship")} />
           </div>
@@ -799,7 +799,7 @@ function IronSharpensIronCard({ onOpen }) {
   return (
     <button onClick={onOpen} style={{
       display:"flex", alignItems:"center", gap:16, width:"100%", textAlign:"left",
-      background:"#2A4A34", border:"1.5px solid #436350", borderRadius:18, padding:16, marginBottom:14, cursor:"pointer"
+      background:"#1D2C4D", border:"1.5px solid #3A4A6E", borderRadius:18, padding:16, marginBottom:14, cursor:"pointer"
     }}>
       <style>{`
         @keyframes iron-ripple { 0% { transform: scale(0.5); opacity:.5; } 100% { transform: scale(2.2); opacity:0; } }
@@ -809,7 +809,7 @@ function IronSharpensIronCard({ onOpen }) {
           <span key={i} style={{ position:"absolute", width:44, height:44, borderRadius:"50%", border:"1.5px solid rgba(184,147,95,.55)", animation:`iron-ripple 2.4s ease-out ${i*0.8}s infinite` }} />
         ))}
         <div style={{ position:"relative", width:40, height:40, borderRadius:"50%", background:"#B8935F", display:"flex", alignItems:"center", justifyContent:"center", boxShadow:"0 3px 10px rgba(184,147,95,.4)" }}>
-          <BookOpen size={19} color="#1F3326" />
+          <BookOpen size={19} color="#16233F" />
         </div>
       </div>
       <div style={{ flex:1 }}>
