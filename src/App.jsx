@@ -626,12 +626,9 @@ export default function App() {
         <div style={{ background:"#16233F", paddingBottom:100 }}>
           <div style={{ padding: "28px 16px 0" }}>
             <IronSharpensIronCard onOpen={() => setScreen("fellowship")} />
+            <button onClick={() => setScreen("fellowship")} style={{ ...primaryBtn, width:"100%", marginTop:14 }}>Share with someone</button>
           </div>
-          <div style={{ padding: "18px 22px 8px" }}>
-            <h2 style={{...heading, color:"#F8F4EA"}}>Your matches</h2>
-            <p style={{fontFamily:"Inter, sans-serif", fontSize:13.5, color:"#B9C9BC", marginTop:-6}}>Ranked by shared faith, values, goals & interests</p>
-          </div>
-          <div style={{ padding:"6px 16px 0" }}>
+          <div style={{ padding:"24px 16px 0" }}>
           {matches.map(({ profile, score }) => (
             <div key={profile.id} style={matchCard}>
             <div style={{display:"flex", gap:14}}>
