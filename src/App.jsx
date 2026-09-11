@@ -521,7 +521,11 @@ export default function App() {
   }
 
   if (screen === "fellowship") {
-    return <FellowshipScreen myId={myId} myProfile={myProfile} onBack={() => setScreen("matches")} />;
+    return <RandomConnectScreen myId={myId} myProfile={myProfile} onBack={() => setScreen("matches")} variant="faith" />;
+  }
+
+  if (screen === "meetSomeone") {
+    return <RandomConnectScreen myId={myId} myProfile={myProfile} onBack={() => setScreen("matches")} variant="love" />;
   }
 
   if (screen === "profile" && myProfile) {
@@ -617,11 +621,9 @@ export default function App() {
         <div style={{ position:"relative" }}>
           <TopBar onMenu={() => setMenuOpen(true)} dark overlay />
           <MenuDrawer open={menuOpen} onClose={() => setMenuOpen(false)} onLogOut={logOut} />
-          <MatchHero count={matches.length} onMeetSomeone={() => {
-            if (matches.length > 0) { setActiveConvo({ otherId: matches[0].profile.id, otherProfile: matches[0].profile }); setScreen("chat"); }
-          }} />
+          <MatchHero count={matches.length} onMeetSomeone={() => setScreen("meetSomeone")} />
         </div>
-        <div style={{ padding: "16px 16px 0" }}>
+        <div style={{ padding: "28px 16px 0" }}>
           <IronSharpensIronCard onOpen={() => setScreen("fellowship")} />
         </div>
         <div style={{ padding: "10px 22px 8px" }}>
@@ -629,7 +631,6 @@ export default function App() {
           <p style={{fontFamily:"Inter, sans-serif", fontSize:13.5, color:"#8A8578", marginTop:-6}}>Ranked by shared faith, values, goals & interests</p>
         </div>
         <div style={{ padding:"6px 16px 100px" }}>
-        {matches.length === 0 && <div style={emptyState}>No matches yet — check back once more people join.</div>}
         {matches.map(({ profile, score }) => (
           <div key={profile.id} style={matchCard}>
             <div style={{display:"flex", gap:14}}>
@@ -1050,7 +1051,9 @@ function ChatScreen({ myId, myProfile, other, onBack }) {
 }
 
 /* ---------------- FELLOWSHIP (random believer connect) ---------------- */
-function FellowshipScreen({ myId, myProfile, onBack }) {
+function RandomConnectScreen({ myId, myProfile, onBack, variant = "faith" }) {
+  const isLove = variant === "love";
+  const kp = isLove ? "m" : "f"; // key prefix keeps the two queues fully separate
   const [stage, setStage] = useState("setup"); // setup, searching, connected
   const [mode, setMode] = useState("chat");
   const [online, setOnline] = useState([]);
@@ -1105,17 +1108,25 @@ function FellowshipScreen({ myId, myProfile, onBack }) {
     setOnline(entries);
   }
 
-  function cleanQueue(list, mode) {
+  function isCompatible(entry) {
+    if (!isLove) return true;
+    if (!entry.gender || !entry.seeking || !myProfile?.gender || !myProfile?.seeking) return true;
+    const iSeekThem = myProfile.seeking === "Everyone" || myProfile.seeking === entry.gender;
+    const theySeekMe = entry.seeking === "Everyone" || entry.seeking === myProfile.gender;
+    return iSeekThem && theySeekMe;
+  }
+
+  function cleanQueue(list) {
     const now = Date.now();
     return (list || []).filter(e => e.id !== myId && (e.partner || now - e.ts < 120000));
   }
 
   async function startSearch(m) {
     setMode(m); setStage("searching");
-    const key = `fqueue:${m}`;
-    const list = cleanQueue((await sget(key, true)) || [], m);
-    const candidate = list.find(e => e.partner == null);
-    const myEntry = { id: myId, name: myProfile?.name || "Believer", ts: Date.now(), partner: null };
+    const key = `${kp}queue:${m}`;
+    const list = cleanQueue((await sget(key, true)) || []);
+    const candidate = list.find(e => e.partner == null && isCompatible(e));
+    const myEntry = { id: myId, name: myProfile?.name || "Believer", gender: myProfile?.gender, seeking: myProfile?.seeking, ts: Date.now(), partner: null };
     if (candidate) {
       candidate.partner = myId;
       myEntry.partner = candidate.id;
@@ -1138,24 +1149,24 @@ function FellowshipScreen({ myId, myProfile, onBack }) {
 
   function connectTo(p, m) {
     setPartner(p);
-    const sid = `fs-${convoId(myId, p.id)}`;
+    const sid = `${kp}s-${convoId(myId, p.id)}`;
     setSessionId(sid);
     setStage("connected");
-    if (m === "chat") startFellowshipChat(sid);
-    else startFellowshipCall(sid, p, m);
+    if (m === "chat") startRandomChat(sid);
+    else startRandomCall(sid, p, m);
   }
 
   /* --- chat mode --- */
-  function startFellowshipChat(sid) {
+  function startRandomChat(sid) {
     setMessages([]);
-    const key = `fchat:${sid}`;
+    const key = `${kp}chat:${sid}`;
     const load = async () => setMessages((await sget(key, true)) || []);
     load();
     chatPollRef.current = setInterval(load, 2000);
   }
-  async function sendFellowshipMsg() {
+  async function sendRandomMsg() {
     if (!text.trim()) return;
-    const key = `fchat:${sessionId}`;
+    const key = `${kp}chat:${sessionId}`;
     const thread = (await sget(key, true)) || [];
     thread.push({ sender: myId, text: text.trim(), ts: Date.now() });
     await sset(key, thread, true);
@@ -1164,9 +1175,9 @@ function FellowshipScreen({ myId, myProfile, onBack }) {
 
   /* --- call mode (audio/video) --- */
   const iceCfg = { iceServers: [{ urls: "stun:stun.l.google.com:19302" }] };
-  async function startFellowshipCall(sid, p, m) {
+  async function startRandomCall(sid, p, m) {
     setCallErr(""); setCallStatus("connecting");
-    const key = `fcall:${sid}`;
+    const key = `${kp}call:${sid}`;
     const iAmCaller = myId < p.id;
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: m === "video" });
@@ -1222,20 +1233,24 @@ function FellowshipScreen({ myId, myProfile, onBack }) {
     onBack();
   }
 
+  const theme = isLove
+    ? { bg:"#16233F", label:"singles", tagline:"Looking for someone who shares your faith", findLabel:"Find my match" }
+    : { bg:"#16233F", label:"believers", tagline:"Iron sharpens iron — meet someone new", findLabel:"Find a believer" };
+
   if (stage === "setup") {
     return (
-      <div style={{ ...page, background: "#16233F" }}>
+      <div style={{ ...page, background: theme.bg }}>
         <FontLoader />
         <div style={{ padding: "18px 16px" }}>
           <button onClick={onBack} style={{ ...backBtn, color: "#B8935F" }}><ChevronLeft size={18}/> Back</button>
         </div>
         <div style={{ flex:1, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", padding:"0 26px 40px", position:"relative" }}>
-          <SonarReveal online={online} />
+          <SonarReveal online={online} variant={variant} />
           <h2 style={{ fontFamily:"Lora, serif", fontSize:22, color:"#F8F4EA", marginTop:26, marginBottom:6, textAlign:"center" }}>
-            {online.length > 0 ? `${online.length} believers online` : "Waiting for believers to join"}
+            {online.length > 0 ? `${online.length} ${theme.label} online` : `Waiting for ${theme.label} to join`}
           </h2>
           <p style={{ fontFamily:"Inter, sans-serif", fontSize:13.5, color:"#8A8FA8", textAlign:"center", marginBottom:26, fontStyle:"italic" }}>
-            Iron sharpens iron — meet someone new
+            {theme.tagline}
           </p>
           <div style={{ display:"flex", gap:10, marginBottom:26 }}>
             {[["chat","Chat",MessageCircle],["voice","Voice",Phone],["video","Video",Video]].map(([key,label,Icon]) => (
@@ -1249,7 +1264,7 @@ function FellowshipScreen({ myId, myProfile, onBack }) {
               </button>
             ))}
           </div>
-          <button onClick={() => startSearch(mode)} style={{ ...primaryBtn, padding:"14px 40px" }}>Find a believer</button>
+          <button onClick={() => startSearch(mode)} style={{ ...primaryBtn, padding:"14px 40px" }}>{theme.findLabel}</button>
         </div>
       </div>
     );
@@ -1257,9 +1272,9 @@ function FellowshipScreen({ myId, myProfile, onBack }) {
 
   if (stage === "searching") {
     return (
-      <div style={{ ...page, background: "#16233F", alignItems:"center", justifyContent:"center" }}>
+      <div style={{ ...page, background: theme.bg, alignItems:"center", justifyContent:"center" }}>
         <FontLoader />
-        <SonarReveal online={online} active />
+        <SonarReveal online={online} variant={variant} active />
         <h2 style={{ fontFamily:"Lora, serif", fontSize:20, color:"#F8F4EA", marginTop:26 }}>Looking for someone…</h2>
         <p style={{ fontFamily:"Inter, sans-serif", fontSize:13.5, color:"#8A8FA8", marginTop:6 }}>Hang tight while we find your match</p>
         <button onClick={leave} style={{ ...secondaryBtn, marginTop:26, borderColor:"#8A8FA8", color:"#C9C2AF" }}>Cancel</button>
@@ -1288,8 +1303,8 @@ function FellowshipScreen({ myId, myProfile, onBack }) {
           <div ref={bottomRef} />
         </div>
         <div style={composer}>
-          <input value={text} onChange={e=>setText(e.target.value)} onKeyDown={e => e.key === "Enter" && sendFellowshipMsg()} placeholder="Type a message…" style={{ flex:1, border:"none", outline:"none", fontFamily:"Inter, sans-serif", fontSize:14.5, background:"transparent", padding:"10px 4px" }} />
-          <button onClick={sendFellowshipMsg} style={iconBtnLight}><Send size={18} color="#B8935F" /></button>
+          <input value={text} onChange={e=>setText(e.target.value)} onKeyDown={e => e.key === "Enter" && sendRandomMsg()} placeholder="Type a message…" style={{ flex:1, border:"none", outline:"none", fontFamily:"Inter, sans-serif", fontSize:14.5, background:"transparent", padding:"10px 4px" }} />
+          <button onClick={sendRandomMsg} style={iconBtnLight}><Send size={18} color="#B8935F" /></button>
         </div>
       </div>
     );
@@ -1335,8 +1350,11 @@ function FellowshipScreen({ myId, myProfile, onBack }) {
   );
 }
 
-function SonarReveal({ online, active }) {
+function SonarReveal({ online, active, variant = "faith" }) {
   const shown = online.slice(0, 10);
+  const isLove = variant === "love";
+  const gradient = isLove ? "linear-gradient(135deg,#D98089,#8E4650)" : "linear-gradient(135deg,#8AAE8E,#4E6E52)";
+  const glow = isLove ? "rgba(181,97,107,.5)" : "rgba(78,110,82,.5)";
   return (
     <div style={{ position:"relative", width:220, height:220, display:"flex", alignItems:"center", justifyContent:"center" }}>
       <style>{`
@@ -1347,8 +1365,8 @@ function SonarReveal({ online, active }) {
       {[0, 1, 2].map(i => (
         <span key={i} style={{ position:"absolute", width:100, height:100, borderRadius:"50%", border:"1.5px solid rgba(184,147,95,.5)", animation:`fr-ripple ${active ? 1.8 : 2.6}s ease-out ${i*0.7}s infinite` }} />
       ))}
-      <div style={{ width:74, height:74, borderRadius:"50%", background:"linear-gradient(135deg,#8AAE8E,#4E6E52)", display:"flex", alignItems:"center", justifyContent:"center", boxShadow:"0 4px 18px rgba(78,110,82,.5)" }}>
-        <BookOpen size={30} color="#FAF7F0" />
+      <div style={{ width:74, height:74, borderRadius:"50%", background:gradient, display:"flex", alignItems:"center", justifyContent:"center", boxShadow:`0 4px 18px ${glow}` }}>
+        {isLove ? <Heart size={30} color="#FAF7F0" fill="#FAF7F0" /> : <BookOpen size={30} color="#FAF7F0" />}
       </div>
       <div style={{ position:"absolute", inset:0, animation: active ? "fr-spin 7s linear infinite" : "none" }}>
         {shown.map((p, i) => {
