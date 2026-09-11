@@ -1250,8 +1250,8 @@ function RandomConnectScreen({ myId, myProfile, onBack, variant = "faith" }) {
   }
 
   const theme = isLove
-    ? { bg:"#16233F", onlineText: n => `${n} people online`, emptyText: "No one's here yet — check back soon", tagline:"Looking for someone who shares your faith", findLabel:"Find my match" }
-    : { bg:"#16233F", onlineText: n => `${n} believers online`, emptyText: "Waiting for believers to join", tagline:"Iron sharpens iron — meet someone new", findLabel:"Find a believer" };
+    ? { bg:"#16233F", onlineText: n => `${n} people online`, emptyText: "No one's here yet — check back soon", tagline:"Looking for someone who shares your faith", findLabel:"Find my match", searchingText:"Hang tight while we find your match" }
+    : { bg:"#16233F", onlineText: n => `${n} believers online`, emptyText: "Waiting for believers to join", tagline:"Iron sharpens iron — meet someone new", findLabel:"Find a believer", searchingText:"Hang tight while we find someone to share with" };
 
   if (stage === "setup") {
     return (
@@ -1292,7 +1292,7 @@ function RandomConnectScreen({ myId, myProfile, onBack, variant = "faith" }) {
         <FontLoader />
         <SonarReveal online={online} variant={variant} active />
         <h2 style={{ fontFamily:"Lora, serif", fontSize:20, color:"#F8F4EA", marginTop:26 }}>Looking for someone…</h2>
-        <p style={{ fontFamily:"Inter, sans-serif", fontSize:13.5, color:"#8A8FA8", marginTop:6 }}>Hang tight while we find your match</p>
+        <p style={{ fontFamily:"Inter, sans-serif", fontSize:13.5, color:"#8A8FA8", marginTop:6 }}>{theme.searchingText}</p>
         <button onClick={leave} style={{ ...secondaryBtn, marginTop:26, borderColor:"#8A8FA8", color:"#C9C2AF" }}>Cancel</button>
       </div>
     );
