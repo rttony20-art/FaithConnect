@@ -623,16 +623,17 @@ export default function App() {
           <MenuDrawer open={menuOpen} onClose={() => setMenuOpen(false)} onLogOut={logOut} onNavigate={setScreen} />
           <MatchHero count={matches.length} onMeetSomeone={() => setScreen("meetSomeone")} />
         </div>
-        <div style={{ padding: "28px 16px 0" }}>
-          <IronSharpensIronCard onOpen={() => setScreen("fellowship")} />
-        </div>
-        <div style={{ padding: "10px 22px 8px" }}>
-          <h2 style={heading}>Your matches</h2>
-          <p style={{fontFamily:"Inter, sans-serif", fontSize:13.5, color:"#8A8578", marginTop:-6}}>Ranked by shared faith, values, goals & interests</p>
-        </div>
-        <div style={{ padding:"6px 16px 100px" }}>
-        {matches.map(({ profile, score }) => (
-          <div key={profile.id} style={matchCard}>
+        <div style={{ background:"#1F3326", paddingBottom:100 }}>
+          <div style={{ padding: "28px 16px 0" }}>
+            <IronSharpensIronCard onOpen={() => setScreen("fellowship")} />
+          </div>
+          <div style={{ padding: "18px 22px 8px" }}>
+            <h2 style={{...heading, color:"#F8F4EA"}}>Your matches</h2>
+            <p style={{fontFamily:"Inter, sans-serif", fontSize:13.5, color:"#B9C9BC", marginTop:-6}}>Ranked by shared faith, values, goals & interests</p>
+          </div>
+          <div style={{ padding:"6px 16px 0" }}>
+          {matches.map(({ profile, score }) => (
+            <div key={profile.id} style={matchCard}>
             <div style={{display:"flex", gap:14}}>
               <div style={{...avatarMd, background: profile.avatarUrl ? `center/cover url(${profile.avatarUrl})` : avatarMd.background}}>{!profile.avatarUrl && profile.name?.[0]?.toUpperCase()}</div>
               <div style={{flex:1}}>
@@ -647,7 +648,8 @@ export default function App() {
             <Tag list={[...(profile.values||[]).slice(0,2), ...(profile.hobbies||[]).slice(0,2)]} />
             <button onClick={() => { setActiveConvo({ otherId: profile.id, otherProfile: profile }); setScreen("chat"); }} style={{...secondaryBtn, width:"100%", marginTop:12}}>Say hello</button>
           </div>
-        ))}
+          ))}
+          </div>
         </div>
       </div>
       {nav}
@@ -797,22 +799,22 @@ function IronSharpensIronCard({ onOpen }) {
   return (
     <button onClick={onOpen} style={{
       display:"flex", alignItems:"center", gap:16, width:"100%", textAlign:"left",
-      background:"#F1EBDD", border:"1.5px solid #D9CCA6", borderRadius:18, padding:16, marginBottom:14, cursor:"pointer"
+      background:"#2A4A34", border:"1.5px solid #436350", borderRadius:18, padding:16, marginBottom:14, cursor:"pointer"
     }}>
       <style>{`
         @keyframes iron-ripple { 0% { transform: scale(0.5); opacity:.5; } 100% { transform: scale(2.2); opacity:0; } }
       `}</style>
       <div style={{ position:"relative", width:64, height:64, flexShrink:0, display:"flex", alignItems:"center", justifyContent:"center" }}>
         {[0, 1].map(i => (
-          <span key={i} style={{ position:"absolute", width:44, height:44, borderRadius:"50%", border:"1.5px solid rgba(107,143,113,.55)", animation:`iron-ripple 2.4s ease-out ${i*0.8}s infinite` }} />
+          <span key={i} style={{ position:"absolute", width:44, height:44, borderRadius:"50%", border:"1.5px solid rgba(184,147,95,.55)", animation:`iron-ripple 2.4s ease-out ${i*0.8}s infinite` }} />
         ))}
-        <div style={{ position:"relative", width:40, height:40, borderRadius:"50%", background:"#6E8F72", display:"flex", alignItems:"center", justifyContent:"center", boxShadow:"0 3px 10px rgba(110,143,114,.4)" }}>
-          <BookOpen size={19} color="#F8F4EA" />
+        <div style={{ position:"relative", width:40, height:40, borderRadius:"50%", background:"#B8935F", display:"flex", alignItems:"center", justifyContent:"center", boxShadow:"0 3px 10px rgba(184,147,95,.4)" }}>
+          <BookOpen size={19} color="#1F3326" />
         </div>
       </div>
       <div style={{ flex:1 }}>
-        <div style={{ fontFamily:"Lora, serif", fontSize:17, color:"#22252B" }}>Iron Sharpens Iron</div>
-        <div style={{ fontFamily:"Inter, sans-serif", fontSize:13, color:"#6B6658", marginTop:2 }}>Meet a random believer and share about your faith</div>
+        <div style={{ fontFamily:"Lora, serif", fontSize:17, color:"#F8F4EA" }}>Iron Sharpens Iron</div>
+        <div style={{ fontFamily:"Inter, sans-serif", fontSize:13, color:"#B9C9BC", marginTop:2 }}>Meet a random believer and share about your faith</div>
       </div>
     </button>
   );
@@ -1248,8 +1250,8 @@ function RandomConnectScreen({ myId, myProfile, onBack, variant = "faith" }) {
   }
 
   const theme = isLove
-    ? { bg:"#16233F", label:"singles", tagline:"Looking for someone who shares your faith", findLabel:"Find my match" }
-    : { bg:"#16233F", label:"believers", tagline:"Iron sharpens iron — meet someone new", findLabel:"Find a believer" };
+    ? { bg:"#16233F", onlineText: n => `${n} people online`, emptyText: "No one's here yet — check back soon", tagline:"Looking for someone who shares your faith", findLabel:"Find my match" }
+    : { bg:"#16233F", onlineText: n => `${n} believers online`, emptyText: "Waiting for believers to join", tagline:"Iron sharpens iron — meet someone new", findLabel:"Find a believer" };
 
   if (stage === "setup") {
     return (
@@ -1261,7 +1263,7 @@ function RandomConnectScreen({ myId, myProfile, onBack, variant = "faith" }) {
         <div style={{ flex:1, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", padding:"0 26px 40px", position:"relative" }}>
           <SonarReveal online={online} variant={variant} />
           <h2 style={{ fontFamily:"Lora, serif", fontSize:22, color:"#F8F4EA", marginTop:26, marginBottom:6, textAlign:"center" }}>
-            {online.length > 0 ? `${online.length} ${theme.label} online` : `Waiting for ${theme.label} to join`}
+            {online.length > 0 ? theme.onlineText(online.length) : theme.emptyText}
           </h2>
           <p style={{ fontFamily:"Inter, sans-serif", fontSize:13.5, color:"#8A8FA8", textAlign:"center", marginBottom:26, fontStyle:"italic" }}>
             {theme.tagline}
