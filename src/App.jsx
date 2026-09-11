@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
-import { Heart, MessageCircle, Phone, Video, Mic, MicOff, PhoneOff, Send, User, ChevronLeft, Check, X, Camera, VideoOff, Square, SkipForward, Menu, LogOut, Info, Shield, HelpCircle, Eye, EyeOff, BookOpen, Home, UserPlus, Sun } from "lucide-react";
+import { Heart, MessageCircle, Phone, Video, Mic, MicOff, PhoneOff, Send, User, ChevronLeft, Check, X, Camera, VideoOff, Square, SkipForward, Menu, LogOut, Info, Shield, HelpCircle, Eye, EyeOff, BookOpen, Home, UserPlus, Sun, Percent } from "lucide-react";
 
 /* ---------- design tokens ----------
 Ink Navy #16233F (dark surfaces), Ivory #F8F4EA (light surfaces),
@@ -146,8 +146,9 @@ function scoreMatch(me, them) {
   const looksAB = jaccard(me.lookPref, them.appearance);
   const looksBA = jaccard(them.lookPref, me.appearance);
   const looks = Math.round((looksAB + looksBA) / 2);
-  const pct = Math.round(faith*0.30 + values*0.25 + goals*0.20 + hobbies*0.15 + looks*0.10);
-  return { pct, faith, values, goals, hobbies, looks };
+  const age = Math.max(0, 100 - Math.abs((Number(me.age)||0) - (Number(them.age)||0)) * 5);
+  const pct = Math.round(faith*0.25 + values*0.20 + goals*0.15 + hobbies*0.15 + looks*0.10 + age*0.15);
+  return { pct, faith, values, goals, hobbies, looks, age };
 }
 
 function PasswordInput({ value, onChange, onKeyDown, placeholder, style }) {
@@ -528,6 +529,10 @@ export default function App() {
     return <RandomConnectScreen myId={myId} myProfile={myProfile} onBack={() => setScreen("matches")} variant="love" />;
   }
 
+  if (screen === "matchList") {
+    return <MatchListScreen matches={matches} onOpenChat={(id, profile) => { setActiveConvo({ otherId: id, otherProfile: profile }); setScreen("chat"); }} onBack={() => setScreen("matches")} />;
+  }
+
   if (screen === "profile" && myProfile) {
     return (
       <div style={page}>
@@ -695,6 +700,7 @@ function MenuDrawer({ open, onClose, onLogOut, onNavigate }) {
   const items = [
     { icon: Home, label: "Home", action: () => onNavigate("matches") },
     { icon: Heart, label: "Connect", action: () => onNavigate("meetSomeone") },
+    { icon: Percent, label: "See who you match with", action: () => onNavigate("matchList") },
     { icon: BookOpen, label: "Share", action: () => onNavigate("fellowship") },
     { icon: MessageCircle, label: "Messages", action: () => onNavigate("messages") },
     { icon: User, label: "Profile", action: () => onNavigate("profile") },
@@ -788,6 +794,39 @@ function MatchHero({ count, onMeetSomeone }) {
       <button onClick={onMeetSomeone} style={{ background:"#B8935F", color:"#16233F", border:"none", padding:"12px 24px", borderRadius:999, fontFamily:"Inter, sans-serif", fontSize:14.5, fontWeight:700, cursor:"pointer" }}>
         Meet someone
       </button>
+    </div>
+  );
+}
+
+function MatchListScreen({ matches, onOpenChat, onBack }) {
+  return (
+    <div style={page}>
+      <FontLoader />
+      <div style={{ padding:"18px 16px 4px", background:"#16233F" }}>
+        <button onClick={onBack} style={{ ...backBtn, color:"#B8935F", marginBottom:10 }}><ChevronLeft size={18}/> Back</button>
+        <h2 style={{ fontFamily:"Lora, serif", fontSize:22, color:"#F8F4EA", margin:"0 0 4px" }}>See who you match with</h2>
+        <p style={{ fontFamily:"Inter, sans-serif", fontSize:13.5, color:"#B9C9BC", margin:"0 0 16px" }}>Ranked by shared faith, values, goals, age & interests</p>
+      </div>
+      <div style={{ flex:1, overflowY:"auto", padding:"16px 16px 100px", background:"#16233F" }}>
+        {matches.length === 0 && <div style={emptyState}>No matches yet — check back once more people join.</div>}
+        {matches.map(({ profile, score }) => (
+          <div key={profile.id} style={matchCard}>
+            <div style={{display:"flex", gap:14}}>
+              <div style={{...avatarMd, background: profile.avatarUrl ? `center/cover url(${profile.avatarUrl})` : avatarMd.background}}>{!profile.avatarUrl && profile.name?.[0]?.toUpperCase()}</div>
+              <div style={{flex:1}}>
+                <div style={{display:"flex", justifyContent:"space-between", alignItems:"baseline"}}>
+                  <div style={{fontFamily:"Lora, serif", fontSize:17, color:"#22252B"}}>{profile.name}, {profile.age}</div>
+                  <div style={{fontFamily:"Lora, serif", fontSize:17, color:"#B5616B", fontWeight:600}}>{score.pct}%</div>
+                </div>
+                <div style={{fontFamily:"Inter, sans-serif", fontSize:13, color:"#8A8578"}}>{profile.city} · {profile.denom}</div>
+              </div>
+            </div>
+            <p style={{fontFamily:"Inter, sans-serif", fontSize:13.5, color:"#4A4A45", lineHeight:1.5, margin:"10px 0"}}>{profile.bio}</p>
+            <Tag list={[...(profile.values||[]).slice(0,2), ...(profile.hobbies||[]).slice(0,2)]} />
+            <button onClick={() => onOpenChat(profile.id, profile)} style={{...secondaryBtn, width:"100%", marginTop:12}}>Say hello</button>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
