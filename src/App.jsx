@@ -835,22 +835,22 @@ function IronSharpensIronCard({ onOpen }) {
   return (
     <button onClick={onOpen} style={{
       display:"flex", alignItems:"center", gap:16, width:"100%", textAlign:"left",
-      background:"#1D2C4D", border:"1.5px solid #3A4A6E", borderRadius:18, padding:16, marginBottom:14, cursor:"pointer"
+      background:"#3E5C48", border:"1.5px solid #567058", borderRadius:18, padding:16, marginBottom:14, cursor:"pointer"
     }}>
       <style>{`
         @keyframes iron-ripple { 0% { transform: scale(0.5); opacity:.5; } 100% { transform: scale(2.2); opacity:0; } }
       `}</style>
       <div style={{ position:"relative", width:64, height:64, flexShrink:0, display:"flex", alignItems:"center", justifyContent:"center" }}>
         {[0, 1].map(i => (
-          <span key={i} style={{ position:"absolute", width:44, height:44, borderRadius:"50%", border:"1.5px solid rgba(184,147,95,.55)", animation:`iron-ripple 2.4s ease-out ${i*0.8}s infinite` }} />
+          <span key={i} style={{ position:"absolute", width:44, height:44, borderRadius:"50%", border:"1.5px solid rgba(238,232,211,.55)", animation:`iron-ripple 2.4s ease-out ${i*0.8}s infinite` }} />
         ))}
-        <div style={{ position:"relative", width:40, height:40, borderRadius:"50%", background:"#B8935F", display:"flex", alignItems:"center", justifyContent:"center", boxShadow:"0 3px 10px rgba(184,147,95,.4)" }}>
-          <BookOpen size={19} color="#16233F" />
+        <div style={{ position:"relative", width:40, height:40, borderRadius:"50%", background:"#8AAE8E", display:"flex", alignItems:"center", justifyContent:"center", boxShadow:"0 3px 10px rgba(138,174,142,.4)" }}>
+          <BookOpen size={19} color="#1F3326" />
         </div>
       </div>
       <div style={{ flex:1 }}>
         <div style={{ fontFamily:"Lora, serif", fontSize:17, color:"#F8F4EA" }}>Iron Sharpens Iron</div>
-        <div style={{ fontFamily:"Inter, sans-serif", fontSize:13, color:"#B9C9BC", marginTop:2 }}>Meet a random believer and share about your faith</div>
+        <div style={{ fontFamily:"Inter, sans-serif", fontSize:13, color:"#C9D6CB", marginTop:2 }}>Meet a random believer and share about your faith</div>
       </div>
     </button>
   );
