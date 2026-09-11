@@ -617,7 +617,9 @@ export default function App() {
         <div style={{ position:"relative" }}>
           <TopBar onMenu={() => setMenuOpen(true)} dark overlay />
           <MenuDrawer open={menuOpen} onClose={() => setMenuOpen(false)} onLogOut={logOut} />
-          <MatchHero count={matches.length} />
+          <MatchHero count={matches.length} onMeetSomeone={() => {
+            if (matches.length > 0) { setActiveConvo({ otherId: matches[0].profile.id, otherProfile: matches[0].profile }); setScreen("chat"); }
+          }} />
         </div>
         <div style={{ padding: "16px 16px 0" }}>
           <IronSharpensIronCard onOpen={() => setScreen("fellowship")} />
@@ -728,7 +730,7 @@ function MenuDrawer({ open, onClose, onLogOut }) {
   );
 }
 
-function MatchHero({ count }) {
+function MatchHero({ count, onMeetSomeone }) {
   return (
     <div style={{ background:"#16233F", padding:"36px 22px 40px", textAlign:"center", position:"relative", overflow:"hidden" }}>
       <style>{`
@@ -766,9 +768,12 @@ function MatchHero({ count }) {
         </svg>
       </div>
       <h1 style={{ fontFamily:"Lora, serif", fontSize:24, color:"#F8F4EA", margin:"0 0 6px", fontWeight:600 }}>Meet your match</h1>
-      <p style={{ fontFamily:"Inter, sans-serif", fontSize:14, color:"#B9B2A0", margin:0 }}>
+      <p style={{ fontFamily:"Inter, sans-serif", fontSize:14, color:"#B9B2A0", margin:"0 0 20px" }}>
         {count > 0 ? `${count} people share your faith and values` : "Ripples are going out to find your match"}
       </p>
+      <button onClick={onMeetSomeone} style={{ background:"#B8935F", color:"#16233F", border:"none", padding:"12px 24px", borderRadius:999, fontFamily:"Inter, sans-serif", fontSize:14.5, fontWeight:700, cursor:"pointer" }}>
+        Meet someone
+      </button>
     </div>
   );
 }
