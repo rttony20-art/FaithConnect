@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
-import { Heart, MessageCircle, Phone, Video, Mic, MicOff, PhoneOff, Send, User, ChevronLeft, Check, X, Camera, VideoOff, Square, SkipForward, Menu, LogOut, Info, Shield, HelpCircle, Eye, EyeOff, BookOpen } from "lucide-react";
+import { Heart, MessageCircle, Phone, Video, Mic, MicOff, PhoneOff, Send, User, ChevronLeft, Check, X, Camera, VideoOff, Square, SkipForward, Menu, LogOut, Info, Shield, HelpCircle, Eye, EyeOff, BookOpen, Home, UserPlus, Sun } from "lucide-react";
 
 /* ---------- design tokens ----------
 Ink Navy #16233F (dark surfaces), Ivory #F8F4EA (light surfaces),
@@ -533,7 +533,7 @@ export default function App() {
       <div style={page}>
         <FontLoader />
         <TopBar onMenu={() => setMenuOpen(true)} dark={false} />
-        <MenuDrawer open={menuOpen} onClose={() => setMenuOpen(false)} onLogOut={logOut} />
+        <MenuDrawer open={menuOpen} onClose={() => setMenuOpen(false)} onLogOut={logOut} onNavigate={setScreen} />
         <div style={{ flex:1, overflowY:"auto", padding:"8px 22px 100px", background:"#FAF7F0" }}>
           <div style={{ width:74, height:74, borderRadius:"50%", background: myProfile.avatarUrl ? `center/cover url(${myProfile.avatarUrl})` : "#B8935F", color:"#FAF7F0", display:"flex", alignItems:"center", justifyContent:"center", fontFamily:"Lora, serif", fontSize:28, margin:"0 auto 14px" }}>
             {!myProfile.avatarUrl && myProfile.name[0]?.toUpperCase()}
@@ -592,7 +592,7 @@ export default function App() {
       <div style={page}>
         <FontLoader />
         <TopBar onMenu={() => setMenuOpen(true)} dark={false} />
-        <MenuDrawer open={menuOpen} onClose={() => setMenuOpen(false)} onLogOut={logOut} />
+        <MenuDrawer open={menuOpen} onClose={() => setMenuOpen(false)} onLogOut={logOut} onNavigate={setScreen} />
         <div style={{ padding: "10px 22px 8px", background:"#FAF7F0" }}><h2 style={heading}>Messages</h2></div>
         <div style={{ flex:1, overflowY:"auto", padding:"0 16px 100px", background:"#FAF7F0" }}>
           {conversations.length === 0 && <div style={emptyState}>No conversations yet. Start one from your matches.</div>}
@@ -620,7 +620,7 @@ export default function App() {
       <div ref={matchesScrollRef} style={{ flex:1, overflowY:"auto", background:"#FAF7F0" }}>
         <div style={{ position:"relative" }}>
           <TopBar onMenu={() => setMenuOpen(true)} dark overlay />
-          <MenuDrawer open={menuOpen} onClose={() => setMenuOpen(false)} onLogOut={logOut} />
+          <MenuDrawer open={menuOpen} onClose={() => setMenuOpen(false)} onLogOut={logOut} onNavigate={setScreen} />
           <MatchHero count={matches.length} onMeetSomeone={() => setScreen("meetSomeone")} />
         </div>
         <div style={{ padding: "28px 16px 0" }}>
@@ -690,11 +690,23 @@ function TopBar({ onMenu, dark, overlay }) {
   );
 }
 
-function MenuDrawer({ open, onClose, onLogOut }) {
+function MenuDrawer({ open, onClose, onLogOut, onNavigate }) {
+  const [inviteMsg, setInviteMsg] = useState("");
+  const [lightMode, setLightMode] = useState(false);
   const items = [
-    { icon: Info, label: "About FaithConnect" },
-    { icon: Shield, label: "Safety & Community Guidelines" },
-    { icon: HelpCircle, label: "Help & Support" },
+    { icon: Home, label: "Home", action: () => onNavigate("matches") },
+    { icon: Heart, label: "Connect", action: () => onNavigate("meetSomeone") },
+    { icon: BookOpen, label: "Share", action: () => onNavigate("fellowship") },
+    { icon: MessageCircle, label: "Messages", action: () => onNavigate("messages") },
+    { icon: User, label: "Profile", action: () => onNavigate("profile") },
+    { icon: UserPlus, label: "Invite a friend", action: async () => {
+        try {
+          await navigator.clipboard.writeText(window.location.href);
+          setInviteMsg("Link copied — share it with a friend!");
+        } catch { setInviteMsg("Copy this page's link from your browser to invite a friend."); }
+        setTimeout(() => setInviteMsg(""), 3000);
+      } },
+    { icon: Sun, label: lightMode ? "Dark mode" : "Light mode", action: () => setLightMode(v => !v), note: "Coming soon" },
   ];
   return (
     <>
@@ -710,14 +722,16 @@ function MenuDrawer({ open, onClose, onLogOut }) {
           <span style={{ fontFamily:"Lora, serif", fontSize:19, color:"#F8F4EA" }}>FaithConnect</span>
           <button onClick={onClose} style={{ background:"none", border:"none", cursor:"pointer" }}><X size={20} color="#C9C2AF" /></button>
         </div>
-        {items.map(({ icon: Icon, label }) => (
-          <button key={label} onClick={onClose} style={{
+        {items.map(({ icon: Icon, label, action, note }) => (
+          <button key={label} onClick={() => { action(); if (!note) onClose(); }} style={{
             display:"flex", alignItems:"center", gap:12, width:"100%", background:"none", border:"none",
             padding:"12px 4px", cursor:"pointer", color:"#E8E3D6", fontFamily:"Inter, sans-serif", fontSize:14.5, textAlign:"left"
           }}>
             <Icon size={18} color="#B8935F" /> {label}
+            {note && <span style={{ marginLeft:"auto", fontSize:11, color:"#6B7690" }}>{note}</span>}
           </button>
         ))}
+        {inviteMsg && <div style={{ fontFamily:"Inter, sans-serif", fontSize:12, color:"#8AAE8E", padding:"4px 4px 0" }}>{inviteMsg}</div>}
         <div style={{ borderTop:"1px solid #2A3B5F", marginTop:14, paddingTop:14 }}>
           <button onClick={onLogOut} style={{
             display:"flex", alignItems:"center", gap:12, width:"100%", background:"none", border:"none",
