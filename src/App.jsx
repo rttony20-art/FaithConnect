@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
-import { Heart, MessageCircle, Phone, Video, Mic, MicOff, PhoneOff, Send, User, ChevronLeft, Check, X, Camera, VideoOff, Square, SkipForward, Menu, LogOut, Info, Shield, HelpCircle, Eye, EyeOff, BookOpen, Home, UserPlus, Sun, Percent } from "lucide-react";
+import { Heart, MessageCircle, Phone, Video, Mic, MicOff, PhoneOff, Send, User, ChevronLeft, Check, X, Camera, VideoOff, Square, SkipForward, Menu, LogOut, Info, Shield, HelpCircle, Eye, EyeOff, BookOpen, Home, UserPlus, Sun, Percent, ArrowRight } from "lucide-react";
 
 /* ---------- design tokens ----------
 Ink Navy #16233F (dark surfaces), Ivory #F8F4EA (light surfaces),
@@ -631,7 +631,7 @@ export default function App() {
         <div style={{ background:"#16233F", paddingBottom:100 }}>
           <div style={{ padding: "28px 16px 0" }}>
             <IronSharpensIronCard onOpen={() => setScreen("fellowship")} />
-            <button onClick={() => setScreen("fellowship")} style={{ ...primaryBtn, width:"100%", marginTop:14 }}>Share with someone</button>
+            <button onClick={() => setScreen("fellowship")} style={{ ...ctaBtn, width:"100%", marginTop:14 }}>Share with someone <ArrowRight size={18} /></button>
           </div>
           <div style={{ padding:"24px 16px 0" }}>
           {matches.map(({ profile, score }) => (
@@ -791,8 +791,8 @@ function MatchHero({ count, onMeetSomeone }) {
       <p style={{ fontFamily:"Inter, sans-serif", fontSize:14, color:"#B9B2A0", margin:"0 0 20px" }}>
         {count > 0 ? `${count} people share your faith and values` : "Ripples are going out to find your match"}
       </p>
-      <button onClick={onMeetSomeone} style={{ background:"#B8935F", color:"#16233F", border:"none", padding:"12px 24px", borderRadius:999, fontFamily:"Inter, sans-serif", fontSize:14.5, fontWeight:700, cursor:"pointer" }}>
-        Meet someone
+      <button onClick={onMeetSomeone} style={ctaBtn}>
+        Meet someone <ArrowRight size={18} />
       </button>
     </div>
   );
@@ -1444,6 +1444,15 @@ const page = { display:"flex", flexDirection:"column", height:"100vh", maxWidth:
 const heading = { fontFamily:"Lora, serif", fontSize:24, color:"#22252B", margin:"0 0 14px", fontWeight:600 };
 const input = { width:"100%", padding:"10px 12px", borderRadius:10, border:"1.5px solid #DDD5C7", fontFamily:"Inter, sans-serif", fontSize:14.5, background:"#fff", boxSizing:"border-box" };
 const primaryBtn = { background:"#B8935F", color:"#FAF7F0", border:"none", padding:"13px 26px", borderRadius:12, fontFamily:"Inter, sans-serif", fontSize:15, fontWeight:600, cursor:"pointer" };
+const ctaBtn = {
+  background:"linear-gradient(180deg, #D6AE6E 0%, #B8935F 55%, #9C7A48 100%)",
+  color:"#2A1F0E", border:"1px solid #8A6A38",
+  padding:"15px 28px", borderRadius:999,
+  fontFamily:"Inter, sans-serif", fontSize:15.5, fontWeight:700,
+  cursor:"pointer", letterSpacing:0.2,
+  boxShadow:"0 3px 0 #7C6032, 0 8px 16px rgba(0,0,0,.28), inset 0 1px 0 rgba(255,255,255,.5)",
+  display:"inline-flex", alignItems:"center", justifyContent:"center", gap:8
+};
 const secondaryBtn = { background:"transparent", color:"#B8935F", border:"1.5px solid #B8935F", padding:"11px 20px", borderRadius:12, fontFamily:"Inter, sans-serif", fontSize:14.5, fontWeight:600, cursor:"pointer" };
 const backBtn = { display:"flex", alignItems:"center", gap:2, background:"none", border:"none", color:"#B8935F", fontFamily:"Inter, sans-serif", fontSize:14, cursor:"pointer", padding:0, marginBottom:12 };
 const navBar = { display:"flex", borderTop:"1px solid #E5DFD1", background:"#FAF7F0", position:"sticky", bottom:0 };
