@@ -1286,7 +1286,7 @@ function RandomConnectScreen({ myId, myProfile, onBack, variant = "faith" }) {
   }
 
   const theme = isLove
-    ? { bg:"#16233F", onlineText: n => `${n} people online`, emptyText: "No one's here yet — check back soon", tagline:"Looking for someone who shares your faith", findLabel:"Find my match", searchingText:"Hang tight while we find your match" }
+    ? { bg:"#16233F", onlineText: n => `${n} people online`, emptyText: "No one's here yet — check back soon", tagline:"Choose how you'd like to connect — chat, voice, or video", findLabel:"Find my match", searchingText:"Hang tight while we find your match" }
     : { bg:"#16233F", onlineText: n => `${n} believers online`, emptyText: "Waiting for believers to join", tagline:"Iron sharpens iron — meet someone new", findLabel:"Find a believer", searchingText:"Hang tight while we find someone to share with" };
 
   if (stage === "setup") {
