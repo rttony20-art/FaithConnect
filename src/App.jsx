@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
-import { Heart, MessageCircle, Phone, Video, Mic, MicOff, PhoneOff, Send, User, ChevronLeft, Check, X, Camera, VideoOff, Square, SkipForward, Menu, LogOut, Info, Shield, HelpCircle, Eye, EyeOff } from "lucide-react";
+import { Heart, MessageCircle, Phone, Video, Mic, MicOff, PhoneOff, Send, User, ChevronLeft, Check, X, Camera, VideoOff, Square, SkipForward, Menu, LogOut, Info, Shield, HelpCircle, Eye, EyeOff, BookOpen } from "lucide-react";
 
 /* ---------- design tokens ----------
 Ink Navy #16233F (dark surfaces), Ivory #F8F4EA (light surfaces),
@@ -617,9 +617,12 @@ export default function App() {
         <div style={{ position:"relative" }}>
           <TopBar onMenu={() => setMenuOpen(true)} dark overlay />
           <MenuDrawer open={menuOpen} onClose={() => setMenuOpen(false)} onLogOut={logOut} />
-          <MatchHero count={matches.length} onConnect={() => setScreen("fellowship")} />
+          <MatchHero count={matches.length} />
         </div>
-        <div style={{ padding: "22px 22px 8px" }}>
+        <div style={{ padding: "16px 16px 0" }}>
+          <IronSharpensIronCard onOpen={() => setScreen("fellowship")} />
+        </div>
+        <div style={{ padding: "10px 22px 8px" }}>
           <h2 style={heading}>Your matches</h2>
           <p style={{fontFamily:"Inter, sans-serif", fontSize:13.5, color:"#8A8578", marginTop:-6}}>Ranked by shared faith, values, goals & interests</p>
         </div>
@@ -725,7 +728,7 @@ function MenuDrawer({ open, onClose, onLogOut }) {
   );
 }
 
-function MatchHero({ count, onConnect }) {
+function MatchHero({ count }) {
   return (
     <div style={{ background:"#16233F", padding:"36px 22px 40px", textAlign:"center", position:"relative", overflow:"hidden" }}>
       <style>{`
@@ -763,16 +766,35 @@ function MatchHero({ count, onConnect }) {
         </svg>
       </div>
       <h1 style={{ fontFamily:"Lora, serif", fontSize:24, color:"#F8F4EA", margin:"0 0 6px", fontWeight:600 }}>Meet your match</h1>
-      <p style={{ fontFamily:"Inter, sans-serif", fontSize:14, color:"#B9B2A0", margin:"0 0 20px" }}>
+      <p style={{ fontFamily:"Inter, sans-serif", fontSize:14, color:"#B9B2A0", margin:0 }}>
         {count > 0 ? `${count} people share your faith and values` : "Ripples are going out to find your match"}
       </p>
-      <button onClick={onConnect} style={{ background:"#B8935F", color:"#16233F", border:"none", padding:"12px 24px", borderRadius:999, fontFamily:"Inter, sans-serif", fontSize:14.5, fontWeight:700, cursor:"pointer" }}>
-        Meet a believer now
-      </button>
-      <p style={{ fontFamily:"Inter, sans-serif", fontSize:12.5, color:"#8A8FA8", marginTop:12, fontStyle:"italic" }}>
-        Iron sharpens iron — share your faith with someone new
-      </p>
     </div>
+  );
+}
+
+function IronSharpensIronCard({ onOpen }) {
+  return (
+    <button onClick={onOpen} style={{
+      display:"flex", alignItems:"center", gap:16, width:"100%", textAlign:"left",
+      background:"#F1EBDD", border:"1.5px solid #D9CCA6", borderRadius:18, padding:16, marginBottom:14, cursor:"pointer"
+    }}>
+      <style>{`
+        @keyframes iron-ripple { 0% { transform: scale(0.5); opacity:.5; } 100% { transform: scale(2.2); opacity:0; } }
+      `}</style>
+      <div style={{ position:"relative", width:64, height:64, flexShrink:0, display:"flex", alignItems:"center", justifyContent:"center" }}>
+        {[0, 1].map(i => (
+          <span key={i} style={{ position:"absolute", width:44, height:44, borderRadius:"50%", border:"1.5px solid rgba(107,143,113,.55)", animation:`iron-ripple 2.4s ease-out ${i*0.8}s infinite` }} />
+        ))}
+        <div style={{ position:"relative", width:40, height:40, borderRadius:"50%", background:"#6E8F72", display:"flex", alignItems:"center", justifyContent:"center", boxShadow:"0 3px 10px rgba(110,143,114,.4)" }}>
+          <BookOpen size={19} color="#F8F4EA" />
+        </div>
+      </div>
+      <div style={{ flex:1 }}>
+        <div style={{ fontFamily:"Lora, serif", fontSize:17, color:"#22252B" }}>Iron Sharpens Iron</div>
+        <div style={{ fontFamily:"Inter, sans-serif", fontSize:13, color:"#6B6658", marginTop:2 }}>Meet a random believer and share about your faith</div>
+      </div>
+    </button>
   );
 }
 
@@ -1320,8 +1342,8 @@ function SonarReveal({ online, active }) {
       {[0, 1, 2].map(i => (
         <span key={i} style={{ position:"absolute", width:100, height:100, borderRadius:"50%", border:"1.5px solid rgba(184,147,95,.5)", animation:`fr-ripple ${active ? 1.8 : 2.6}s ease-out ${i*0.7}s infinite` }} />
       ))}
-      <div style={{ width:74, height:74, borderRadius:"50%", background:"linear-gradient(135deg,#D98089,#8E4650)", display:"flex", alignItems:"center", justifyContent:"center", boxShadow:"0 4px 18px rgba(181,97,107,.5)" }}>
-        <Heart size={30} color="#FAF7F0" fill="#FAF7F0" />
+      <div style={{ width:74, height:74, borderRadius:"50%", background:"linear-gradient(135deg,#8AAE8E,#4E6E52)", display:"flex", alignItems:"center", justifyContent:"center", boxShadow:"0 4px 18px rgba(78,110,82,.5)" }}>
+        <BookOpen size={30} color="#FAF7F0" />
       </div>
       <div style={{ position:"absolute", inset:0, animation: active ? "fr-spin 7s linear infinite" : "none" }}>
         {shown.map((p, i) => {
