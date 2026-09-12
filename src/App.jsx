@@ -677,7 +677,7 @@ function Chips({ list, sel, onToggle }) {
 function Tag({ list }) {
   if (!list || !list.length) return null;
   return <div>{list.filter(Boolean).map(t => (
-    <span key={t} style={{ display:"inline-block", fontSize:12, fontFamily:"Inter, sans-serif", color:"#6E8F72", background:"#E9EFE7", padding:"4px 10px", borderRadius:999, marginRight:6, marginBottom:6 }}>{t}</span>
+    <span key={t} style={{ display:"inline-block", fontSize:12, fontFamily:"Inter, sans-serif", color:"#F8F4EA", background:"#1D2C4D", padding:"4px 10px", borderRadius:999, marginRight:6, marginBottom:6 }}>{t}</span>
   ))}</div>;
 }
 function FontLoader() {
