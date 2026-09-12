@@ -600,11 +600,11 @@ export default function App() {
     return (
       <div style={page}>
         <FontLoader />
-        <TopBar onMenu={() => setMenuOpen(true)} dark={false} />
+        <TopBar onMenu={() => setMenuOpen(true)} dark overlay={false} />
         <MenuDrawer open={menuOpen} onClose={() => setMenuOpen(false)} onLogOut={logOut} onNavigate={setScreen} />
-        <div style={{ padding: "10px 22px 8px", background:"#FAF7F0" }}><h2 style={heading}>Messages</h2></div>
-        <div style={{ flex:1, overflowY:"auto", padding:"0 16px 100px", background:"#FAF7F0" }}>
-          {conversations.length === 0 && <div style={emptyState}>No conversations yet. Start one from your matches.</div>}
+        <div style={{ padding: "10px 22px 8px", background:GLOW_BG }}><h2 style={{...heading, color:"#F8F4EA"}}>Messages</h2></div>
+        <div style={{ flex:1, overflowY:"auto", padding:"0 16px 100px", background:GLOW_BG }}>
+          {conversations.length === 0 && <div style={{...emptyState, color:"#B9C9BC"}}>No conversations yet. Start one from your matches.</div>}
           {conversations.map(c => (
             <button key={c.otherId} onClick={() => { setActiveConvo({ otherId: c.otherId, otherProfile: c.otherProfile }); setScreen("chat"); }} style={convoRow}>
               <div style={avatarSm}>{c.otherProfile?.name?.[0]?.toUpperCase() || "?"}</div>
