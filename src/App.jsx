@@ -233,7 +233,7 @@ export default function App() {
 
   useEffect(() => {
     if (!myId || !myProfile) return;
-    const beat = () => sset(`presence:${myId}`, { ts: Date.now(), name: myProfile.name }, true);
+    const beat = () => sset(`presence:${myId}`, { ts: Date.now(), name: myProfile.name, gender: myProfile.gender }, true);
     beat();
     const t = setInterval(beat, 15000);
     return () => clearInterval(t);
@@ -1155,7 +1155,9 @@ function RandomConnectScreen({ myId, myProfile, onBack, variant = "faith" }) {
     for (const k of list.keys) {
       if (k === `presence:${myId}`) continue;
       const p = await sget(k, true);
-      if (p && now - p.ts < 45000) entries.push({ id: k.replace("presence:", ""), name: p.name });
+      if (!p || now - p.ts >= 45000) continue;
+      if (isLove && myProfile?.seeking && myProfile.seeking !== "Everyone" && p.gender && p.gender !== myProfile.seeking) continue;
+      entries.push({ id: k.replace("presence:", ""), name: p.name, gender: p.gender });
     }
     setOnline(entries);
   }
