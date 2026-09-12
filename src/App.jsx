@@ -195,8 +195,8 @@ function Chip({ label, active, onClick }) {
   return (
     <button type="button" onClick={onClick} style={{
       padding: "7px 13px", borderRadius: 999, fontSize: 13.5, fontFamily: "Inter, sans-serif",
-      border: active ? "1.5px solid #B8935F" : "1.5px solid #DDD5C7",
-      background: active ? "#B8935F" : "transparent", color: active ? "#FAF7F0" : "#4A4A45",
+      border: active ? "1.5px solid #D6AE6E" : "1.5px solid rgba(248,244,234,0.4)",
+      background: active ? "#B8935F" : "transparent", color: active ? "#2A1F0E" : "#F8F4EA",
       cursor: "pointer", margin: "3px 5px 3px 0", transition: "all .15s"
     }}>{label}</button>
   );
@@ -449,10 +449,10 @@ export default function App() {
             FaithConnect matches you by faith, values, hobbies, and what you're looking for in a relationship — not a swipe. Chat, send voice notes, or call once you match.
           </p>
 
-          <div style={{ marginTop:30, maxWidth:340, background:"#1D2C4D", border:"1.5px solid #3A4A6E", borderRadius:16, padding:18 }}>
-            <label style={{ fontFamily:"Inter, sans-serif", fontSize:13, color:"#C9C2AF", display:"block", marginBottom:8 }}>Log in with your username</label>
-            <input value={loginUser} onChange={e=>setLoginUser(e.target.value)} placeholder="Username" style={{ ...input, background:"#22304F", color:"#F8F4EA", border:"1.5px solid #3A4A6E", marginBottom:8 }} />
-            <PasswordInput value={loginPass} onChange={e=>setLoginPass(e.target.value)} onKeyDown={e => e.key === "Enter" && logIn()} placeholder="Password" style={{ ...input, background:"#22304F", color:"#F8F4EA", border:"1.5px solid #3A4A6E", marginBottom:8 }} />
+          <div style={{ marginTop:30, maxWidth:340, background:"#5C4520", border:"1.5px solid #9C7A48", borderRadius:16, padding:18 }}>
+            <label style={{ fontFamily:"Inter, sans-serif", fontSize:13, color:"#F0E6C8", display:"block", marginBottom:8 }}>Log in with your username</label>
+            <input value={loginUser} onChange={e=>setLoginUser(e.target.value)} placeholder="Username" style={{ ...input, background:"#3E2E14", color:"#F8F4EA", border:"1.5px solid #9C7A48", marginBottom:8 }} />
+            <PasswordInput value={loginPass} onChange={e=>setLoginPass(e.target.value)} onKeyDown={e => e.key === "Enter" && logIn()} placeholder="Password" style={{ ...input, background:"#3E2E14", color:"#F8F4EA", border:"1.5px solid #9C7A48", marginBottom:8 }} />
             <button onClick={logIn} disabled={loginBusy} style={{ ...primaryBtn, width:"100%" }}>{loginBusy ? "Logging in…" : "Log in"}</button>
             {loginErr && <div style={{ color:"#E3A6A6", fontSize:13, fontFamily:"Inter, sans-serif", marginTop:8 }}>{loginErr}</div>}
           </div>
@@ -677,7 +677,7 @@ function Chips({ list, sel, onToggle }) {
 function Tag({ list }) {
   if (!list || !list.length) return null;
   return <div>{list.filter(Boolean).map(t => (
-    <span key={t} style={{ display:"inline-block", fontSize:12, fontFamily:"Inter, sans-serif", color:"#F8F4EA", background:"#1D2C4D", padding:"4px 10px", borderRadius:999, marginRight:6, marginBottom:6 }}>{t}</span>
+    <span key={t} style={{ display:"inline-block", fontSize:12, fontFamily:"Inter, sans-serif", color:"#F8F4EA", background:"#9C7A48", padding:"4px 10px", borderRadius:999, marginRight:6, marginBottom:6 }}>{t}</span>
   ))}</div>;
 }
 function FontLoader() {
@@ -741,7 +741,7 @@ function MenuDrawer({ open, onClose, onLogOut, onNavigate }) {
           </button>
         ))}
         {inviteMsg && <div style={{ fontFamily:"Inter, sans-serif", fontSize:12, color:"#8AAE8E", padding:"4px 4px 0" }}>{inviteMsg}</div>}
-        <div style={{ borderTop:"1px solid #2A3B5F", marginTop:14, paddingTop:14 }}>
+        <div style={{ borderTop:"1px solid #6B5327", marginTop:14, paddingTop:14 }}>
           <button onClick={onLogOut} style={{
             display:"flex", alignItems:"center", gap:12, width:"100%", background:"none", border:"none",
             padding:"12px 4px", cursor:"pointer", color:"#D9A6A6", fontFamily:"Inter, sans-serif", fontSize:14.5, textAlign:"left"
@@ -1023,18 +1023,18 @@ function ChatScreen({ myId, myProfile, other, onBack }) {
 
   if (callMode && callStatus !== "idle") {
     return (
-      <div style={{ ...page, background: "#0F172E" }}>
+      <div style={{ ...page, background: "#0A0F0A" }}>
         <FontLoader />
         <div style={{ flex:1, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", position:"relative" }}>
           {callMode === "video" ? (
             <>
-              <video ref={remoteVideoRef} autoPlay playsInline style={{ position:"absolute", inset:0, width:"100%", height:"100%", objectFit:"cover", background:"#0F172E" }} />
+              <video ref={remoteVideoRef} autoPlay playsInline style={{ position:"absolute", inset:0, width:"100%", height:"100%", objectFit:"cover", background:"#0A0F0A" }} />
               <video ref={localVideoRef} autoPlay playsInline muted style={{ position:"absolute", bottom:110, right:16, width:100, height:140, borderRadius:14, objectFit:"cover", border:"2px solid #B8935F" }} />
             </>
           ) : (
             <>
               <audio ref={remoteAudioRef} autoPlay />
-              <div style={{ width:120, height:120, borderRadius:"50%", background:"#B8935F", display:"flex", alignItems:"center", justifyContent:"center", fontFamily:"Lora, serif", fontSize:42, color:"#0F172E" }}>
+              <div style={{ width:120, height:120, borderRadius:"50%", background:"#B8935F", display:"flex", alignItems:"center", justifyContent:"center", fontFamily:"Lora, serif", fontSize:42, color:"#2A1F0E" }}>
                 {other.otherProfile?.name?.[0]?.toUpperCase()}
               </div>
             </>
@@ -1056,11 +1056,11 @@ function ChatScreen({ myId, myProfile, other, onBack }) {
               </>
             ) : (
               <>
-                <button onClick={() => { localStreamRef.current?.getAudioTracks().forEach(t => t.enabled = !micOn); setMicOn(!micOn); }} style={callBtn(micOn ? "#2A3B5F" : "#B5616B")}>
+                <button onClick={() => { localStreamRef.current?.getAudioTracks().forEach(t => t.enabled = !micOn); setMicOn(!micOn); }} style={callBtn(micOn ? "#5C4520" : "#B5616B")}>
                   {micOn ? <Mic size={20} color="#fff"/> : <MicOff size={20} color="#fff"/>}
                 </button>
                 {callMode === "video" && (
-                  <button onClick={() => { localStreamRef.current?.getVideoTracks().forEach(t => t.enabled = !camOn); setCamOn(!camOn); }} style={callBtn(camOn ? "#2A3B5F" : "#B5616B")}>
+                  <button onClick={() => { localStreamRef.current?.getVideoTracks().forEach(t => t.enabled = !camOn); setCamOn(!camOn); }} style={callBtn(camOn ? "#5C4520" : "#B5616B")}>
                     {camOn ? <Camera size={20} color="#fff"/> : <VideoOff size={20} color="#fff"/>}
                   </button>
                 )}
@@ -1370,18 +1370,18 @@ function RandomConnectScreen({ myId, myProfile, onBack, variant = "faith" }) {
 
   // connected — voice/video call
   return (
-    <div style={{ ...page, background:"#0F172E" }}>
+    <div style={{ ...page, background:"#0A0F0A" }}>
       <FontLoader />
       <div style={{ flex:1, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", position:"relative" }}>
         {mode === "video" ? (
           <>
-            <video ref={remoteVideoRef} autoPlay playsInline style={{ position:"absolute", inset:0, width:"100%", height:"100%", objectFit:"cover", background:"#0F172E" }} />
+            <video ref={remoteVideoRef} autoPlay playsInline style={{ position:"absolute", inset:0, width:"100%", height:"100%", objectFit:"cover", background:"#0A0F0A" }} />
             <video ref={localVideoRef} autoPlay playsInline muted style={{ position:"absolute", bottom:110, right:16, width:100, height:140, borderRadius:14, objectFit:"cover", border:"2px solid #B8935F" }} />
           </>
         ) : (
           <>
             <audio ref={remoteAudioRef} autoPlay />
-            <div style={{ width:120, height:120, borderRadius:"50%", background:"#B8935F", display:"flex", alignItems:"center", justifyContent:"center", fontFamily:"Lora, serif", fontSize:42, color:"#0F172E" }}>
+            <div style={{ width:120, height:120, borderRadius:"50%", background:"#B8935F", display:"flex", alignItems:"center", justifyContent:"center", fontFamily:"Lora, serif", fontSize:42, color:"#2A1F0E" }}>
               {partner?.name?.[0]?.toUpperCase() || "?"}
             </div>
           </>
@@ -1392,11 +1392,11 @@ function RandomConnectScreen({ myId, myProfile, onBack, variant = "faith" }) {
         </div>
         {callErr && <div style={{position:"absolute", bottom:190, color:"#E3A6A6", fontSize:12.5, fontFamily:"Inter, sans-serif", textAlign:"center", padding:"0 30px"}}>{callErr}</div>}
         <div style={{ position:"absolute", bottom:30, display:"flex", gap:18 }}>
-          <button onClick={() => { localStreamRef.current?.getAudioTracks().forEach(t => t.enabled = !micOn); setMicOn(!micOn); }} style={callBtn(micOn ? "#2A3B5F" : "#B5616B")}>
+          <button onClick={() => { localStreamRef.current?.getAudioTracks().forEach(t => t.enabled = !micOn); setMicOn(!micOn); }} style={callBtn(micOn ? "#5C4520" : "#B5616B")}>
             {micOn ? <Mic size={20} color="#fff"/> : <MicOff size={20} color="#fff"/>}
           </button>
           {mode === "video" && (
-            <button onClick={() => { localStreamRef.current?.getVideoTracks().forEach(t => t.enabled = !camOn); setCamOn(!camOn); }} style={callBtn(camOn ? "#2A3B5F" : "#B5616B")}>
+            <button onClick={() => { localStreamRef.current?.getVideoTracks().forEach(t => t.enabled = !camOn); setCamOn(!camOn); }} style={callBtn(camOn ? "#5C4520" : "#B5616B")}>
               {camOn ? <Camera size={20} color="#fff"/> : <VideoOff size={20} color="#fff"/>}
             </button>
           )}
