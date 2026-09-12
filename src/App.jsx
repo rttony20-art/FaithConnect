@@ -541,7 +541,7 @@ export default function App() {
     return (
       <div style={page}>
         <FontLoader />
-        <TopBar onMenu={() => setMenuOpen(true)} dark overlay={false} />
+        <TopBar onMenu={() => setMenuOpen(true)} dark overlay={false} onLogo={() => setScreen("matches")} />
         <MenuDrawer open={menuOpen} onClose={() => setMenuOpen(false)} onLogOut={logOut} onNavigate={setScreen} />
         <div style={{ flex:1, overflowY:"auto", padding:"8px 22px 100px", background:GLOW_BG }}>
           <div style={{ width:74, height:74, borderRadius:"50%", background: myProfile.avatarUrl ? `center/cover url(${myProfile.avatarUrl})` : "#B8935F", color:"#FAF7F0", display:"flex", alignItems:"center", justifyContent:"center", fontFamily:"Lora, serif", fontSize:28, margin:"0 auto 14px" }}>
@@ -600,9 +600,12 @@ export default function App() {
     return (
       <div style={page}>
         <FontLoader />
-        <TopBar onMenu={() => setMenuOpen(true)} dark overlay={false} />
+        <TopBar onMenu={() => setMenuOpen(true)} dark overlay={false} onLogo={() => setScreen("matches")} />
         <MenuDrawer open={menuOpen} onClose={() => setMenuOpen(false)} onLogOut={logOut} onNavigate={setScreen} />
-        <div style={{ padding: "10px 22px 8px", background:GLOW_BG }}><h2 style={{...heading, color:"#F8F4EA"}}>Messages</h2></div>
+        <div style={{ padding: "10px 22px 8px", background:GLOW_BG }}>
+          <button onClick={() => setScreen("matches")} style={{ ...backBtn, color:"#D6AE6E", marginBottom:8 }}><ChevronLeft size={18}/> Back</button>
+          <h2 style={{...heading, color:"#F8F4EA"}}>Messages</h2>
+        </div>
         <div style={{ flex:1, overflowY:"auto", padding:"0 16px 100px", background:GLOW_BG }}>
           {conversations.length === 0 && <div style={{...emptyState, color:"#B9C9BC"}}>No conversations yet. Start one from your matches.</div>}
           {conversations.map(c => (
@@ -628,7 +631,7 @@ export default function App() {
       <FontLoader />
       <div ref={matchesScrollRef} style={{ flex:1, overflowY:"auto", background:GLOW_BG }}>
         <div style={{ position:"relative" }}>
-          <TopBar onMenu={() => setMenuOpen(true)} dark overlay />
+          <TopBar onMenu={() => setMenuOpen(true)} dark overlay onLogo={() => setScreen("matches")} />
           <MenuDrawer open={menuOpen} onClose={() => setMenuOpen(false)} onLogOut={logOut} onNavigate={setScreen} />
           <MatchHero count={matches.length} onMeetSomeone={() => setScreen("meetSomeone")} />
         </div>
@@ -684,7 +687,7 @@ function FontLoader() {
   return <style>{`@import url('https://fonts.googleapis.com/css2?family=Lora:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap');`}</style>;
 }
 
-function TopBar({ onMenu, dark, overlay }) {
+function TopBar({ onMenu, dark, overlay, onLogo }) {
   return (
     <div style={{
       display:"flex", alignItems:"center", padding:"14px 16px 4px",
@@ -693,7 +696,9 @@ function TopBar({ onMenu, dark, overlay }) {
       <button onClick={onMenu} style={{ background:"none", border:"none", cursor:"pointer", padding:8, display:"flex" }}>
         <Menu size={22} color={dark ? "#F8F4EA" : "#22252B"} />
       </button>
-      <span style={{ fontFamily:"Lora, serif", fontSize:16, color: dark ? "#F8F4EA" : "#22252B", marginLeft:4 }}>FaithConnect</span>
+      <button onClick={onLogo} style={{ background:"none", border:"none", cursor:"pointer", padding:0, marginLeft:4 }}>
+        <span style={{ fontFamily:"Lora, serif", fontSize:16, color: dark ? "#F8F4EA" : "#22252B" }}>FaithConnect</span>
+      </button>
     </div>
   );
 }
