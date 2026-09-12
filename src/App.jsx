@@ -1407,12 +1407,34 @@ function SonarReveal({ online, active, variant = "faith" }) {
   const isLove = variant === "love";
   const gradient = isLove ? "linear-gradient(135deg,#D98089,#8E4650)" : "linear-gradient(135deg,#8AAE8E,#4E6E52)";
   const glow = isLove ? "rgba(181,97,107,.5)" : "rgba(78,110,82,.5)";
+  const [tick, setTick] = useState(0);
+  const [blipName, setBlipName] = useState(null);
+  const [blipPos, setBlipPos] = useState({ x: 110, y: 40 });
+
+  useEffect(() => {
+    if (!active || shown.length === 0) return;
+    let i = 0;
+    function next() {
+      const angle = Math.random() * Math.PI * 2;
+      const r = 55 + Math.random() * 45;
+      setBlipPos({ x: 110 + r * Math.cos(angle), y: 110 + r * Math.sin(angle) });
+      setBlipName(shown[i % shown.length].name);
+      i++;
+      setTick(t => t + 1);
+    }
+    next();
+    const id = setInterval(next, 2000);
+    return () => clearInterval(id);
+    // eslint-disable-next-line
+  }, [active, online.length]);
+
   return (
     <div style={{ position:"relative", width:220, height:220, display:"flex", alignItems:"center", justifyContent:"center" }}>
       <style>{`
         @keyframes fr-ripple { 0% { transform: scale(0.4); opacity:.5; } 100% { transform: scale(2.4); opacity:0; } }
         @keyframes fr-pop { 0% { opacity:0; transform: scale(.4); } 60% { opacity:1; transform: scale(1.1); } 100% { opacity:1; transform: scale(1); } }
         @keyframes fr-spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        @keyframes radar-blip { 0% { opacity:0; transform: scale(.7); } 18% { opacity:1; transform: scale(1); } 78% { opacity:1; } 100% { opacity:0; transform: scale(.92); } }
       `}</style>
       {[0, 1, 2].map(i => (
         <span key={i} style={{ position:"absolute", width:100, height:100, borderRadius:"50%", border:"1.5px solid rgba(184,147,95,.5)", animation:`fr-ripple ${active ? 1.8 : 2.6}s ease-out ${i*0.7}s infinite` }} />
@@ -1420,6 +1442,16 @@ function SonarReveal({ online, active, variant = "faith" }) {
       <div style={{ width:74, height:74, borderRadius:"50%", background:gradient, display:"flex", alignItems:"center", justifyContent:"center", boxShadow:`0 4px 18px ${glow}` }}>
         {isLove ? <Heart size={30} color="#FAF7F0" fill="#FAF7F0" /> : <BookOpen size={30} color="#FAF7F0" />}
       </div>
+      {active && blipName && (
+        <div key={tick} style={{
+          position:"absolute", left:blipPos.x, top:blipPos.y, transform:"translate(-50%,-50%)",
+          display:"flex", alignItems:"center", gap:5, background:"rgba(22,35,63,0.85)", padding:"4px 10px",
+          borderRadius:999, animation:"radar-blip 2s ease-in-out", whiteSpace:"nowrap"
+        }}>
+          <span style={{ width:7, height:7, borderRadius:"50%", background:"#5FCB6E", boxShadow:"0 0 5px rgba(95,203,110,.8)", flexShrink:0 }} />
+          <span style={{ fontFamily:"Inter, sans-serif", fontSize:12.5, color:"#F8F4EA" }}>{blipName}</span>
+        </div>
+      )}
       <div style={{ position:"absolute", inset:0, animation: active ? "fr-spin 7s linear infinite" : "none" }}>
         {shown.map((p, i) => {
           const angle = (i / Math.max(shown.length,1)) * 2 * Math.PI;
