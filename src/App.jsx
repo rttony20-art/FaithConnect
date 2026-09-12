@@ -1485,12 +1485,12 @@ const heading = { fontFamily:"Lora, serif", fontSize:24, color:"#22252B", margin
 const input = { width:"100%", padding:"10px 12px", borderRadius:10, border:"1.5px solid #DDD5C7", fontFamily:"Inter, sans-serif", fontSize:14.5, background:"#fff", boxSizing:"border-box" };
 const primaryBtn = { background:"#B8935F", color:"#FAF7F0", border:"none", padding:"13px 26px", borderRadius:12, fontFamily:"Inter, sans-serif", fontSize:15, fontWeight:600, cursor:"pointer" };
 const ctaBtn = {
-  background:"linear-gradient(180deg, #D6AE6E 0%, #B8935F 55%, #9C7A48 100%)",
-  color:"#2A1F0E", border:"1px solid #8A6A38",
+  background:"linear-gradient(180deg, #8FC79A 0%, #6FA97C 55%, #57905F 100%)",
+  color:"#0F2013", border:"1px solid #4E7A56",
   padding:"15px 28px", borderRadius:999,
   fontFamily:"Inter, sans-serif", fontSize:15.5, fontWeight:700,
   cursor:"pointer", letterSpacing:0.2,
-  boxShadow:"0 3px 0 #7C6032, 0 8px 16px rgba(0,0,0,.28), inset 0 1px 0 rgba(255,255,255,.5)",
+  boxShadow:"0 3px 0 #3F6448, 0 8px 16px rgba(0,0,0,.28), inset 0 1px 0 rgba(255,255,255,.5)",
   display:"inline-flex", alignItems:"center", justifyContent:"center", gap:8
 };
 const secondaryBtn = { background:"transparent", color:"#B8935F", border:"1.5px solid #B8935F", padding:"11px 20px", borderRadius:12, fontFamily:"Inter, sans-serif", fontSize:14.5, fontWeight:600, cursor:"pointer" };
