@@ -14,6 +14,10 @@ const GOALS = ["Marriage-minded","Dating intentionally","Getting to know people"
 const PERSONALITY = ["Introvert","Extrovert","Quiet","Social","Morning person","Night owl","Homebody","Adventurous","Easygoing","Organized","Spontaneous","Analytical","Empathetic","Funny & playful","Reserved","Outgoing","Family-oriented","Independent","Romantic","Practical","Optimistic","Deep thinker","Affectionate","Straightforward"];
 const DENOMS = ["Non-denominational","Baptist","Catholic","Methodist","Pentecostal","Presbyterian","Lutheran","Orthodox","Anglican / Episcopal","Just Christian"];
 
+// Experimental dark background: soft green glow blobs on black, in place of solid navy.
+// To revert, change GLOW_BG back to the string "#16233F".
+const GLOW_BG = 'radial-gradient(circle at 78% 12%, rgba(46,148,68,0.55), transparent 42%), radial-gradient(circle at 55% 42%, rgba(24,102,40,0.55), transparent 45%), radial-gradient(circle at 88% 68%, rgba(30,120,46,0.5), transparent 45%), radial-gradient(circle at 20% 84%, rgba(20,80,30,0.4), transparent 40%), #050806';
+
 function genId() { return Math.random().toString(36).slice(2, 10); }
 function convoId(a, b) { return [a, b].sort().join("-"); }
 
@@ -436,7 +440,7 @@ export default function App() {
     return (
       <div style={page}>
         <FontLoader />
-        <div style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "center", padding: "40px 28px", background: "#16233F" }}>
+        <div style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "center", padding: "40px 28px", background:GLOW_BG }}>
           <div style={{ fontFamily: "Lora, serif", fontSize: 15, letterSpacing: 1, color: "#B8935F", marginBottom: 10 }}>a faith-centered matchmaking app</div>
           <h1 style={{ fontFamily: "Lora, serif", fontSize: 40, lineHeight: 1.15, color: "#F8F4EA", fontWeight: 600, margin: "0 0 18px" }}>
             Built on shared conviction, not just chemistry.
@@ -628,7 +632,7 @@ export default function App() {
           <MenuDrawer open={menuOpen} onClose={() => setMenuOpen(false)} onLogOut={logOut} onNavigate={setScreen} />
           <MatchHero count={matches.length} onMeetSomeone={() => setScreen("meetSomeone")} />
         </div>
-        <div style={{ background:"#16233F", paddingBottom:100 }}>
+        <div style={{ background:GLOW_BG, paddingBottom:100 }}>
           <div style={{ padding: "28px 16px 0" }}>
             <IronSharpensIronCard onOpen={() => setScreen("fellowship")} />
             <button onClick={() => setScreen("fellowship")} style={{ ...ctaBtn, width:"100%", marginTop:14 }}>Share with someone <ArrowRight size={18} /></button>
@@ -720,7 +724,7 @@ function MenuDrawer({ open, onClose, onLogOut, onNavigate }) {
         opacity: open ? 1 : 0, pointerEvents: open ? "auto" : "none", transition:"opacity .25s"
       }} />
       <div style={{
-        position:"fixed", top:0, left:0, bottom:0, width:260, background:"#16233F", zIndex:21,
+        position:"fixed", top:0, left:0, bottom:0, width:260, background:GLOW_BG, zIndex:21,
         transform: open ? "translateX(0)" : "translateX(-100%)", transition:"transform .28s ease", padding:"22px 18px", boxShadow:"2px 0 20px rgba(0,0,0,.3)"
       }}>
         <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:24 }}>
@@ -752,7 +756,7 @@ function MenuDrawer({ open, onClose, onLogOut, onNavigate }) {
 
 function MatchHero({ count, onMeetSomeone }) {
   return (
-    <div style={{ background:"#16233F", padding:"36px 22px 40px", textAlign:"center", position:"relative", overflow:"hidden" }}>
+    <div style={{ background:GLOW_BG, padding:"36px 22px 40px", textAlign:"center", position:"relative", overflow:"hidden" }}>
       <style>{`
         @keyframes ripple-out {
           0%   { transform: scale(0.5); opacity: 0.55; }
@@ -802,12 +806,12 @@ function MatchListScreen({ matches, onOpenChat, onBack }) {
   return (
     <div style={page}>
       <FontLoader />
-      <div style={{ padding:"18px 16px 4px", background:"#16233F" }}>
+      <div style={{ padding:"18px 16px 4px", background:GLOW_BG }}>
         <button onClick={onBack} style={{ ...backBtn, color:"#B8935F", marginBottom:10 }}><ChevronLeft size={18}/> Back</button>
         <h2 style={{ fontFamily:"Lora, serif", fontSize:22, color:"#F8F4EA", margin:"0 0 4px" }}>See who you match with</h2>
         <p style={{ fontFamily:"Inter, sans-serif", fontSize:13.5, color:"#B9C9BC", margin:"0 0 16px" }}>Ranked by shared faith, values, goals, age & interests</p>
       </div>
-      <div style={{ flex:1, overflowY:"auto", padding:"16px 16px 100px", background:"#16233F" }}>
+      <div style={{ flex:1, overflowY:"auto", padding:"16px 16px 100px", background:GLOW_BG }}>
         {matches.length === 0 && <div style={emptyState}>No matches yet — check back once more people join.</div>}
         {matches.map(({ profile, score }) => (
           <div key={profile.id} style={matchCard}>
@@ -1288,8 +1292,8 @@ function RandomConnectScreen({ myId, myProfile, onBack, variant = "faith" }) {
   }
 
   const theme = isLove
-    ? { bg:"#16233F", onlineText: n => `${n} people online`, emptyText: "No one's here yet — check back soon", tagline:"Choose how you'd like to connect — chat, voice, or video", findLabel:"Find my match", searchingText:"Hang tight while we find your match" }
-    : { bg:"#16233F", onlineText: n => `${n} believers online`, emptyText: "Waiting for believers to join", tagline:"Choose how you'd like to connect — chat, voice, or video", findLabel:"Find a believer", searchingText:"Hang tight while we find someone to share with" };
+    ? { bg:GLOW_BG, onlineText: n => `${n} people online`, emptyText: "No one's here yet — check back soon", tagline:"Choose how you'd like to connect — chat, voice, or video", findLabel:"Find my match", searchingText:"Hang tight while we find your match" }
+    : { bg:GLOW_BG, onlineText: n => `${n} believers online`, emptyText: "Waiting for believers to join", tagline:"Choose how you'd like to connect — chat, voice, or video", findLabel:"Find a believer", searchingText:"Hang tight while we find someone to share with" };
 
   if (stage === "setup") {
     return (
@@ -1498,7 +1502,7 @@ const avatarMd = { width:52, height:52, borderRadius:"50%", background:"#EFE9DC"
 const avatarSm = { width:38, height:38, borderRadius:"50%", background:"#EFE9DC", color:"#B8935F", display:"flex", alignItems:"center", justifyContent:"center", fontFamily:"Lora, serif", fontSize:15, flexShrink:0, marginRight:10 };
 const emptyState = { textAlign:"center", color:"#9B9585", fontFamily:"Inter, sans-serif", fontSize:14, padding:"60px 20px" };
 const convoRow = { display:"flex", alignItems:"center", width:"100%", background:"#fff", border:"none", borderRadius:14, padding:12, marginBottom:10, cursor:"pointer", boxShadow:"0 1px 2px rgba(20,20,15,.05)" };
-const chatHeader = { display:"flex", alignItems:"center", padding:"14px 12px", background:"#16233F" };
+const chatHeader = { display:"flex", alignItems:"center", padding:"14px 12px", background:GLOW_BG };
 const iconBtn = { background:"rgba(255,255,255,.1)", border:"none", borderRadius:10, width:36, height:36, display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", marginLeft:6 };
 const composer = { display:"flex", alignItems:"center", gap:8, padding:"10px 12px", background:"#fff", borderTop:"1px solid #E5DFD1" };
 const iconBtnLight = { width:38, height:38, borderRadius:"50%", border:"none", background:"#EFE9DC", display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", flexShrink:0 };
