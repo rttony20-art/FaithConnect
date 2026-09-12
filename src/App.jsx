@@ -541,20 +541,20 @@ export default function App() {
     return (
       <div style={page}>
         <FontLoader />
-        <TopBar onMenu={() => setMenuOpen(true)} dark={false} />
+        <TopBar onMenu={() => setMenuOpen(true)} dark overlay={false} />
         <MenuDrawer open={menuOpen} onClose={() => setMenuOpen(false)} onLogOut={logOut} onNavigate={setScreen} />
-        <div style={{ flex:1, overflowY:"auto", padding:"8px 22px 100px", background:"#FAF7F0" }}>
+        <div style={{ flex:1, overflowY:"auto", padding:"8px 22px 100px", background:GLOW_BG }}>
           <div style={{ width:74, height:74, borderRadius:"50%", background: myProfile.avatarUrl ? `center/cover url(${myProfile.avatarUrl})` : "#B8935F", color:"#FAF7F0", display:"flex", alignItems:"center", justifyContent:"center", fontFamily:"Lora, serif", fontSize:28, margin:"0 auto 14px" }}>
             {!myProfile.avatarUrl && myProfile.name[0]?.toUpperCase()}
           </div>
-          <h2 style={{...heading, textAlign:"center"}}>{myProfile.name}, {myProfile.age}</h2>
-          <p style={{textAlign:"center", color:"#7A7568", fontFamily:"Inter, sans-serif", fontSize:14, marginTop:-8}}>{myProfile.city} · {myProfile.denom}</p>
+          <h2 style={{...heading, textAlign:"center", color:"#F8F4EA"}}>{myProfile.name}, {myProfile.age}</h2>
+          <p style={{textAlign:"center", color:"#B9C9BC", fontFamily:"Inter, sans-serif", fontSize:14, marginTop:-8}}>{myProfile.city} · {myProfile.denom}</p>
           {myProfile.photoUrls && myProfile.photoUrls.length > 0 && (
             <div style={{ display:"flex", gap:8, marginTop:16, overflowX:"auto" }}>
               {myProfile.photoUrls.map((u,i) => <img key={i} src={u} alt="" style={{ width:100, height:130, objectFit:"cover", borderRadius:12, flexShrink:0 }} />)}
             </div>
           )}
-          <p style={{fontFamily:"Inter, sans-serif", fontSize:14.5, color:"#4A4A45", lineHeight:1.6, marginTop:18}}>{myProfile.bio}</p>
+          <p style={{fontFamily:"Inter, sans-serif", fontSize:14.5, color:"#E4E7E2", lineHeight:1.6, marginTop:18}}>{myProfile.bio}</p>
           <div style={{marginTop:18}}><Tag list={myProfile.values} /></div>
           <div style={{marginTop:8}}><Tag list={myProfile.hobbies} /></div>
           <div style={{marginTop:8}}><Tag list={myProfile.goals} /></div>
@@ -1480,7 +1480,7 @@ function SonarReveal({ online, active, variant = "faith" }) {
 }
 
 /* ---------------- styles ---------------- */
-const page = { display:"flex", flexDirection:"column", height:"100vh", maxWidth:460, margin:"0 auto", fontFamily:"Inter, sans-serif", background:"#FAF7F0", overflow:"hidden" };
+const page = { display:"flex", flexDirection:"column", height:"100vh", maxWidth:460, margin:"0 auto", fontFamily:"Inter, sans-serif", background:GLOW_BG, overflow:"hidden" };
 const heading = { fontFamily:"Lora, serif", fontSize:24, color:"#22252B", margin:"0 0 14px", fontWeight:600 };
 const input = { width:"100%", padding:"10px 12px", borderRadius:10, border:"1.5px solid #DDD5C7", fontFamily:"Inter, sans-serif", fontSize:14.5, background:"#fff", boxSizing:"border-box" };
 const primaryBtn = { background:"#B8935F", color:"#FAF7F0", border:"none", padding:"13px 26px", borderRadius:12, fontFamily:"Inter, sans-serif", fontSize:15, fontWeight:600, cursor:"pointer" };
