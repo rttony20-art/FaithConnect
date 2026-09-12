@@ -1454,21 +1454,23 @@ function SonarReveal({ online, active, variant = "faith" }) {
           <span style={{ fontFamily:"Inter, sans-serif", fontSize:12.5, color:"#F8F4EA" }}>{blipName}</span>
         </div>
       )}
-      <div style={{ position:"absolute", inset:0, animation: active ? "fr-spin 7s linear infinite" : "none" }}>
-        {shown.map((p, i) => {
-          const angle = (i / Math.max(shown.length,1)) * 2 * Math.PI;
-          const r = 96;
-          const x = 110 + r * Math.cos(angle) - 14;
-          const y = 110 + r * Math.sin(angle) - 14;
-          return (
-            <div key={p.id} style={{
-              position:"absolute", left:x, top:y, width:28, height:28, borderRadius:"50%", background:"#EFE9DC", color:"#B8935F",
-              display:"flex", alignItems:"center", justifyContent:"center", fontFamily:"Lora, serif", fontSize:12, fontWeight:600,
-              animation:`fr-pop .5s ease ${i*0.15}s both`, boxShadow:"0 2px 6px rgba(0,0,0,.25)"
-            }}>{p.name?.[0]?.toUpperCase() || "?"}</div>
-          );
-        })}
-      </div>
+      {active && (
+        <div style={{ position:"absolute", inset:0, animation:"fr-spin 7s linear infinite" }}>
+          {shown.map((p, i) => {
+            const angle = (i / Math.max(shown.length,1)) * 2 * Math.PI;
+            const r = 96;
+            const x = 110 + r * Math.cos(angle) - 14;
+            const y = 110 + r * Math.sin(angle) - 14;
+            return (
+              <div key={p.id} style={{
+                position:"absolute", left:x, top:y, width:28, height:28, borderRadius:"50%", background:"#EFE9DC", color:"#B8935F",
+                display:"flex", alignItems:"center", justifyContent:"center", fontFamily:"Lora, serif", fontSize:12, fontWeight:600,
+                animation:`fr-pop .5s ease ${i*0.15}s both`, boxShadow:"0 2px 6px rgba(0,0,0,.25)"
+              }}>{p.name?.[0]?.toUpperCase() || "?"}</div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }
