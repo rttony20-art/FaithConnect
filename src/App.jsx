@@ -467,7 +467,7 @@ export default function App() {
     return (
       <div style={page}>
         <FontLoader />
-        <div style={{ flex: 1, overflowY: "auto", padding: "28px 22px 100px", background: "#FAF7F0" }}>
+        <div style={{ flex: 1, overflowY: "auto", padding: "28px 22px 100px", background:GLOW_BG }}>
           <h2 style={heading}>Tell us about you</h2>
           <p style={{ fontFamily:"Inter, sans-serif", fontSize:13, color:"#8A8578", lineHeight:1.5, marginTop:-8, marginBottom:18 }}>
             What you share on this page is how we match you with someone else — other members can see it to find out if you're a good match.
@@ -570,7 +570,7 @@ export default function App() {
     return (
       <div style={page}>
         <FontLoader />
-        <div style={{ flex: 1, overflowY: "auto", padding: "20px 22px 100px", background: "#FAF7F0" }}>
+        <div style={{ flex: 1, overflowY: "auto", padding: "20px 22px 100px", background:GLOW_BG }}>
           <button onClick={()=>setScreen("profile")} style={backBtn}><ChevronLeft size={18}/> Back</button>
           <h2 style={heading}>Edit your profile</h2>
           <div style={{ display:"flex", justifyContent:"center", marginBottom:8 }}>
@@ -626,7 +626,7 @@ export default function App() {
   return (
     <div style={page}>
       <FontLoader />
-      <div ref={matchesScrollRef} style={{ flex:1, overflowY:"auto", background:"#FAF7F0" }}>
+      <div ref={matchesScrollRef} style={{ flex:1, overflowY:"auto", background:GLOW_BG }}>
         <div style={{ position:"relative" }}>
           <TopBar onMenu={() => setMenuOpen(true)} dark overlay />
           <MenuDrawer open={menuOpen} onClose={() => setMenuOpen(false)} onLogOut={logOut} onNavigate={setScreen} />
@@ -666,7 +666,7 @@ export default function App() {
 function Field({ label, children, style }) {
   return (
     <div style={{ marginBottom: 16, ...style }}>
-      <label style={{ fontFamily:"Inter, sans-serif", fontSize:13, color:"#6B6658", display:"block", marginBottom:6 }}>{label}</label>
+      <label style={{ fontFamily:"Inter, sans-serif", fontSize:13, color:"#C9C2AF", display:"block", marginBottom:6 }}>{label}</label>
       {children}
     </div>
   );
@@ -1083,7 +1083,7 @@ function ChatScreen({ myId, myProfile, other, onBack }) {
         <button onClick={() => startCall("audio")} style={iconBtn}><Phone size={19} color="#F8F4EA" /></button>
         <button onClick={() => startCall("video")} style={iconBtn}><Video size={19} color="#F8F4EA" /></button>
       </div>
-      <div style={{ flex:1, overflowY:"auto", padding:"16px 14px", background:"#FAF7F0", display:"flex", flexDirection:"column" }}>
+      <div style={{ flex:1, overflowY:"auto", padding:"16px 14px", background:GLOW_BG, display:"flex", flexDirection:"column" }}>
         {messages.length === 0 && <div style={emptyState}>Say hello — your conversation starts here.</div>}
         {messages.map((m, i) => (
           <div key={i} style={{ alignSelf: m.sender === myId ? "flex-end" : "flex-start", maxWidth:"75%", marginBottom:10 }}>
@@ -1094,7 +1094,7 @@ function ChatScreen({ myId, myProfile, other, onBack }) {
         ))}
         <div ref={bottomRef} />
       </div>
-      {callErr && <div style={{fontSize:12, color:"#B5616B", fontFamily:"Inter, sans-serif", padding:"4px 14px", background:"#FAF7F0"}}>{callErr}</div>}
+      {callErr && <div style={{fontSize:12, color:"#B5616B", fontFamily:"Inter, sans-serif", padding:"4px 14px", background:GLOW_BG}}>{callErr}</div>}
       <div style={composer}>
         <button onClick={recording ? stopRecording : startRecording} style={{ ...iconBtnLight, background: recording ? "#B5616B" : "#EFE9DC" }}>
           {recording ? <Square size={17} color="#fff" /> : <Mic size={18} color="#4A4A45" />}
@@ -1351,7 +1351,7 @@ function RandomConnectScreen({ myId, myProfile, onBack, variant = "faith" }) {
           <div style={{ flex:1, fontFamily:"Lora, serif", fontSize:16.5, color:"#F8F4EA" }}>{partner?.name || "Believer"}</div>
           <button onClick={skip} style={iconBtn}><SkipForward size={18} color="#F8F4EA" /></button>
         </div>
-        <div style={{ flex:1, overflowY:"auto", padding:"16px 14px", background:"#FAF7F0", display:"flex", flexDirection:"column" }}>
+        <div style={{ flex:1, overflowY:"auto", padding:"16px 14px", background:GLOW_BG, display:"flex", flexDirection:"column" }}>
           {messages.length === 0 && <div style={emptyState}>Say hello and share what's on your heart.</div>}
           {messages.map((m, i) => (
             <div key={i} style={{ alignSelf: m.sender === myId ? "flex-end" : "flex-start", maxWidth:"75%", marginBottom:10 }}>
@@ -1481,7 +1481,7 @@ function SonarReveal({ online, active, variant = "faith" }) {
 
 /* ---------------- styles ---------------- */
 const page = { display:"flex", flexDirection:"column", height:"100vh", maxWidth:460, margin:"0 auto", fontFamily:"Inter, sans-serif", background:GLOW_BG, overflow:"hidden" };
-const heading = { fontFamily:"Lora, serif", fontSize:24, color:"#22252B", margin:"0 0 14px", fontWeight:600 };
+const heading = { fontFamily:"Lora, serif", fontSize:24, color:"#F8F4EA", margin:"0 0 14px", fontWeight:600 };
 const input = { width:"100%", padding:"10px 12px", borderRadius:10, border:"1.5px solid #DDD5C7", fontFamily:"Inter, sans-serif", fontSize:14.5, background:"#fff", boxSizing:"border-box" };
 const primaryBtn = { background:"#B8935F", color:"#FAF7F0", border:"none", padding:"13px 26px", borderRadius:12, fontFamily:"Inter, sans-serif", fontSize:15, fontWeight:600, cursor:"pointer" };
 const ctaBtn = {
@@ -1495,8 +1495,8 @@ const ctaBtn = {
 };
 const secondaryBtn = { background:"transparent", color:"#B8935F", border:"1.5px solid #B8935F", padding:"11px 20px", borderRadius:12, fontFamily:"Inter, sans-serif", fontSize:14.5, fontWeight:600, cursor:"pointer" };
 const backBtn = { display:"flex", alignItems:"center", gap:2, background:"none", border:"none", color:"#B8935F", fontFamily:"Inter, sans-serif", fontSize:14, cursor:"pointer", padding:0, marginBottom:12 };
-const navBar = { display:"flex", borderTop:"1px solid #E5DFD1", background:"#FAF7F0", position:"sticky", bottom:0 };
-const navBtn = active => ({ flex:1, display:"flex", flexDirection:"column", alignItems:"center", padding:"10px 0 12px", background:"none", border:"none", cursor:"pointer", color: active ? "#B8935F" : "#9B9585" });
+const navBar = { display:"flex", borderTop:"1px solid rgba(255,255,255,0.12)", background:GLOW_BG, position:"sticky", bottom:0 };
+const navBtn = active => ({ flex:1, display:"flex", flexDirection:"column", alignItems:"center", padding:"10px 0 12px", background:"none", border:"none", cursor:"pointer", color: active ? "#D6AE6E" : "#9BA5A0" });
 const matchCard = { background:"#fff", borderRadius:18, padding:16, marginBottom:14, boxShadow:"0 1px 3px rgba(20,20,15,.06)" };
 const avatarMd = { width:52, height:52, borderRadius:"50%", background:"#EFE9DC", color:"#B8935F", display:"flex", alignItems:"center", justifyContent:"center", fontFamily:"Lora, serif", fontSize:20, flexShrink:0 };
 const avatarSm = { width:38, height:38, borderRadius:"50%", background:"#EFE9DC", color:"#B8935F", display:"flex", alignItems:"center", justifyContent:"center", fontFamily:"Lora, serif", fontSize:15, flexShrink:0, marginRight:10 };
