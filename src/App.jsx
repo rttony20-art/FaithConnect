@@ -839,7 +839,7 @@ function IronSharpensIronCard({ onOpen }) {
   return (
     <button onClick={onOpen} style={{
       display:"flex", alignItems:"center", gap:16, width:"100%", textAlign:"left",
-      background:"#5B5F5C", border:"1.5px solid #75786F", borderRadius:18, padding:16, marginBottom:14, cursor:"pointer"
+      background:"#7C6032", border:"1.5px solid #9C7A48", borderRadius:18, padding:16, marginBottom:14, cursor:"pointer"
     }}>
       <style>{`
         @keyframes iron-ripple { 0% { transform: scale(0.5); opacity:.5; } 100% { transform: scale(2.2); opacity:0; } }
@@ -848,13 +848,13 @@ function IronSharpensIronCard({ onOpen }) {
         {[0, 1].map(i => (
           <span key={i} style={{ position:"absolute", width:44, height:44, borderRadius:"50%", border:"1.5px solid rgba(238,232,211,.55)", animation:`iron-ripple 2.4s ease-out ${i*0.8}s infinite` }} />
         ))}
-        <div style={{ position:"relative", width:40, height:40, borderRadius:"50%", background:"#D6D9D3", display:"flex", alignItems:"center", justifyContent:"center", boxShadow:"0 3px 10px rgba(214,217,211,.35)" }}>
-          <BookOpen size={19} color="#3A3D3A" />
+        <div style={{ position:"relative", width:40, height:40, borderRadius:"50%", background:"#D6AE6E", display:"flex", alignItems:"center", justifyContent:"center", boxShadow:"0 3px 10px rgba(214,174,110,.4)" }}>
+          <BookOpen size={19} color="#4A3410" />
         </div>
       </div>
       <div style={{ flex:1 }}>
         <div style={{ fontFamily:"Lora, serif", fontSize:17, color:"#F8F4EA" }}>Iron Sharpens Iron</div>
-        <div style={{ fontFamily:"Inter, sans-serif", fontSize:13, color:"#D6D9D3", marginTop:2 }}>Meet a random believer and share about your faith</div>
+        <div style={{ fontFamily:"Inter, sans-serif", fontSize:13, color:"#E4D3B0", marginTop:2 }}>Meet a random believer and share about your faith</div>
       </div>
     </button>
   );
@@ -1485,12 +1485,12 @@ const heading = { fontFamily:"Lora, serif", fontSize:24, color:"#22252B", margin
 const input = { width:"100%", padding:"10px 12px", borderRadius:10, border:"1.5px solid #DDD5C7", fontFamily:"Inter, sans-serif", fontSize:14.5, background:"#fff", boxSizing:"border-box" };
 const primaryBtn = { background:"#B8935F", color:"#FAF7F0", border:"none", padding:"13px 26px", borderRadius:12, fontFamily:"Inter, sans-serif", fontSize:15, fontWeight:600, cursor:"pointer" };
 const ctaBtn = {
-  background:"linear-gradient(180deg, #8FC79A 0%, #6FA97C 55%, #57905F 100%)",
-  color:"#0F2013", border:"1px solid #4E7A56",
+  background:"linear-gradient(180deg, #D6AE6E 0%, #B8935F 55%, #9C7A48 100%)",
+  color:"#2A1F0E", border:"1px solid #8A6A38",
   padding:"15px 28px", borderRadius:999,
   fontFamily:"Inter, sans-serif", fontSize:15.5, fontWeight:700,
   cursor:"pointer", letterSpacing:0.2,
-  boxShadow:"0 3px 0 #3F6448, 0 8px 16px rgba(0,0,0,.28), inset 0 1px 0 rgba(255,255,255,.5)",
+  boxShadow:"0 3px 0 #7C6032, 0 8px 16px rgba(0,0,0,.28), inset 0 1px 0 rgba(255,255,255,.5)",
   display:"inline-flex", alignItems:"center", justifyContent:"center", gap:8
 };
 const secondaryBtn = { background:"transparent", color:"#B8935F", border:"1.5px solid #B8935F", padding:"11px 20px", borderRadius:12, fontFamily:"Inter, sans-serif", fontSize:14.5, fontWeight:600, cursor:"pointer" };
