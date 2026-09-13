@@ -1084,22 +1084,22 @@ function IronSharpensIronCard({ onOpen }) {
   return (
     <button onClick={onOpen} style={{
       display:"flex", alignItems:"center", gap:16, width:"100%", textAlign:"left",
-      background:"#7C6032", border:"1.5px solid #9C7A48", borderRadius:18, padding:16, marginBottom:14, cursor:"pointer"
+      background:"#7A1330", border:"1.5px solid #9E2748", borderRadius:18, padding:16, marginBottom:14, cursor:"pointer"
     }}>
       <style>{`
         @keyframes iron-ripple { 0% { transform: scale(0.5); opacity:.5; } 100% { transform: scale(2.2); opacity:0; } }
       `}</style>
       <div style={{ position:"relative", width:64, height:64, flexShrink:0, display:"flex", alignItems:"center", justifyContent:"center" }}>
         {[0, 1].map(i => (
-          <span key={i} style={{ position:"absolute", width:44, height:44, borderRadius:"50%", border:"1.5px solid rgba(238,232,211,.55)", animation:`iron-ripple 2.4s ease-out ${i*0.8}s infinite` }} />
+          <span key={i} style={{ position:"absolute", width:44, height:44, borderRadius:"50%", border:"1.5px solid rgba(232,164,181,.55)", animation:`iron-ripple 2.4s ease-out ${i*0.8}s infinite` }} />
         ))}
-        <div style={{ position:"relative", width:40, height:40, borderRadius:"50%", background:"#D6AE6E", display:"flex", alignItems:"center", justifyContent:"center", boxShadow:"0 3px 10px rgba(214,174,110,.4)" }}>
-          <BookOpen size={19} color="#4A3410" />
+        <div style={{ position:"relative", width:40, height:40, borderRadius:"50%", background:"#E8A4B5", display:"flex", alignItems:"center", justifyContent:"center", boxShadow:"0 3px 10px rgba(232,164,181,.4)" }}>
+          <BookOpen size={19} color="#4A0A1C" />
         </div>
       </div>
       <div style={{ flex:1 }}>
         <div style={{ fontFamily:"Lora, serif", fontSize:17, color:"#F8F4EA" }}>Iron Sharpens Iron</div>
-        <div style={{ fontFamily:"Inter, sans-serif", fontSize:13, color:"#E4D3B0", marginTop:2 }}>Meet a random believer and share about your faith</div>
+        <div style={{ fontFamily:"Inter, sans-serif", fontSize:13, color:"#F0C6D1", marginTop:2 }}>Meet a random believer and share about your faith</div>
       </div>
     </button>
   );
@@ -1656,8 +1656,8 @@ function RandomConnectScreen({ myId, myProfile, onBack, variant = "faith" }) {
 function SonarReveal({ online, active, variant = "faith" }) {
   const shown = online.slice(0, 10);
   const isLove = variant === "love";
-  const gradient = isLove ? "linear-gradient(135deg,#D98089,#8E4650)" : "linear-gradient(135deg,#8AAE8E,#4E6E52)";
-  const glow = isLove ? "rgba(181,97,107,.5)" : "rgba(78,110,82,.5)";
+  const gradient = isLove ? "linear-gradient(135deg,#D98089,#8E4650)" : "linear-gradient(135deg,#E8A4B5,#7A1330)";
+  const glow = isLove ? "rgba(181,97,107,.5)" : "rgba(122,19,48,.5)";
   const [tick, setTick] = useState(0);
   const [blipName, setBlipName] = useState(null);
   const [blipPos, setBlipPos] = useState({ x: 110, y: 40 });
