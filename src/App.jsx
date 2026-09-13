@@ -1674,7 +1674,7 @@ function SonarReveal({ online, active, variant = "faith" }) {
 /* ---------------- styles ---------------- */
 const page = { display:"flex", flexDirection:"column", height:"100vh", maxWidth:460, margin:"0 auto", fontFamily:"Inter, sans-serif", background:GLOW_BG, overflow:"hidden" };
 const heading = { fontFamily:"Lora, serif", fontSize:24, color:"#F8F4EA", margin:"0 0 14px", fontWeight:600 };
-const input = { width:"100%", padding:"10px 12px", borderRadius:10, border:"1.5px solid #DDD5C7", fontFamily:"Inter, sans-serif", fontSize:14.5, background:"#fff", boxSizing:"border-box" };
+const input = { width:"100%", padding:"10px 12px", borderRadius:10, border:"1.5px solid #9C7A48", fontFamily:"Inter, sans-serif", fontSize:14.5, background:"#3E2E14", color:"#F8F4EA", boxSizing:"border-box" };
 const primaryBtn = { background:"#B8935F", color:"#FAF7F0", border:"none", padding:"13px 26px", borderRadius:12, fontFamily:"Inter, sans-serif", fontSize:15, fontWeight:600, cursor:"pointer" };
 const ctaBtn = {
   background:"linear-gradient(180deg, #D6AE6E 0%, #B8935F 55%, #9C7A48 100%)",
