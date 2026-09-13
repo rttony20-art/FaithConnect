@@ -43,6 +43,16 @@ async function supaAuthGet(path, token) {
   if (!res.ok) throw new Error(data.error_description || data.msg || `Auth request failed (${res.status})`);
   return data;
 }
+async function supaAuthUpdateUser(token, body) {
+  const res = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json", "apikey": SUPABASE_ANON_KEY, "Authorization": `Bearer ${token}` },
+    body: JSON.stringify(body)
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error_description || data.msg || `Update failed (${res.status})`);
+  return data;
+}
 async function supaRest(path, { method = "GET", token, body, extraHeaders = {} } = {}) {
   const headers = { "apikey": SUPABASE_ANON_KEY, "Content-Type": "application/json", ...extraHeaders };
   if (token) headers["Authorization"] = `Bearer ${token}`;
@@ -206,7 +216,7 @@ export default function App() {
   const [screen, setScreen] = useState("loading"); // loading, welcome, profile, matches, chat, messages
   const [myId, setMyId] = useState(null);
   const [myProfile, setMyProfile] = useState(null);
-  const [form, setForm] = useState({ name:"", age:"", gender:"Female", seeking:"Male", city:"", denom: DENOMS[0], faithLevel:3, bio:"", values:[], hobbies:[], goals:[], appearance:[], lookPref:[], username:"", password:"", avatarUrl:null, photoUrls:[] });
+  const [form, setForm] = useState({ name:"", age:"", gender:"Female", seeking:"Male", city:"", denom: DENOMS[0], faithLevel:3, bio:"", values:[], hobbies:[], goals:[], appearance:[], lookPref:[], username:"", password:"", email:"", avatarUrl:null, photoUrls:[] });
   const [avatarFile, setAvatarFile] = useState(null);
   const [avatarPreview, setAvatarPreview] = useState(null);
   const [photoFiles, setPhotoFiles] = useState([null, null, null]);
@@ -218,6 +228,13 @@ export default function App() {
   const [loginUser, setLoginUser] = useState("");
   const [loginPass, setLoginPass] = useState("");
   const [loginErr, setLoginErr] = useState("");
+  const [recoveryMode, setRecoveryMode] = useState(null); // null | "password" | "username"
+  const [recoveryEmail, setRecoveryEmail] = useState("");
+  const [recoveryMsg, setRecoveryMsg] = useState("");
+  const [recoveryToken, setRecoveryToken] = useState(null);
+  const [newPassword, setNewPassword] = useState("");
+  const [newPasswordErr, setNewPasswordErr] = useState("");
+  const [newPasswordBusy, setNewPasswordBusy] = useState(false);
   const [loginBusy, setLoginBusy] = useState(false);
   const matchesScrollRef = useRef(null);
   useEffect(() => { if (screen === "matches" && matchesScrollRef.current) matchesScrollRef.current.scrollTop = 0; }, [screen]);
@@ -227,7 +244,7 @@ export default function App() {
     try { await sdel("supabase-session", false); } catch {}
     setMyId(null);
     setMyProfile(null);
-    setForm({ name:"", age:"", gender:"Female", seeking:"Male", city:"", denom: DENOMS[0], faithLevel:3, bio:"", values:[], hobbies:[], goals:[], appearance:[], lookPref:[], username:"", password:"", avatarUrl:null, photoUrls:[] });
+    setForm({ name:"", age:"", gender:"Female", seeking:"Male", city:"", denom: DENOMS[0], faithLevel:3, bio:"", values:[], hobbies:[], goals:[], appearance:[], lookPref:[], username:"", password:"", email:"", avatarUrl:null, photoUrls:[] });
     setAvatarFile(null); setAvatarPreview(null); setPhotoFiles([null,null,null]); setPhotoPreviews([null,null,null]);
     setMenuOpen(false);
     setScreen("welcome");
@@ -244,6 +261,18 @@ export default function App() {
   }, [myId, myProfile]);
 
   async function init() {
+    // if the person arrived here via a password-reset email link, Supabase appends
+    // #access_token=...&type=recovery to the URL — catch that before anything else
+    if (window.location.hash.includes("type=recovery")) {
+      const params = new URLSearchParams(window.location.hash.slice(1));
+      const accessToken = params.get("access_token");
+      if (accessToken) {
+        setRecoveryToken(accessToken);
+        window.history.replaceState(null, "", window.location.pathname);
+        setScreen("resetPassword");
+        return;
+      }
+    }
     try {
       const session = await restoreSupaSession();
       if (session && session.access_token) {
@@ -313,36 +342,43 @@ export default function App() {
     }
     if (!form.username || !form.username.trim()) { setErr("Please choose a username."); return; }
     if (!form.password || form.password.length < 6) { setErr("Password must be at least 6 characters."); return; }
+    if (!form.email || !/^\S+@\S+\.\S+$/.test(form.email.trim())) { setErr("Please add a valid email — it's used if you ever need to reset your password."); return; }
     const uname = form.username.trim().toLowerCase().replace(/\s+/g, "");
+    const email = form.email.trim().toLowerCase();
     if (!uname) { setErr("Please choose a username."); return; }
     setErr("Creating your account…");
     try {
       let data, user, token;
       try {
-        data = await supaAuth("signup", { email: usernameToEmail(uname), password: form.password });
+        data = await supaAuth("signup", { email, password: form.password });
         user = data.user || data;
         token = data.access_token;
       } catch (signupErr) {
         // account already exists — if these are YOUR credentials (e.g. a profile save got interrupted earlier), recover it instead of blocking you
         if (/registered|exists|duplicate/i.test(signupErr.message)) {
           try {
-            data = await supaAuth("token?grant_type=password", { email: usernameToEmail(uname), password: form.password });
+            data = await supaAuth("token?grant_type=password", { email, password: form.password });
             user = data.user; token = data.access_token;
           } catch {
-            setErr("That username is taken — try another.");
+            setErr("That email is already registered — try logging in instead, or use 'Forgot password?'.");
             return;
           }
         } else { throw signupErr; }
       }
       if (!token) {
-        data = await supaAuth("token?grant_type=password", { email: usernameToEmail(uname), password: form.password });
+        data = await supaAuth("token?grant_type=password", { email, password: form.password });
         user = data.user; token = data.access_token;
       }
       if (!user || !user.id || !token) { setErr("Something went wrong creating your account — try again."); return; }
       setErr("Uploading photos…");
       const { avatarUrl, photoUrls } = await uploadSelectedPhotos(user.id, token);
-      const profile = { ...form, id: user.id, age: Number(form.age), username: uname, avatarUrl, photoUrls };
+      const profile = { ...form, id: user.id, age: Number(form.age), username: uname, email, avatarUrl, photoUrls };
       await supaRest("profiles", { method: "POST", token, body: profileToDb(profile), extraHeaders: { Prefer: "return=minimal" } });
+      try {
+        await supaRest("usernames", { method: "POST", token, body: { username: uname, email, user_id: user.id }, extraHeaders: { Prefer: "resolution=merge-duplicates" } });
+      } catch (e) {
+        if (/duplicate|already exists/i.test(e.message)) { setErr("That username is taken — try another."); return; }
+      }
       await saveSupaSession(data);
       setErr("");
       setMyId(user.id);
@@ -360,7 +396,10 @@ export default function App() {
     if (!uname || !loginPass) { setLoginErr("Enter your username and password."); return; }
     setLoginBusy(true);
     try {
-      const data = await supaAuth("token?grant_type=password", { email: usernameToEmail(uname), password: loginPass });
+      const mapRows = await supaRest(`usernames?username=eq.${encodeURIComponent(uname)}&select=email`);
+      const email = mapRows && mapRows[0] && mapRows[0].email;
+      if (!email) { setLoginErr("No account found with that username."); setLoginBusy(false); return; }
+      const data = await supaAuth("token?grant_type=password", { email, password: loginPass });
       const rows = await supaRest(`profiles?id=eq.${data.user.id}&select=*`, { token: data.access_token });
       const row = rows && rows[0];
       if (!row) { setLoginErr("Account found, but no profile data — try creating your profile again."); setLoginBusy(false); return; }
@@ -372,6 +411,16 @@ export default function App() {
       setLoginErr(/invalid|credentials/i.test(e.message) ? "Incorrect username or password." : "Couldn't log in: " + e.message);
     }
     setLoginBusy(false);
+  }
+
+  async function sendPasswordReset(email) {
+    const redirectTo = encodeURIComponent(window.location.origin + window.location.pathname);
+    await supaAuth(`recover?redirect_to=${redirectTo}`, { email: email.trim().toLowerCase() });
+  }
+
+  async function lookupUsernameByEmail(email) {
+    const rows = await supaRest(`usernames?email=eq.${encodeURIComponent(email.trim().toLowerCase())}&select=username`);
+    return rows && rows[0] ? rows[0].username : null;
   }
 
   const loadMatches = useCallback(async () => {
@@ -436,6 +485,37 @@ export default function App() {
 
   if (screen === "loading") return <div style={{...page, alignItems:"center", justifyContent:"center"}}><div style={{fontFamily:"Lora, serif", color:"#B8935F"}}>Loading…</div></div>;
 
+  if (screen === "resetPassword") {
+    return (
+      <div style={{ ...page, background: GLOW_BG }}>
+        <FontLoader />
+        <div style={{ flex:1, display:"flex", flexDirection:"column", justifyContent:"center", padding:"0 28px" }}>
+          <h1 style={{ fontFamily:"Lora, serif", fontSize:26, color:"#F8F4EA", marginBottom:8 }}>Set a new password</h1>
+          <p style={{ fontFamily:"Inter, sans-serif", fontSize:14, color:"#C9C2AF", marginBottom:20 }}>Choose a new password for your account (min. 6 characters).</p>
+          <PasswordInput value={newPassword} onChange={e=>setNewPassword(e.target.value)} placeholder="New password" style={{ ...input, marginBottom:10 }} />
+          {newPasswordErr && <div style={{ color:"#E3A6A6", fontSize:13, fontFamily:"Inter, sans-serif", marginBottom:10 }}>{newPasswordErr}</div>}
+          <button disabled={newPasswordBusy} onClick={async () => {
+            setNewPasswordErr("");
+            if (!newPassword || newPassword.length < 6) { setNewPasswordErr("Password must be at least 6 characters."); return; }
+            setNewPasswordBusy(true);
+            try {
+              await supaAuthUpdateUser(recoveryToken, { password: newPassword });
+              const user = await supaAuthGet("user", recoveryToken);
+              await saveSupaSession({ access_token: recoveryToken, refresh_token: null });
+              const rows = await supaRest(`profiles?id=eq.${user.id}&select=*`, { token: recoveryToken });
+              const row = rows && rows[0];
+              if (row) { setMyId(user.id); setMyProfile(profileFromDb(row)); setForm(profileFromDb(row)); }
+              setScreen("matches");
+            } catch (e) {
+              setNewPasswordErr("Couldn't update your password: " + e.message);
+            }
+            setNewPasswordBusy(false);
+          }} style={{ ...primaryBtn, width:"100%" }}>{newPasswordBusy ? "Saving…" : "Save new password"}</button>
+        </div>
+      </div>
+    );
+  }
+
   if (screen === "welcome") {
     return (
       <div style={page}>
@@ -455,6 +535,34 @@ export default function App() {
             <PasswordInput value={loginPass} onChange={e=>setLoginPass(e.target.value)} onKeyDown={e => e.key === "Enter" && logIn()} placeholder="Password" style={{ ...input, background:"#3E2E14", color:"#F8F4EA", border:"1.5px solid #9C7A48", marginBottom:8 }} />
             <button onClick={logIn} disabled={loginBusy} style={{ ...primaryBtn, width:"100%" }}>{loginBusy ? "Logging in…" : "Log in"}</button>
             {loginErr && <div style={{ color:"#E3A6A6", fontSize:13, fontFamily:"Inter, sans-serif", marginTop:8 }}>{loginErr}</div>}
+            <div style={{ display:"flex", justifyContent:"space-between", marginTop:12 }}>
+              <button onClick={() => { setRecoveryMode(recoveryMode === "password" ? null : "password"); setRecoveryMsg(""); setRecoveryEmail(""); }} style={{ background:"none", border:"none", color:"#F0E6C8", fontFamily:"Inter, sans-serif", fontSize:12.5, textDecoration:"underline", cursor:"pointer", padding:0 }}>Forgot password?</button>
+              <button onClick={() => { setRecoveryMode(recoveryMode === "username" ? null : "username"); setRecoveryMsg(""); setRecoveryEmail(""); }} style={{ background:"none", border:"none", color:"#F0E6C8", fontFamily:"Inter, sans-serif", fontSize:12.5, textDecoration:"underline", cursor:"pointer", padding:0 }}>Forgot username?</button>
+            </div>
+            {recoveryMode && (
+              <div style={{ marginTop:12, paddingTop:12, borderTop:"1px solid #9C7A48" }}>
+                <label style={{ fontFamily:"Inter, sans-serif", fontSize:12.5, color:"#F0E6C8", display:"block", marginBottom:6 }}>
+                  {recoveryMode === "password" ? "Enter your email — we'll send a reset link" : "Enter your email — we'll show your username"}
+                </label>
+                <div style={{ display:"flex", gap:8 }}>
+                  <input type="email" value={recoveryEmail} onChange={e=>setRecoveryEmail(e.target.value)} placeholder="you@example.com" style={{ ...input, flex:1, background:"#3E2E14", color:"#F8F4EA", border:"1.5px solid #9C7A48" }} />
+                  <button onClick={async () => {
+                    if (!recoveryEmail.trim()) return;
+                    setRecoveryMsg("Working…");
+                    try {
+                      if (recoveryMode === "password") {
+                        await sendPasswordReset(recoveryEmail);
+                        setRecoveryMsg("If that email has an account, a reset link is on its way.");
+                      } else {
+                        const uname = await lookupUsernameByEmail(recoveryEmail);
+                        setRecoveryMsg(uname ? `Your username is: ${uname}` : "No account found with that email.");
+                      }
+                    } catch (e) { setRecoveryMsg("Something went wrong — try again."); }
+                  }} style={{ ...primaryBtn, padding:"10px 16px" }}>Send</button>
+                </div>
+                {recoveryMsg && <div style={{ color:"#F0E6C8", fontSize:12.5, fontFamily:"Inter, sans-serif", marginTop:8 }}>{recoveryMsg}</div>}
+              </div>
+            )}
           </div>
 
           <button onClick={() => setScreen("profile")} style={{ ...secondaryBtn, marginTop: 20, alignSelf: "flex-start", borderColor:"#B8935F", color:"#B8935F" }}>New here? Create your profile</button>
@@ -487,6 +595,9 @@ export default function App() {
           </Field>
           <Field label="Password (min. 6 characters)">
             <PasswordInput style={input} value={form.password||""} onChange={e=>setForm({...form,password:e.target.value})} placeholder="Choose a password" />
+          </Field>
+          <Field label="Email — only used if you ever need to reset your password">
+            <input type="email" style={input} value={form.email||""} onChange={e=>setForm({...form,email:e.target.value})} placeholder="you@example.com" />
           </Field>
           <Field label="Name"><input style={input} value={form.name} onChange={e=>setForm({...form,name:e.target.value})} /></Field>
           <div style={{ display:"flex", gap: 10 }}>
@@ -535,6 +646,10 @@ export default function App() {
 
   if (screen === "matchList") {
     return <MatchListScreen matches={matches} onOpenChat={(id, profile) => { setActiveConvo({ otherId: id, otherProfile: profile }); setScreen("chat"); }} onBack={() => setScreen("matches")} />;
+  }
+
+  if (screen === "security") {
+    return <SecurityScreen myId={myId} myProfile={myProfile} onBack={() => setScreen("profile")} onUsernameChanged={u => { const updated = { ...myProfile, username: u }; setMyProfile(updated); setForm(updated); }} />;
   }
 
   if (screen === "profile" && myProfile) {
@@ -713,6 +828,7 @@ function MenuDrawer({ open, onClose, onLogOut, onNavigate }) {
     { icon: BookOpen, label: "Share", action: () => onNavigate("fellowship") },
     { icon: MessageCircle, label: "Messages", action: () => onNavigate("messages") },
     { icon: User, label: "Profile", action: () => onNavigate("profile") },
+    { icon: Shield, label: "Security", action: () => onNavigate("security") },
     { icon: UserPlus, label: "Invite a friend", action: async () => {
         try {
           await navigator.clipboard.writeText(window.location.href);
@@ -803,6 +919,77 @@ function MatchHero({ count, onMeetSomeone }) {
       <button onClick={onMeetSomeone} style={ctaBtn}>
         Meet someone <ArrowRight size={18} />
       </button>
+    </div>
+  );
+}
+
+function SecurityScreen({ myId, myProfile, onBack, onUsernameChanged }) {
+  const [newUsername, setNewUsername] = useState(myProfile?.username || "");
+  const [usernameMsg, setUsernameMsg] = useState("");
+  const [usernameBusy, setUsernameBusy] = useState(false);
+  const [newPass, setNewPass] = useState("");
+  const [passMsg, setPassMsg] = useState("");
+  const [passBusy, setPassBusy] = useState(false);
+
+  async function changeUsername() {
+    setUsernameMsg("");
+    const uname = newUsername.trim().toLowerCase().replace(/\s+/g, "");
+    if (!uname) { setUsernameMsg("Enter a username."); return; }
+    if (uname === myProfile.username) { setUsernameMsg("That's already your username."); return; }
+    setUsernameBusy(true);
+    try {
+      const session = await restoreSupaSession();
+      if (!session) { setUsernameMsg("Your session expired — please log in again."); setUsernameBusy(false); return; }
+      const existing = await supaRest(`usernames?username=eq.${encodeURIComponent(uname)}&select=username`);
+      if (existing && existing.length) { setUsernameMsg("That username is taken — try another."); setUsernameBusy(false); return; }
+      await supaRest(`usernames?username=eq.${encodeURIComponent(myProfile.username)}`, { method: "PATCH", token: session.access_token, body: { username: uname }, extraHeaders: { Prefer: "return=minimal" } });
+      await supaRest(`profiles?id=eq.${myId}`, { method: "PATCH", token: session.access_token, body: { username: uname }, extraHeaders: { Prefer: "return=minimal" } });
+      onUsernameChanged(uname);
+      setUsernameMsg("Username updated!");
+    } catch (e) {
+      setUsernameMsg("Couldn't update username: " + e.message);
+    }
+    setUsernameBusy(false);
+  }
+
+  async function changePassword() {
+    setPassMsg("");
+    if (!newPass || newPass.length < 6) { setPassMsg("Password must be at least 6 characters."); return; }
+    setPassBusy(true);
+    try {
+      const session = await restoreSupaSession();
+      if (!session) { setPassMsg("Your session expired — please log in again."); setPassBusy(false); return; }
+      await supaAuthUpdateUser(session.access_token, { password: newPass });
+      setNewPass("");
+      setPassMsg("Password updated!");
+    } catch (e) {
+      setPassMsg("Couldn't update password: " + e.message);
+    }
+    setPassBusy(false);
+  }
+
+  return (
+    <div style={page}>
+      <FontLoader />
+      <div style={{ padding:"18px 22px 8px", background:GLOW_BG }}>
+        <button onClick={onBack} style={{ ...backBtn, color:"#D6AE6E", marginBottom:10 }}><ChevronLeft size={18}/> Back</button>
+        <h2 style={{ ...heading, color:"#F8F4EA" }}>Security</h2>
+        <p style={{ fontFamily:"Inter, sans-serif", fontSize:13.5, color:"#C9C2AF", margin:"0 0 16px" }}>Change your username or password anytime.</p>
+      </div>
+      <div style={{ flex:1, overflowY:"auto", padding:"0 22px 100px", background:GLOW_BG }}>
+        <div style={{ background:"#5C4520", border:"1.5px solid #9C7A48", borderRadius:16, padding:18, marginBottom:16 }}>
+          <label style={{ fontFamily:"Inter, sans-serif", fontSize:13, color:"#F0E6C8", display:"block", marginBottom:8 }}>Username</label>
+          <input value={newUsername} onChange={e=>setNewUsername(e.target.value)} style={{ ...input, background:"#3E2E14", color:"#F8F4EA", border:"1.5px solid #9C7A48", marginBottom:10 }} />
+          <button disabled={usernameBusy} onClick={changeUsername} style={{ ...primaryBtn, width:"100%" }}>{usernameBusy ? "Saving…" : "Update username"}</button>
+          {usernameMsg && <div style={{ color:"#F0E6C8", fontSize:12.5, fontFamily:"Inter, sans-serif", marginTop:8 }}>{usernameMsg}</div>}
+        </div>
+        <div style={{ background:"#5C4520", border:"1.5px solid #9C7A48", borderRadius:16, padding:18 }}>
+          <label style={{ fontFamily:"Inter, sans-serif", fontSize:13, color:"#F0E6C8", display:"block", marginBottom:8 }}>New password</label>
+          <PasswordInput value={newPass} onChange={e=>setNewPass(e.target.value)} placeholder="Min. 6 characters" style={{ ...input, background:"#3E2E14", color:"#F8F4EA", border:"1.5px solid #9C7A48", marginBottom:10 }} />
+          <button disabled={passBusy} onClick={changePassword} style={{ ...primaryBtn, width:"100%" }}>{passBusy ? "Saving…" : "Update password"}</button>
+          {passMsg && <div style={{ color:"#F0E6C8", fontSize:12.5, fontFamily:"Inter, sans-serif", marginTop:8 }}>{passMsg}</div>}
+        </div>
+      </div>
     </div>
   );
 }
