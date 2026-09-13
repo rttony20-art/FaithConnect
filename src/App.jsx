@@ -16,7 +16,7 @@ const DENOMS = ["Non-denominational","Baptist","Catholic","Methodist","Pentecost
 
 // Experimental dark background: soft green glow blobs on black, in place of solid navy.
 // To revert, change GLOW_BG back to the string "#16233F".
-const GLOW_BG = 'radial-gradient(circle at 78% 12%, rgba(46,148,68,0.55), transparent 42%), radial-gradient(circle at 55% 42%, rgba(24,102,40,0.55), transparent 45%), radial-gradient(circle at 88% 68%, rgba(30,120,46,0.5), transparent 45%), radial-gradient(circle at 20% 84%, rgba(20,80,30,0.4), transparent 40%), #050806';
+const GLOW_BG = 'radial-gradient(circle at 75% 30%, rgba(30,50,140,0.55), transparent 50%), radial-gradient(circle at 30% 70%, rgba(15,25,90,0.5), transparent 55%), #05061A';
 
 function genId() { return Math.random().toString(36).slice(2, 10); }
 function convoId(a, b) { return [a, b].sort().join("-"); }
@@ -645,7 +645,7 @@ export default function App() {
   }
 
   if (screen === "matchList") {
-    return <MatchListScreen matches={matches} onOpenChat={(id, profile) => { setActiveConvo({ otherId: id, otherProfile: profile }); setScreen("chat"); }} onBack={() => setScreen("matches")} />;
+    return <MatchListScreen matches={matches} myProfile={myProfile} onOpenChat={(id, profile) => { setActiveConvo({ otherId: id, otherProfile: profile }); setScreen("chat"); }} onBack={() => setScreen("matches")} />;
   }
 
   if (screen === "security") {
@@ -994,35 +994,88 @@ function SecurityScreen({ myId, myProfile, onBack, onUsernameChanged }) {
   );
 }
 
-function MatchListScreen({ matches, onOpenChat, onBack }) {
+function MatchListScreen({ matches, myProfile, onOpenChat, onBack }) {
+  const [reveal, setReveal] = useState(null); // { profile, score } | null
   return (
     <div style={page}>
       <FontLoader />
       <div style={{ padding:"18px 16px 4px", background:GLOW_BG }}>
         <button onClick={onBack} style={{ ...backBtn, color:"#B8935F", marginBottom:10 }}><ChevronLeft size={18}/> Back</button>
         <h2 style={{ fontFamily:"Lora, serif", fontSize:22, color:"#F8F4EA", margin:"0 0 4px" }}>See who you match with</h2>
-        <p style={{ fontFamily:"Inter, sans-serif", fontSize:13.5, color:"#B9C9BC", margin:"0 0 16px" }}>Ranked by shared faith, values, goals, age & interests</p>
+        <p style={{ fontFamily:"Inter, sans-serif", fontSize:13.5, color:"#B9C9BC", margin:"0 0 16px" }}>Tap someone to reveal your match %</p>
       </div>
-      <div style={{ flex:1, overflowY:"auto", padding:"16px 16px 100px", background:GLOW_BG }}>
+      <div style={{ flex:1, overflowY:"auto", padding:"16px 16px 100px", background:GLOW_BG, display:"flex", flexWrap:"wrap", gap:12, alignContent:"flex-start" }}>
         {matches.length === 0 && <div style={emptyState}>No matches yet — check back once more people join.</div>}
         {matches.map(({ profile, score }) => (
-          <div key={profile.id} style={matchCard}>
-            <div style={{display:"flex", gap:14}}>
-              <div style={{...avatarMd, background: profile.avatarUrl ? `center/cover url(${profile.avatarUrl})` : avatarMd.background}}>{!profile.avatarUrl && profile.name?.[0]?.toUpperCase()}</div>
-              <div style={{flex:1}}>
-                <div style={{display:"flex", justifyContent:"space-between", alignItems:"baseline"}}>
-                  <div style={{fontFamily:"Lora, serif", fontSize:17, color:"#22252B"}}>{profile.name}, {profile.age}</div>
-                  <div style={{fontFamily:"Lora, serif", fontSize:17, color:"#B5616B", fontWeight:600}}>{score.pct}%</div>
-                </div>
-                <div style={{fontFamily:"Inter, sans-serif", fontSize:13, color:"#8A8578"}}>{profile.city} · {profile.denom}</div>
-              </div>
+          <button key={profile.id} onClick={() => setReveal({ profile, score })} style={{
+            width:"calc(50% - 6px)", borderRadius:16, overflow:"hidden", border:"1.5px solid #9C7A48",
+            background:"#3E2E14", cursor:"pointer", padding:0, textAlign:"left"
+          }}>
+            <div style={{ width:"100%", aspectRatio:"1", background: profile.avatarUrl ? `center/cover url(${profile.avatarUrl})` : "#5C4520", display:"flex", alignItems:"center", justifyContent:"center" }}>
+              {!profile.avatarUrl && <span style={{ fontFamily:"Lora, serif", fontSize:34, color:"#D6AE6E" }}>{profile.name?.[0]?.toUpperCase()}</span>}
             </div>
-            <p style={{fontFamily:"Inter, sans-serif", fontSize:13.5, color:"#4A4A45", lineHeight:1.5, margin:"10px 0"}}>{profile.bio}</p>
-            <Tag list={[...(profile.values||[]).slice(0,2), ...(profile.hobbies||[]).slice(0,2)]} />
-            <button onClick={() => onOpenChat(profile.id, profile)} style={{...secondaryBtn, width:"100%", marginTop:12}}>Say hello</button>
-          </div>
+            <div style={{ padding:"8px 10px" }}>
+              <div style={{ fontFamily:"Lora, serif", fontSize:15, color:"#F8F4EA" }}>{profile.name}, {profile.age}</div>
+              <div style={{ fontFamily:"Inter, sans-serif", fontSize:11.5, color:"#C9C2AF" }}>{profile.city}</div>
+            </div>
+          </button>
         ))}
       </div>
+      {reveal && (
+        <MatchRevealOverlay
+          myProfile={myProfile}
+          other={reveal.profile}
+          score={reveal.score}
+          onClose={() => setReveal(null)}
+          onSayHello={() => { onOpenChat(reveal.profile.id, reveal.profile); setReveal(null); }}
+        />
+      )}
+    </div>
+  );
+}
+
+function MatchRevealOverlay({ myProfile, other, score, onClose, onSayHello }) {
+  const [count, setCount] = useState(0);
+  useEffect(() => {
+    let raf;
+    const start = performance.now();
+    const duration = 1600;
+    function tick(now) {
+      const t = Math.min(1, (now - start) / duration);
+      const eased = 1 - Math.pow(1 - t, 2);
+      setCount(Math.round(eased * score.pct));
+      if (t < 1) raf = requestAnimationFrame(tick);
+    }
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [score.pct]);
+
+  function Avatar({ p }) {
+    return (
+      <div style={{ width:88, height:88, borderRadius:"50%", background: p.avatarUrl ? `center/cover url(${p.avatarUrl})` : "#B8935F", display:"flex", alignItems:"center", justifyContent:"center", border:"3px solid #D6AE6E", boxShadow:"0 4px 16px rgba(0,0,0,.4)" }}>
+        {!p.avatarUrl && <span style={{ fontFamily:"Lora, serif", fontSize:32, color:"#FAF7F0" }}>{p.name?.[0]?.toUpperCase()}</span>}
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ position:"fixed", inset:0, background:GLOW_BG, zIndex:50, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", padding:24 }}>
+      <FontLoader />
+      <button onClick={onClose} style={{ position:"absolute", top:20, left:16, background:"none", border:"none", cursor:"pointer" }}><X size={24} color="#F8F4EA" /></button>
+      <div style={{ display:"flex", alignItems:"center", gap:20 }}>
+        <div style={{ textAlign:"center" }}>
+          <Avatar p={myProfile} />
+          <div style={{ color:"#F8F4EA", marginTop:8, fontFamily:"Lora, serif", fontSize:14 }}>{myProfile.name}</div>
+        </div>
+        <Heart size={28} color="#D6AE6E" fill="#D6AE6E" />
+        <div style={{ textAlign:"center" }}>
+          <Avatar p={other} />
+          <div style={{ color:"#F8F4EA", marginTop:8, fontFamily:"Lora, serif", fontSize:14 }}>{other.name}</div>
+        </div>
+      </div>
+      <div style={{ fontFamily:"Lora, serif", fontSize:64, color:"#D6AE6E", marginTop:32, fontWeight:700 }}>{count}%</div>
+      <div style={{ fontFamily:"Inter, sans-serif", fontSize:14, color:"#C9C2AF", marginTop:-6 }}>match</div>
+      <button onClick={onSayHello} style={{ ...ctaBtn, marginTop:32 }}>Say hello <ArrowRight size={18} /></button>
     </div>
   );
 }
