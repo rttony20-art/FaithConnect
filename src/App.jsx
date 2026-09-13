@@ -1083,24 +1083,22 @@ function MatchRevealOverlay({ myProfile, other, score, onClose, onSayHello }) {
 function IronSharpensIronCard({ onOpen }) {
   return (
     <button onClick={onOpen} style={{
-      display:"flex", alignItems:"center", gap:16, width:"100%", textAlign:"left",
-      background:"#7A1330", border:"1.5px solid #9E2748", borderRadius:18, padding:16, marginBottom:14, cursor:"pointer"
+      display:"flex", flexDirection:"column", alignItems:"center", width:"100%", textAlign:"center",
+      background:"transparent", border:"none", padding:"8px 16px 4px", marginBottom:6, cursor:"pointer"
     }}>
       <style>{`
         @keyframes iron-ripple { 0% { transform: scale(0.5); opacity:.5; } 100% { transform: scale(2.2); opacity:0; } }
       `}</style>
-      <div style={{ position:"relative", width:64, height:64, flexShrink:0, display:"flex", alignItems:"center", justifyContent:"center" }}>
+      <div style={{ position:"relative", width:64, height:64, flexShrink:0, display:"flex", alignItems:"center", justifyContent:"center", marginBottom:10 }}>
         {[0, 1].map(i => (
           <span key={i} style={{ position:"absolute", width:44, height:44, borderRadius:"50%", border:"1.5px solid rgba(232,164,181,.55)", animation:`iron-ripple 2.4s ease-out ${i*0.8}s infinite` }} />
         ))}
-        <div style={{ position:"relative", width:40, height:40, borderRadius:"50%", background:"#E8A4B5", display:"flex", alignItems:"center", justifyContent:"center", boxShadow:"0 3px 10px rgba(232,164,181,.4)" }}>
-          <BookOpen size={19} color="#4A0A1C" />
+        <div style={{ position:"relative", width:40, height:40, borderRadius:"50%", background:"#7A1330", display:"flex", alignItems:"center", justifyContent:"center", boxShadow:"0 3px 10px rgba(122,19,48,.5)" }}>
+          <BookOpen size={19} color="#F8F4EA" />
         </div>
       </div>
-      <div style={{ flex:1 }}>
-        <div style={{ fontFamily:"Lora, serif", fontSize:17, color:"#F8F4EA" }}>Iron Sharpens Iron</div>
-        <div style={{ fontFamily:"Inter, sans-serif", fontSize:13, color:"#F0C6D1", marginTop:2 }}>Meet a random believer and share about your faith</div>
-      </div>
+      <div style={{ fontFamily:"Lora, serif", fontSize:17, color:"#F8F4EA" }}>Iron Sharpens Iron</div>
+      <div style={{ fontFamily:"Inter, sans-serif", fontSize:13, color:"#C9C2AF", marginTop:2 }}>Meet a random believer and share about your faith</div>
     </button>
   );
 }
