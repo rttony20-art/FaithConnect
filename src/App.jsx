@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
-import { Heart, MessageCircle, Phone, Video, Mic, MicOff, PhoneOff, Send, User, ChevronLeft, Check, X, Camera, VideoOff, Square, SkipForward, Menu, LogOut, Info, Shield, HelpCircle, Eye, EyeOff, BookOpen, Home, UserPlus, Sun, Percent, ArrowRight } from "lucide-react";
+import { Heart, MessageCircle, Phone, Video, Mic, MicOff, PhoneOff, Send, User, ChevronLeft, Check, X, Camera, VideoOff, Square, SkipForward, Menu, LogOut, Info, Shield, HelpCircle, Eye, EyeOff, Home, UserPlus, Sun, Percent, ArrowRight } from "lucide-react";
 
 /* ---------- design tokens ----------
 Ink Navy #16233F (dark surfaces), Ivory #F8F4EA (light surfaces),
@@ -163,6 +163,17 @@ function scoreMatch(me, them) {
   const age = Math.max(0, 100 - Math.abs((Number(me.age)||0) - (Number(them.age)||0)) * 5);
   const pct = Math.round(faith*0.25 + values*0.20 + goals*0.15 + hobbies*0.15 + looks*0.10 + age*0.15);
   return { pct, faith, values, goals, hobbies, looks, age };
+}
+
+function BibleIcon({ size = 24, color = "currentColor" }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M2 5h6a4 4 0 0 1 4 4v12a3 3 0 0 0-3-3H2z" />
+      <path d="M22 5h-6a4 4 0 0 0-4 4v12a3 3 0 0 1 3-3h7z" />
+      <path d="M12 6v3" />
+      <path d="M10.5 7.5h3" />
+    </svg>
+  );
 }
 
 function PasswordInput({ value, onChange, onKeyDown, placeholder, style }) {
@@ -825,7 +836,7 @@ function MenuDrawer({ open, onClose, onLogOut, onNavigate }) {
     { icon: Home, label: "Home", action: () => onNavigate("matches") },
     { icon: Heart, label: "Connect", action: () => onNavigate("meetSomeone") },
     { icon: Percent, label: "See who you match with", action: () => onNavigate("matchList") },
-    { icon: BookOpen, label: "Share", action: () => onNavigate("fellowship") },
+    { icon: BibleIcon, label: "Share", action: () => onNavigate("fellowship") },
     { icon: MessageCircle, label: "Messages", action: () => onNavigate("messages") },
     { icon: User, label: "Profile", action: () => onNavigate("profile") },
     { icon: Shield, label: "Security", action: () => onNavigate("security") },
@@ -1094,7 +1105,7 @@ function IronSharpensIronCard({ onOpen }) {
           <span key={i} style={{ position:"absolute", width:44, height:44, borderRadius:"50%", border:"1.5px solid rgba(232,164,181,.55)", animation:`iron-ripple 2.4s ease-out ${i*0.8}s infinite` }} />
         ))}
         <div style={{ position:"relative", width:40, height:40, borderRadius:"50%", background:"#7A1330", display:"flex", alignItems:"center", justifyContent:"center", boxShadow:"0 3px 10px rgba(122,19,48,.5)" }}>
-          <BookOpen size={19} color="#F8F4EA" />
+          <BibleIcon size={19} color="#F8F4EA" />
         </div>
       </div>
       <div style={{ fontFamily:"Lora, serif", fontSize:17, color:"#F8F4EA" }}>Iron Sharpens Iron</div>
@@ -1689,7 +1700,7 @@ function SonarReveal({ online, active, variant = "faith" }) {
         <span key={i} style={{ position:"absolute", width:100, height:100, borderRadius:"50%", border:"1.5px solid rgba(184,147,95,.5)", animation:`fr-ripple ${active ? 1.8 : 2.6}s ease-out ${i*0.7}s infinite` }} />
       ))}
       <div style={{ width:74, height:74, borderRadius:"50%", background:gradient, display:"flex", alignItems:"center", justifyContent:"center", boxShadow:`0 4px 18px ${glow}` }}>
-        {isLove ? <Heart size={30} color="#FAF7F0" fill="#FAF7F0" /> : <BookOpen size={30} color="#FAF7F0" />}
+        {isLove ? <Heart size={30} color="#FAF7F0" fill="#FAF7F0" /> : <BibleIcon size={30} color="#FAF7F0" />}
       </div>
       {active && blipName && (
         <div key={tick} style={{
@@ -1723,7 +1734,7 @@ function SonarReveal({ online, active, variant = "faith" }) {
 }
 
 /* ---------------- styles ---------------- */
-const page = { display:"flex", flexDirection:"column", height:"100vh", maxWidth:460, margin:"0 auto", fontFamily:"Inter, sans-serif", background:GLOW_BG, overflow:"hidden" };
+const page = { display:"flex", flexDirection:"column", height:"100dvh", maxWidth:460, margin:"0 auto", fontFamily:"Inter, sans-serif", background:GLOW_BG, overflow:"hidden" };
 const heading = { fontFamily:"Lora, serif", fontSize:24, color:"#F8F4EA", margin:"0 0 14px", fontWeight:600 };
 const input = { width:"100%", padding:"10px 12px", borderRadius:10, border:"1.5px solid #9C7A48", fontFamily:"Inter, sans-serif", fontSize:14.5, background:"#3E2E14", color:"#F8F4EA", boxSizing:"border-box" };
 const primaryBtn = { background:"#B8935F", color:"#FAF7F0", border:"none", padding:"13px 26px", borderRadius:12, fontFamily:"Inter, sans-serif", fontSize:15, fontWeight:600, cursor:"pointer" };
