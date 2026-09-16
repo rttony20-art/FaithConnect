@@ -168,10 +168,10 @@ function scoreMatch(me, them) {
 function BibleIcon({ size = 24, color = "currentColor" }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M2 5h6a4 4 0 0 1 4 4v12a3 3 0 0 0-3-3H2z" />
-      <path d="M22 5h-6a4 4 0 0 0-4 4v12a3 3 0 0 1 3-3h7z" />
-      <path d="M12 6v3" />
-      <path d="M10.5 7.5h3" />
+      <path d="M4 4.5A2.5 2.5 0 0 1 6.5 2H20v18H6.5A2.5 2.5 0 0 1 4 17.5v-13Z" />
+      <path d="M4 17.5A2.5 2.5 0 0 1 6.5 15H20" />
+      <path d="M12 6v6" />
+      <path d="M9.2 9h5.6" />
     </svg>
   );
 }
