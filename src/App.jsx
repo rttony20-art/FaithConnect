@@ -110,14 +110,6 @@ function profileToDb(p) {
   };
 }
 
-const AVATAR_OPTIONS = [
-  { emoji: "😊", color: "#B8935F" }, { emoji: "🙏", color: "#7A1330" },
-  { emoji: "✨", color: "#1D9E75" }, { emoji: "🕊️", color: "#378ADD" },
-  { emoji: "❤️", color: "#8E4650" }, { emoji: "🌿", color: "#4E6E52" },
-  { emoji: "🌟", color: "#9C7A48" }, { emoji: "😇", color: "#5C4520" },
-  { emoji: "🌸", color: "#B5616B" }, { emoji: "🔥", color: "#7C6032" },
-  { emoji: "🎉", color: "#185FA5" }, { emoji: "💛", color: "#D6AE6E" }
-];
 function AvatarCircle({ profile, size = 74, fontSize = 28 }) {
   const style = { width:size, height:size, borderRadius:"50%", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 };
   if (profile?.avatarUrl) {
@@ -234,15 +226,31 @@ function PhotoSlot({ label, preview, existingUrl, onPick, big, emoji, emojiColor
   );
 }
 
-function AvatarPicker({ selected, onPick }) {
+function dicebearUrl(seed) {
+  return `https://api.dicebear.com/9.x/avataaars/svg?seed=${encodeURIComponent(seed)}&backgroundColor=B8935F,7A1330,4E6E52,378ADD,9C7A48`;
+}
+function AvatarPicker({ selected, onPick, baseSeed }) {
+  const [round, setRound] = useState(0);
+  const seeds = Array.from({ length: 9 }, (_, i) => `${baseSeed || "believer"}-${round}-${i}`);
   return (
-    <div style={{ display:"flex", flexWrap:"wrap", gap:8, marginTop:10 }}>
-      {AVATAR_OPTIONS.map(opt => (
-        <button key={opt.emoji} type="button" onClick={() => onPick(opt)} style={{
-          width:38, height:38, borderRadius:"50%", background:opt.color, border: selected === opt.emoji ? "2px solid #F8F4EA" : "2px solid transparent",
-          display:"flex", alignItems:"center", justifyContent:"center", fontSize:17, cursor:"pointer", padding:0
-        }}>{opt.emoji}</button>
-      ))}
+    <div>
+      <div style={{ display:"grid", gridTemplateColumns:"repeat(3, 1fr)", gap:8, marginTop:10 }}>
+        {seeds.map(seed => {
+          const url = dicebearUrl(seed);
+          return (
+            <button key={seed} type="button" onClick={() => onPick(url)} style={{
+              width:64, height:64, borderRadius:"50%", padding:0, cursor:"pointer", overflow:"hidden",
+              border: selected === url ? "2.5px solid #F8F4EA" : "2px solid rgba(248,244,234,0.3)",
+              background:"#3E2E14"
+            }}>
+              <img src={url} alt="" style={{ width:"100%", height:"100%" }} />
+            </button>
+          );
+        })}
+      </div>
+      <button type="button" onClick={() => setRound(r => r + 1)} style={{ marginTop:10, background:"none", border:"none", color:"#D6AE6E", fontFamily:"Inter, sans-serif", fontSize:12.5, textDecoration:"underline", cursor:"pointer", padding:0 }}>
+        Show more options
+      </button>
     </div>
   );
 }
@@ -629,7 +637,7 @@ export default function App() {
           <div style={{ display:"flex", flexDirection:"column", alignItems:"center", marginBottom:8 }}>
             <PhotoSlot label="Profile photo" preview={avatarPreview} existingUrl={form.avatarUrl} emoji={form.avatarEmoji} emojiColor={form.avatarColor} onPick={pickAvatar} big />
             <div style={{ fontFamily:"Inter, sans-serif", fontSize:12, color:"#B9C9BC", marginTop:8 }}>Or pick an avatar instead of a photo:</div>
-            <AvatarPicker selected={form.avatarEmoji} onPick={opt => { setAvatarFile(null); setAvatarPreview(null); setForm({ ...form, avatarUrl:null, avatarEmoji:opt.emoji, avatarColor:opt.color }); }} />
+            <AvatarPicker selected={form.avatarUrl} baseSeed={form.username || form.name} onPick={url => { setAvatarFile(null); setAvatarPreview(null); setForm({ ...form, avatarUrl:url, avatarEmoji:null, avatarColor:null }); }} />
           </div>
           <Field label="Add three pictures of yourself for others to view — optional">
             <div style={{ display:"flex", gap:14, flexWrap:"wrap" }}>
@@ -737,7 +745,7 @@ export default function App() {
           <div style={{ display:"flex", flexDirection:"column", alignItems:"center", marginBottom:8 }}>
             <PhotoSlot label="Profile photo" preview={avatarPreview} existingUrl={form.avatarUrl} emoji={form.avatarEmoji} emojiColor={form.avatarColor} onPick={pickAvatar} big />
             <div style={{ fontFamily:"Inter, sans-serif", fontSize:12, color:"#B9C9BC", marginTop:8 }}>Or pick an avatar instead of a photo:</div>
-            <AvatarPicker selected={form.avatarEmoji} onPick={opt => { setAvatarFile(null); setAvatarPreview(null); setForm({ ...form, avatarUrl:null, avatarEmoji:opt.emoji, avatarColor:opt.color }); }} />
+            <AvatarPicker selected={form.avatarUrl} baseSeed={form.username || form.name} onPick={url => { setAvatarFile(null); setAvatarPreview(null); setForm({ ...form, avatarUrl:url, avatarEmoji:null, avatarColor:null }); }} />
           </div>
           <Field label="Add three pictures of yourself for others to view — optional">
             <div style={{ display:"flex", gap:14, flexWrap:"wrap" }}>
