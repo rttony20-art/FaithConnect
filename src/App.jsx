@@ -227,7 +227,7 @@ function PhotoSlot({ label, preview, existingUrl, onPick, big, emoji, emojiColor
 }
 
 function dicebearUrl(seed) {
-  return `https://api.dicebear.com/9.x/avataaars/svg?seed=${encodeURIComponent(seed)}&backgroundColor=B8935F,7A1330,4E6E52,378ADD,9C7A48`;
+  return `https://api.dicebear.com/9.x/avataaars/svg?seed=${encodeURIComponent(seed)}&backgroundColor=B8935F,7A1330,4E6E52,378ADD,9C7A48&eyes=default,happy,hearts,wink,squint&mouth=smile,twinkle,default&eyebrows=default,defaultNatural,raisedExcited,raisedExcitedNatural`;
 }
 function AvatarPicker({ selected, onPick, baseSeed }) {
   const [round, setRound] = useState(0);
