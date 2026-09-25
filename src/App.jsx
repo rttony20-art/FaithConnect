@@ -95,7 +95,8 @@ function profileFromDb(row) {
     city: row.city, denom: row.denom, faithLevel: row.faith_level, bio: row.bio,
     values: row.core_values || [], hobbies: row.hobbies || [], goals: row.goals || [],
     appearance: row.appearance || [], lookPref: row.look_pref || [],
-    avatarUrl: row.avatar_url || null, photoUrls: row.photo_urls || []
+    avatarUrl: row.avatar_url || null, photoUrls: row.photo_urls || [],
+    avatarEmoji: row.avatar_emoji || null, avatarColor: row.avatar_color || null
   };
 }
 function profileToDb(p) {
@@ -104,8 +105,28 @@ function profileToDb(p) {
     city: p.city, denom: p.denom, faith_level: p.faithLevel, bio: p.bio,
     core_values: p.values || [], hobbies: p.hobbies || [], goals: p.goals || [],
     appearance: p.appearance || [], look_pref: p.lookPref || [],
-    avatar_url: p.avatarUrl || null, photo_urls: p.photoUrls || []
+    avatar_url: p.avatarUrl || null, photo_urls: p.photoUrls || [],
+    avatar_emoji: p.avatarEmoji || null, avatar_color: p.avatarColor || null
   };
+}
+
+const AVATAR_OPTIONS = [
+  { emoji: "😊", color: "#B8935F" }, { emoji: "🙏", color: "#7A1330" },
+  { emoji: "✨", color: "#1D9E75" }, { emoji: "🕊️", color: "#378ADD" },
+  { emoji: "❤️", color: "#8E4650" }, { emoji: "🌿", color: "#4E6E52" },
+  { emoji: "🌟", color: "#9C7A48" }, { emoji: "😇", color: "#5C4520" },
+  { emoji: "🌸", color: "#B5616B" }, { emoji: "🔥", color: "#7C6032" },
+  { emoji: "🎉", color: "#185FA5" }, { emoji: "💛", color: "#D6AE6E" }
+];
+function AvatarCircle({ profile, size = 74, fontSize = 28 }) {
+  const style = { width:size, height:size, borderRadius:"50%", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 };
+  if (profile?.avatarUrl) {
+    return <div style={{ ...style, background:`center/cover url(${profile.avatarUrl})` }} />;
+  }
+  if (profile?.avatarEmoji) {
+    return <div style={{ ...style, background: profile.avatarColor || "#B8935F", fontSize: fontSize * 0.8 }}>{profile.avatarEmoji}</div>;
+  }
+  return <div style={{ ...style, background:"#B8935F", color:"#FAF7F0", fontFamily:"Lora, serif", fontSize }}>{profile?.name?.[0]?.toUpperCase() || "?"}</div>;
 }
 
 function jaccard(a = [], b = []) {
@@ -195,20 +216,34 @@ function PasswordInput({ value, onChange, onKeyDown, placeholder, style }) {
   );
 }
 
-function PhotoSlot({ label, preview, existingUrl, onPick, big }) {
+function PhotoSlot({ label, preview, existingUrl, onPick, big, emoji, emojiColor }) {
   const img = preview || existingUrl;
   const size = big ? 96 : 76;
   return (
     <label style={{ display:"flex", flexDirection:"column", alignItems:"center", gap:6, cursor:"pointer" }}>
       <div style={{
-        width:size, height:size, borderRadius: big ? "50%" : 14, background: img ? `center/cover url(${img})` : "#EFE9DC",
-        border:"1.5px dashed #C9A227", display:"flex", alignItems:"center", justifyContent:"center", overflow:"hidden"
+        width:size, height:size, borderRadius: big ? "50%" : 14,
+        background: img ? `center/cover url(${img})` : (emoji ? emojiColor : "#EFE9DC"),
+        border:"1.5px dashed #C9A227", display:"flex", alignItems:"center", justifyContent:"center", overflow:"hidden", fontSize: size * 0.45
       }}>
-        {!img && <Camera size={big ? 26 : 20} color="#B8935F" />}
+        {!img && (emoji || <Camera size={big ? 26 : 20} color="#B8935F" />)}
       </div>
       <span style={{ fontFamily:"Inter, sans-serif", fontSize:11.5, color:"#8A8578" }}>{label}</span>
       <input type="file" accept="image/*" onChange={onPick} style={{ display:"none" }} />
     </label>
+  );
+}
+
+function AvatarPicker({ selected, onPick }) {
+  return (
+    <div style={{ display:"flex", flexWrap:"wrap", gap:8, marginTop:10 }}>
+      {AVATAR_OPTIONS.map(opt => (
+        <button key={opt.emoji} type="button" onClick={() => onPick(opt)} style={{
+          width:38, height:38, borderRadius:"50%", background:opt.color, border: selected === opt.emoji ? "2px solid #F8F4EA" : "2px solid transparent",
+          display:"flex", alignItems:"center", justifyContent:"center", fontSize:17, cursor:"pointer", padding:0
+        }}>{opt.emoji}</button>
+      ))}
+    </div>
   );
 }
 
@@ -227,7 +262,7 @@ export default function App() {
   const [screen, setScreen] = useState("loading"); // loading, welcome, profile, matches, chat, messages
   const [myId, setMyId] = useState(null);
   const [myProfile, setMyProfile] = useState(null);
-  const [form, setForm] = useState({ name:"", age:"", gender:"Female", seeking:"Male", city:"", denom: DENOMS[0], faithLevel:3, bio:"", values:[], hobbies:[], goals:[], appearance:[], lookPref:[], username:"", password:"", email:"", avatarUrl:null, photoUrls:[] });
+  const [form, setForm] = useState({ name:"", age:"", gender:"Female", seeking:"Male", city:"", denom: DENOMS[0], faithLevel:3, bio:"", values:[], hobbies:[], goals:[], appearance:[], lookPref:[], username:"", password:"", email:"", avatarUrl:null, photoUrls:[], avatarEmoji:null, avatarColor:null });
   const [avatarFile, setAvatarFile] = useState(null);
   const [avatarPreview, setAvatarPreview] = useState(null);
   const [photoFiles, setPhotoFiles] = useState([null, null, null]);
@@ -255,7 +290,7 @@ export default function App() {
     try { await sdel("supabase-session", false); } catch {}
     setMyId(null);
     setMyProfile(null);
-    setForm({ name:"", age:"", gender:"Female", seeking:"Male", city:"", denom: DENOMS[0], faithLevel:3, bio:"", values:[], hobbies:[], goals:[], appearance:[], lookPref:[], username:"", password:"", email:"", avatarUrl:null, photoUrls:[] });
+    setForm({ name:"", age:"", gender:"Female", seeking:"Male", city:"", denom: DENOMS[0], faithLevel:3, bio:"", values:[], hobbies:[], goals:[], appearance:[], lookPref:[], username:"", password:"", email:"", avatarUrl:null, photoUrls:[], avatarEmoji:null, avatarColor:null });
     setAvatarFile(null); setAvatarPreview(null); setPhotoFiles([null,null,null]); setPhotoPreviews([null,null,null]);
     setMenuOpen(false);
     setScreen("welcome");
@@ -591,8 +626,10 @@ export default function App() {
           <p style={{ fontFamily:"Inter, sans-serif", fontSize:13, color:"#8A8578", lineHeight:1.5, marginTop:-8, marginBottom:18 }}>
             What you share on this page is how we match you with someone else — other members can see it to find out if you're a good match.
           </p>
-          <div style={{ display:"flex", justifyContent:"center", marginBottom:8 }}>
-            <PhotoSlot label="Profile photo" preview={avatarPreview} existingUrl={form.avatarUrl} onPick={pickAvatar} big />
+          <div style={{ display:"flex", flexDirection:"column", alignItems:"center", marginBottom:8 }}>
+            <PhotoSlot label="Profile photo" preview={avatarPreview} existingUrl={form.avatarUrl} emoji={form.avatarEmoji} emojiColor={form.avatarColor} onPick={pickAvatar} big />
+            <div style={{ fontFamily:"Inter, sans-serif", fontSize:12, color:"#B9C9BC", marginTop:8 }}>Or pick an avatar instead of a photo:</div>
+            <AvatarPicker selected={form.avatarEmoji} onPick={opt => { setAvatarFile(null); setAvatarPreview(null); setForm({ ...form, avatarUrl:null, avatarEmoji:opt.emoji, avatarColor:opt.color }); }} />
           </div>
           <Field label="Add three pictures of yourself for others to view — optional">
             <div style={{ display:"flex", gap:14, flexWrap:"wrap" }}>
@@ -670,9 +707,7 @@ export default function App() {
         <TopBar onMenu={() => setMenuOpen(true)} dark overlay={false} onLogo={() => setScreen("matches")} />
         <MenuDrawer open={menuOpen} onClose={() => setMenuOpen(false)} onLogOut={logOut} onNavigate={setScreen} />
         <div style={{ flex:1, overflowY:"auto", padding:"8px 22px 100px", background:GLOW_BG }}>
-          <div style={{ width:74, height:74, borderRadius:"50%", background: myProfile.avatarUrl ? `center/cover url(${myProfile.avatarUrl})` : "#B8935F", color:"#FAF7F0", display:"flex", alignItems:"center", justifyContent:"center", fontFamily:"Lora, serif", fontSize:28, margin:"0 auto 14px" }}>
-            {!myProfile.avatarUrl && myProfile.name[0]?.toUpperCase()}
-          </div>
+          <div style={{ margin:"0 auto 14px", display:"flex", justifyContent:"center" }}><AvatarCircle profile={myProfile} size={74} fontSize={28} /></div>
           <h2 style={{...heading, textAlign:"center", color:"#F8F4EA"}}>{myProfile.name}, {myProfile.age}</h2>
           <p style={{textAlign:"center", color:"#B9C9BC", fontFamily:"Inter, sans-serif", fontSize:14, marginTop:-8}}>{myProfile.city} · {myProfile.denom}</p>
           {myProfile.photoUrls && myProfile.photoUrls.length > 0 && (
@@ -699,8 +734,10 @@ export default function App() {
         <div style={{ flex: 1, overflowY: "auto", padding: "20px 22px 100px", background:GLOW_BG }}>
           <button onClick={()=>setScreen("profile")} style={backBtn}><ChevronLeft size={18}/> Back</button>
           <h2 style={heading}>Edit your profile</h2>
-          <div style={{ display:"flex", justifyContent:"center", marginBottom:8 }}>
-            <PhotoSlot label="Profile photo" preview={avatarPreview} existingUrl={form.avatarUrl} onPick={pickAvatar} big />
+          <div style={{ display:"flex", flexDirection:"column", alignItems:"center", marginBottom:8 }}>
+            <PhotoSlot label="Profile photo" preview={avatarPreview} existingUrl={form.avatarUrl} emoji={form.avatarEmoji} emojiColor={form.avatarColor} onPick={pickAvatar} big />
+            <div style={{ fontFamily:"Inter, sans-serif", fontSize:12, color:"#B9C9BC", marginTop:8 }}>Or pick an avatar instead of a photo:</div>
+            <AvatarPicker selected={form.avatarEmoji} onPick={opt => { setAvatarFile(null); setAvatarPreview(null); setForm({ ...form, avatarUrl:null, avatarEmoji:opt.emoji, avatarColor:opt.color }); }} />
           </div>
           <Field label="Add three pictures of yourself for others to view — optional">
             <div style={{ display:"flex", gap:14, flexWrap:"wrap" }}>
@@ -736,7 +773,7 @@ export default function App() {
           {conversations.length === 0 && <div style={{...emptyState, color:"#B9C9BC"}}>No conversations yet. Start one from your matches.</div>}
           {conversations.map(c => (
             <button key={c.otherId} onClick={() => { setActiveConvo({ otherId: c.otherId, otherProfile: c.otherProfile }); setScreen("chat"); }} style={convoRow}>
-              <div style={avatarSm}>{c.otherProfile?.name?.[0]?.toUpperCase() || "?"}</div>
+              <div style={{ marginRight:10 }}><AvatarCircle profile={c.otherProfile} size={38} fontSize={15} /></div>
               <div style={{flex:1, textAlign:"left"}}>
                 <div style={{fontFamily:"Lora, serif", fontSize:15.5, color:"#22252B"}}>{c.otherProfile?.name || "Someone"}</div>
                 <div style={{fontFamily:"Inter, sans-serif", fontSize:13, color:"#8A8578", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis", maxWidth:220}}>
@@ -770,7 +807,7 @@ export default function App() {
           {matches.map(({ profile, score }) => (
             <div key={profile.id} style={matchCard}>
             <div style={{display:"flex", gap:14}}>
-              <div style={{...avatarMd, background: profile.avatarUrl ? `center/cover url(${profile.avatarUrl})` : avatarMd.background}}>{!profile.avatarUrl && profile.name?.[0]?.toUpperCase()}</div>
+              <AvatarCircle profile={profile} size={52} fontSize={20} />
               <div style={{flex:1}}>
                 <div style={{display:"flex", justifyContent:"space-between", alignItems:"baseline"}}>
                   <div style={{fontFamily:"Lora, serif", fontSize:17, color:"#22252B"}}>{profile.name}, {profile.age}</div>
@@ -1022,8 +1059,8 @@ function MatchListScreen({ matches, myProfile, onOpenChat, onBack }) {
             width:"calc(50% - 6px)", borderRadius:16, overflow:"hidden", border:"1.5px solid #9C7A48",
             background:"#3E2E14", cursor:"pointer", padding:0, textAlign:"left"
           }}>
-            <div style={{ width:"100%", aspectRatio:"1", background: profile.avatarUrl ? `center/cover url(${profile.avatarUrl})` : "#5C4520", display:"flex", alignItems:"center", justifyContent:"center" }}>
-              {!profile.avatarUrl && <span style={{ fontFamily:"Lora, serif", fontSize:34, color:"#D6AE6E" }}>{profile.name?.[0]?.toUpperCase()}</span>}
+            <div style={{ width:"100%", aspectRatio:"1", background: profile.avatarUrl ? `center/cover url(${profile.avatarUrl})` : (profile.avatarEmoji ? profile.avatarColor : "#5C4520"), display:"flex", alignItems:"center", justifyContent:"center", fontSize:34 }}>
+              {!profile.avatarUrl && (profile.avatarEmoji || <span style={{ fontFamily:"Lora, serif", fontSize:34, color:"#D6AE6E" }}>{profile.name?.[0]?.toUpperCase()}</span>)}
             </div>
             <div style={{ padding:"8px 10px" }}>
               <div style={{ fontFamily:"Lora, serif", fontSize:15, color:"#F8F4EA" }}>{profile.name}, {profile.age}</div>
@@ -1063,8 +1100,8 @@ function MatchRevealOverlay({ myProfile, other, score, onClose, onSayHello }) {
 
   function Avatar({ p }) {
     return (
-      <div style={{ width:88, height:88, borderRadius:"50%", background: p.avatarUrl ? `center/cover url(${p.avatarUrl})` : "#B8935F", display:"flex", alignItems:"center", justifyContent:"center", border:"3px solid #D6AE6E", boxShadow:"0 4px 16px rgba(0,0,0,.4)" }}>
-        {!p.avatarUrl && <span style={{ fontFamily:"Lora, serif", fontSize:32, color:"#FAF7F0" }}>{p.name?.[0]?.toUpperCase()}</span>}
+      <div style={{ border:"3px solid #D6AE6E", borderRadius:"50%", boxShadow:"0 4px 16px rgba(0,0,0,.4)" }}>
+        <AvatarCircle profile={p} size={82} fontSize={32} />
       </div>
     );
   }
