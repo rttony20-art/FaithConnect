@@ -233,13 +233,13 @@ function AvatarPicker({ selected, onPick, baseSeed }) {
   const [round, setRound] = useState(0);
   const seeds = Array.from({ length: 9 }, (_, i) => `${baseSeed || "believer"}-${round}-${i}`);
   return (
-    <div>
-      <div style={{ display:"grid", gridTemplateColumns:"repeat(3, 1fr)", gap:8, marginTop:10 }}>
+    <div style={{ display:"flex", alignItems:"center", gap:10, marginTop:10 }}>
+      <div style={{ display:"grid", gridTemplateColumns:"repeat(3, 1fr)", gap:8, flex:1 }}>
         {seeds.map(seed => {
           const url = dicebearUrl(seed);
           return (
             <button key={seed} type="button" onClick={() => onPick(url)} style={{
-              width:64, height:64, borderRadius:"50%", padding:0, cursor:"pointer", overflow:"hidden",
+              width:"100%", aspectRatio:"1", borderRadius:"50%", padding:0, cursor:"pointer", overflow:"hidden",
               border: selected === url ? "2.5px solid #F8F4EA" : "2px solid rgba(248,244,234,0.3)",
               background:"#3E2E14"
             }}>
@@ -248,8 +248,12 @@ function AvatarPicker({ selected, onPick, baseSeed }) {
           );
         })}
       </div>
-      <button type="button" onClick={() => setRound(r => r + 1)} style={{ marginTop:10, background:"none", border:"none", color:"#D6AE6E", fontFamily:"Inter, sans-serif", fontSize:12.5, textDecoration:"underline", cursor:"pointer", padding:0 }}>
-        Show more options
+      <button type="button" onClick={() => setRound(r => r + 1)} style={{
+        display:"flex", flexDirection:"column", alignItems:"center", gap:4, background:"none", border:"none",
+        color:"#D6AE6E", fontFamily:"Inter, sans-serif", fontSize:12, fontWeight:600, cursor:"pointer", padding:"0 2px", flexShrink:0
+      }}>
+        <ArrowRight size={20} />
+        Next
       </button>
     </div>
   );
