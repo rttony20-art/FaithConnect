@@ -16,7 +16,8 @@ const DENOMS = ["Non-denominational","Baptist","Catholic","Methodist","Pentecost
 
 // Experimental dark background: soft green glow blobs on black, in place of solid navy.
 // To revert, change GLOW_BG back to the string "#16233F".
-const GLOW_BG = 'radial-gradient(circle at 75% 30%, rgba(30,50,140,0.55), transparent 50%), radial-gradient(circle at 30% 70%, rgba(15,25,90,0.5), transparent 55%), #05061A';
+const GLOW_BG = 'radial-gradient(circle at 50% 20%, rgba(93,124,255,0.16), transparent 45%), radial-gradient(circle at 15% 45%, rgba(86,108,255,0.16), transparent 40%), radial-gradient(circle at 85% 75%, rgba(171,71,255,0.14), transparent 45%), linear-gradient(180deg, #080b17 0%, #070a14 55%, #090b16 100%)';
+const ACCENT_GRADIENT = 'linear-gradient(100deg, #526cff, #8d5cff)';
 
 function genId() { return Math.random().toString(36).slice(2, 10); }
 function convoId(a, b) { return [a, b].sort().join("-"); }
@@ -532,16 +533,16 @@ export default function App() {
 
   const nav = (
     <div style={navBar}>
-      {[["matches","Matches",Heart],["messages","Messages",MessageCircle],["profile","Profile",User]].map(([key,label,Icon]) => (
+      {[["matches","Matches",Heart],["messages","Messages",MessageCircle],["matchList","Discover",Percent],["profile","Profile",User]].map(([key,label,Icon]) => (
         <button key={key} onClick={() => setScreen(key)} style={navBtn(screen===key)}>
-          <Icon size={20} strokeWidth={screen===key?2.4:1.8} />
-          <span style={{ fontSize: 11, marginTop: 3 }}>{label}</span>
+          <Icon size={19} strokeWidth={screen===key?2.4:1.8} />
+          <span style={{ fontSize: 10, marginTop: 2, fontFamily:"Inter, sans-serif" }}>{label}</span>
         </button>
       ))}
     </div>
   );
 
-  if (screen === "loading") return <div style={{...page, alignItems:"center", justifyContent:"center"}}><div style={{fontFamily:"Lora, serif", color:"#B8935F"}}>Loading…</div></div>;
+  if (screen === "loading") return <div style={{...page, alignItems:"center", justifyContent:"center"}}><div style={{fontFamily:"Lora, serif", color:"#a0aaff"}}>Loading…</div></div>;
 
   if (screen === "resetPassword") {
     return (
@@ -811,24 +812,39 @@ export default function App() {
           <MatchHero count={matches.length} onMeetSomeone={() => setScreen("meetSomeone")} />
         </div>
         <div style={{ background:GLOW_BG, paddingBottom:100 }}>
-          <div style={{ padding: "28px 16px 0" }}>
-            <IronSharpensIronCard onOpen={() => setScreen("fellowship")} />
-            <button onClick={() => setScreen("fellowship")} style={{ ...ctaBtn, width:"100%", marginTop:14 }}>Share with someone <ArrowRight size={18} /></button>
+          <div style={{ padding:"36px 16px 0" }}>
+            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-end", marginBottom:18 }}>
+              <div>
+                <div style={{ fontFamily:"Inter, sans-serif", fontSize:9, letterSpacing:2, color:"#6879e9", marginBottom:6 }}>DISCOVER</div>
+                <div style={{ fontFamily:"Lora, serif", fontSize:24, color:"#F8F4EA", letterSpacing:-0.5 }}>Find Your Match</div>
+              </div>
+            </div>
+            <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:14, marginBottom:20 }}>
+              <FeatureCard
+                title="Meet someone"
+                description="Someone who shares your faith and values."
+                gradient="linear-gradient(145deg, #34405c, #171b2d)"
+                Icon={Heart}
+                onConnect={() => setScreen("meetSomeone")}
+              />
+              <IronSharpensIronCard onOpen={() => setScreen("fellowship")} />
+            </div>
+            <TodaysWordCard />
           </div>
-          <div style={{ padding:"24px 16px 0" }}>
+          <div style={{ padding:"0 16px 0" }}>
           {matches.map(({ profile, score }) => (
             <div key={profile.id} style={matchCard}>
             <div style={{display:"flex", gap:14}}>
               <AvatarCircle profile={profile} size={52} fontSize={20} />
               <div style={{flex:1}}>
                 <div style={{display:"flex", justifyContent:"space-between", alignItems:"baseline"}}>
-                  <div style={{fontFamily:"Lora, serif", fontSize:17, color:"#22252B"}}>{profile.name}, {profile.age}</div>
-                  <div style={{fontFamily:"Lora, serif", fontSize:17, color:"#B5616B", fontWeight:600}}>{score.pct}%</div>
+                  <div style={{fontFamily:"Lora, serif", fontSize:17, color:"#F8F4EA"}}>{profile.name}, {profile.age}</div>
+                  <div style={{fontFamily:"Lora, serif", fontSize:17, color:"#a0aaff", fontWeight:600}}>{score.pct}%</div>
                 </div>
-                <div style={{fontFamily:"Inter, sans-serif", fontSize:13, color:"#8A8578"}}>{profile.city} · {profile.denom}</div>
+                <div style={{fontFamily:"Inter, sans-serif", fontSize:13, color:"#858ca1"}}>{profile.city} · {profile.denom}</div>
               </div>
             </div>
-            <p style={{fontFamily:"Inter, sans-serif", fontSize:13.5, color:"#4A4A45", lineHeight:1.5, margin:"10px 0"}}>{profile.bio}</p>
+            <p style={{fontFamily:"Inter, sans-serif", fontSize:13.5, color:"#a4aabd", lineHeight:1.5, margin:"10px 0"}}>{profile.bio}</p>
             <Tag list={[...(profile.values||[]).slice(0,2), ...(profile.hobbies||[]).slice(0,2)]} />
             <button onClick={() => { setActiveConvo({ otherId: profile.id, otherProfile: profile }); setScreen("chat"); }} style={{...secondaryBtn, width:"100%", marginTop:12}}>Say hello</button>
           </div>
@@ -855,7 +871,7 @@ function Chips({ list, sel, onToggle }) {
 function Tag({ list }) {
   if (!list || !list.length) return null;
   return <div>{list.filter(Boolean).map(t => (
-    <span key={t} style={{ display:"inline-block", fontSize:12, fontFamily:"Inter, sans-serif", color:"#F8F4EA", background:"#9C7A48", padding:"4px 10px", borderRadius:999, marginRight:6, marginBottom:6 }}>{t}</span>
+    <span key={t} style={{ display:"inline-block", fontSize:12, fontFamily:"Inter, sans-serif", color:"#F8F4EA", background:"rgba(96,112,255,0.18)", border:"1px solid rgba(108,124,255,0.3)", padding:"4px 10px", borderRadius:999, marginRight:6, marginBottom:6 }}>{t}</span>
   ))}</div>;
 }
 function FontLoader() {
@@ -865,15 +881,26 @@ function FontLoader() {
 function TopBar({ onMenu, dark, overlay, onLogo }) {
   return (
     <div style={{
-      display:"flex", alignItems:"center", padding:"14px 16px 4px",
+      display:"flex", alignItems:"center", justifyContent:"space-between", padding:"16px 16px 4px",
       position: overlay ? "absolute" : "static", top:0, left:0, right:0, zIndex: overlay ? 5 : "auto"
     }}>
-      <button onClick={onMenu} style={{ background:"none", border:"none", cursor:"pointer", padding:8, display:"flex" }}>
-        <Menu size={22} color={dark ? "#F8F4EA" : "#22252B"} />
-      </button>
-      <button onClick={onLogo} style={{ background:"none", border:"none", cursor:"pointer", padding:0, marginLeft:4 }}>
-        <span style={{ fontFamily:"Lora, serif", fontSize:16, color: dark ? "#F8F4EA" : "#22252B" }}>FaithConnect</span>
-      </button>
+      <div style={{ display:"flex", alignItems:"center", gap:10 }}>
+        <button onClick={onMenu} style={{ background:"none", border:"none", cursor:"pointer", padding:8, display:"flex", marginLeft:-8 }}>
+          <Menu size={20} color={dark ? "#F8F4EA" : "#22252B"} />
+        </button>
+        <button onClick={onLogo} style={{ background:"none", border:"none", cursor:"pointer", padding:0, display:"flex", alignItems:"center", gap:10 }}>
+          <div style={{ width:36, height:36, borderRadius:11, background:ACCENT_GRADIENT, display:"flex", alignItems:"center", justifyContent:"center", boxShadow:"0 0 20px rgba(105,101,255,.45)" }}>
+            <Heart size={17} color="#fff" fill="#fff" />
+          </div>
+          <div style={{ textAlign:"left" }}>
+            <div style={{ fontFamily:"Inter, sans-serif", fontWeight:700, fontSize:15, color: dark ? "#F8F4EA" : "#22252B", letterSpacing:-0.3 }}>FaithConnect</div>
+            <div style={{ fontFamily:"Inter, sans-serif", fontSize:7.5, letterSpacing:1.5, color: dark ? "#737b92" : "#8A8578" }}>CONNECT • GROW • BELIEVE</div>
+          </div>
+        </button>
+      </div>
+      <div style={{ width:36, height:36, borderRadius:"50%", background:"rgba(255,255,255,0.05)", border:"1px solid rgba(255,255,255,0.08)", display:"flex", alignItems:"center", justifyContent:"center" }}>
+        <Heart size={16} color={dark ? "#F8F4EA" : "#22252B"} />
+      </div>
     </div>
   );
 }
@@ -937,47 +964,46 @@ function MenuDrawer({ open, onClose, onLogOut, onNavigate }) {
 
 function MatchHero({ count, onMeetSomeone }) {
   return (
-    <div style={{ background:GLOW_BG, padding:"36px 22px 40px", textAlign:"center", position:"relative", overflow:"hidden" }}>
+    <div style={{ padding:"18px 22px 40px", textAlign:"center", position:"relative", overflow:"hidden" }}>
       <style>{`
-        @keyframes ripple-out {
-          0%   { transform: scale(0.5); opacity: 0.55; }
-          100% { transform: scale(2.6); opacity: 0; }
-        }
-        @keyframes heart-bob {
-          0%, 100% { transform: translateY(0); }
-          50% { transform: translateY(-6px); }
-        }
+        @keyframes sun-pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.07); } }
       `}</style>
-      <div style={{ position:"relative", width:180, height:180, margin:"0 auto 22px", display:"flex", alignItems:"center", justifyContent:"center" }}>
-        {[0, 0.9, 1.8].map(delay => (
-          <span key={delay} style={{
-            position:"absolute", width:110, height:110, borderRadius:"50%",
-            border:"1.5px solid rgba(184,147,95,0.55)",
-            animation:`ripple-out 2.7s ease-out ${delay}s infinite`
+      <div style={{ position:"relative", width:220, height:220, margin:"0 auto 14px", display:"flex", alignItems:"center", justifyContent:"center" }}>
+        <div style={{
+          position:"absolute", width:200, height:200, borderRadius:"50%",
+          border:"1px solid rgba(116,136,255,0.25)", boxShadow:"0 0 70px rgba(77,96,255,.15), inset 0 0 60px rgba(110,87,255,.08)"
+        }} />
+        <div style={{
+          position:"absolute", width:100, height:100, borderRadius:"50%",
+          background:"radial-gradient(circle, #fff8c7 0%, #ffe47a 20%, #ffae37 48%, rgba(255,132,43,0.15) 70%, transparent 72%)",
+          boxShadow:"0 0 35px #ffce59, 0 0 100px rgba(255,174,55,.55)", animation:"sun-pulse 4s ease-in-out infinite"
+        }} />
+        <div style={{ position:"relative", width:220, height:180, zIndex:3 }}>
+          <div style={{
+            position:"absolute", width:98, height:58, top:66, left:10, borderRadius:"80% 20% 70% 30%",
+            background:"linear-gradient(145deg, rgba(217,171,145,.95), rgba(108,69,70,.95))",
+            filter:"drop-shadow(0 6px 10px rgba(0,0,0,.35))", transform:"rotate(38deg) skewX(-10deg)"
           }} />
-        ))}
-        <svg width="96" height="96" viewBox="0 0 100 100" style={{ position:"relative", animation:"heart-bob 3.4s ease-in-out infinite", filter:"drop-shadow(0 4px 18px rgba(181,97,107,0.55))" }}>
-          <defs>
-            <linearGradient id="heartGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" stopColor="#D98089" />
-              <stop offset="55%" stopColor="#B5616B" />
-              <stop offset="100%" stopColor="#8E4650" />
-            </linearGradient>
-            <radialGradient id="heartShine" cx="35%" cy="28%" r="35%">
-              <stop offset="0%" stopColor="rgba(255,255,255,0.75)" />
-              <stop offset="100%" stopColor="rgba(255,255,255,0)" />
-            </radialGradient>
-          </defs>
-          <path d="M50 88 C22 66 6 48 6 29 C6 13 18 3 32 3 C41 3 48 8 50 16 C52 8 59 3 68 3 C82 3 94 13 94 29 C94 48 78 66 50 88 Z" fill="url(#heartGrad)" />
-          <path d="M50 88 C22 66 6 48 6 29 C6 13 18 3 32 3 C41 3 48 8 50 16 C52 8 59 3 68 3 C82 3 94 13 94 29 C94 48 78 66 50 88 Z" fill="url(#heartShine)" />
-        </svg>
+          <div style={{
+            position:"absolute", width:98, height:58, top:66, right:10, borderRadius:"80% 20% 70% 30%",
+            background:"linear-gradient(145deg, rgba(217,171,145,.95), rgba(108,69,70,.95))",
+            filter:"drop-shadow(0 6px 10px rgba(0,0,0,.35))", transform:"rotate(-38deg) scaleX(-1) skewX(-10deg)"
+          }} />
+        </div>
       </div>
-      <h1 style={{ fontFamily:"Lora, serif", fontSize:24, color:"#F8F4EA", margin:"0 0 6px", fontWeight:600 }}>Meet your match</h1>
-      <p style={{ fontFamily:"Inter, sans-serif", fontSize:14, color:"#B9B2A0", margin:"0 0 20px" }}>
-        {count > 0 ? `${count} people share your faith and values` : "Ripples are going out to find your match"}
+      <div style={{ display:"flex", alignItems:"center", justifyContent:"center", gap:9, marginBottom:16 }}>
+        <span style={{ width:20, height:1, background:"#647cff" }} />
+        <span style={{ fontFamily:"Inter, sans-serif", fontSize:9, letterSpacing:2.5, color:"#8792b4" }}>FAITH • PURPOSE • CONNECTION</span>
+        <span style={{ width:20, height:1, background:"#647cff" }} />
+      </div>
+      <h1 style={{ fontFamily:"Inter, sans-serif", fontSize:32, lineHeight:1.05, letterSpacing:-1, fontWeight:800, color:"#F8F4EA", margin:"0 0 14px" }}>
+        Real People. <span style={{ background:"linear-gradient(90deg,#ffffff,#8192ff,#c17cff)", WebkitBackgroundClip:"text", backgroundClip:"text", color:"transparent" }}>Same Faith.</span> Greater Purpose.
+      </h1>
+      <p style={{ fontFamily:"Inter, sans-serif", fontSize:14, color:"#9399aa", margin:"0 0 22px" }}>
+        {count > 0 ? `${count} people share your faith and values` : "Connect with people who share your faith, values and desire to grow together."}
       </p>
       <button onClick={onMeetSomeone} style={ctaBtn}>
-        Meet someone <ArrowRight size={18} />
+        Start Matching <ArrowRight size={18} />
       </button>
     </div>
   );
@@ -1140,26 +1166,50 @@ function MatchRevealOverlay({ myProfile, other, score, onClose, onSayHello }) {
   );
 }
 
+function FeatureCard({ title, description, gradient, Icon, onConnect }) {
+  return (
+    <div style={{ background:"linear-gradient(145deg, rgba(22,27,48,0.95), rgba(11,15,29,0.95))", border:"1px solid rgba(255,255,255,0.07)", borderRadius:22, overflow:"hidden" }}>
+      <div style={{ height:110, position:"relative", background:gradient, display:"flex", alignItems:"center", justifyContent:"center" }}>
+        <div style={{ position:"absolute", top:12, right:12, width:9, height:9, borderRadius:"50%", background:"#55e8a5", boxShadow:"0 0 12px #55e8a5" }} />
+        <Icon size={32} color="#fff" fill={Icon === Heart ? "#fff" : "none"} />
+      </div>
+      <div style={{ padding:16 }}>
+        <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+          <span style={{ fontFamily:"Inter, sans-serif", fontWeight:700, fontSize:14.5, color:"#F8F4EA" }}>{title}</span>
+          <span style={{ color:"#8d8fff", fontSize:13 }}>✦</span>
+        </div>
+        <p style={{ fontFamily:"Inter, sans-serif", fontSize:11.5, color:"#858ca1", lineHeight:1.5, margin:"8px 0 14px", minHeight:32 }}>{description}</p>
+        <button onClick={onConnect} style={{ width:"100%", padding:"10px 0", borderRadius:11, color:"#a0aaff", background:"rgba(96,112,255,0.12)", border:"1px solid rgba(108,124,255,0.2)", fontFamily:"Inter, sans-serif", fontWeight:600, fontSize:13, cursor:"pointer" }}>Connect</button>
+      </div>
+    </div>
+  );
+}
+
+function TodaysWordCard() {
+  return (
+    <div style={{ position:"relative", background:"linear-gradient(120deg, #14182a, #080a13)", border:"1px solid rgba(255,255,255,0.07)", borderRadius:22, padding:"28px 24px", overflow:"hidden", marginBottom:16 }}>
+      <div style={{ position:"absolute", width:180, height:180, right:-40, top:-60, borderRadius:"50%", background:"radial-gradient(circle, rgba(127,107,255,0.3), transparent 65%)", filter:"blur(16px)" }} />
+      <div style={{ position:"relative" }}>
+        <div style={{ fontFamily:"Inter, sans-serif", fontSize:9, letterSpacing:3, color:"#7887e8", marginBottom:16 }}>TODAY'S WORD</div>
+        <div style={{ fontSize:26, color:"#d4d8ff", textShadow:"0 0 20px rgba(130,135,255,.8)", marginBottom:14 }}>✝</div>
+        <h3 style={{ fontFamily:"Lora, serif", fontSize:19, lineHeight:1.35, fontWeight:500, color:"#F8F4EA", margin:0 }}>
+          "Iron sharpens iron, and one person sharpens another."
+        </h3>
+        <p style={{ fontFamily:"Inter, sans-serif", fontSize:12, color:"#757d95", marginTop:12 }}>Proverbs 27:17</p>
+      </div>
+    </div>
+  );
+}
+
 function IronSharpensIronCard({ onOpen }) {
   return (
-    <button onClick={onOpen} style={{
-      display:"flex", flexDirection:"column", alignItems:"center", width:"100%", textAlign:"center",
-      background:"transparent", border:"none", padding:"8px 16px 4px", marginBottom:6, cursor:"pointer"
-    }}>
-      <style>{`
-        @keyframes iron-ripple { 0% { transform: scale(0.5); opacity:.5; } 100% { transform: scale(2.2); opacity:0; } }
-      `}</style>
-      <div style={{ position:"relative", width:64, height:64, flexShrink:0, display:"flex", alignItems:"center", justifyContent:"center", marginBottom:10 }}>
-        {[0, 1].map(i => (
-          <span key={i} style={{ position:"absolute", width:44, height:44, borderRadius:"50%", border:"1.5px solid rgba(232,164,181,.55)", animation:`iron-ripple 2.4s ease-out ${i*0.8}s infinite` }} />
-        ))}
-        <div style={{ position:"relative", width:40, height:40, borderRadius:"50%", background:"#7A1330", display:"flex", alignItems:"center", justifyContent:"center", boxShadow:"0 3px 10px rgba(122,19,48,.5)" }}>
-          <BibleIcon size={19} color="#F8F4EA" />
-        </div>
-      </div>
-      <div style={{ fontFamily:"Lora, serif", fontSize:17, color:"#F8F4EA" }}>Iron Sharpens Iron</div>
-      <div style={{ fontFamily:"Inter, sans-serif", fontSize:13, color:"#C9C2AF", marginTop:2 }}>Meet a random believer and share about your faith</div>
-    </button>
+    <FeatureCard
+      title="Iron Sharpens Iron"
+      description="Grow spiritually with someone who challenges you."
+      gradient="linear-gradient(145deg, #473951, #171525)"
+      Icon={BibleIcon}
+      onConnect={onOpen}
+    />
   );
 }
 
@@ -1785,22 +1835,22 @@ function SonarReveal({ online, active, variant = "faith" }) {
 /* ---------------- styles ---------------- */
 const page = { display:"flex", flexDirection:"column", height:"100dvh", maxWidth:460, margin:"0 auto", fontFamily:"Inter, sans-serif", background:GLOW_BG, overflow:"hidden" };
 const heading = { fontFamily:"Lora, serif", fontSize:24, color:"#F8F4EA", margin:"0 0 14px", fontWeight:600 };
-const input = { width:"100%", padding:"10px 12px", borderRadius:10, border:"1.5px solid #9C7A48", fontFamily:"Inter, sans-serif", fontSize:14.5, background:"#3E2E14", color:"#F8F4EA", boxSizing:"border-box" };
-const primaryBtn = { background:"#B8935F", color:"#FAF7F0", border:"none", padding:"13px 26px", borderRadius:12, fontFamily:"Inter, sans-serif", fontSize:15, fontWeight:600, cursor:"pointer" };
+const input = { width:"100%", padding:"10px 12px", borderRadius:10, border:"1.5px solid rgba(255,255,255,0.15)", fontFamily:"Inter, sans-serif", fontSize:14.5, background:"#151b30", color:"#F8F4EA", boxSizing:"border-box" };
+const primaryBtn = { background:ACCENT_GRADIENT, color:"#FFFFFF", border:"none", padding:"13px 26px", borderRadius:12, fontFamily:"Inter, sans-serif", fontSize:15, fontWeight:600, cursor:"pointer", boxShadow:"0 8px 24px rgba(88,91,255,.3)" };
 const ctaBtn = {
-  background:"linear-gradient(180deg, #D6AE6E 0%, #B8935F 55%, #9C7A48 100%)",
-  color:"#2A1F0E", border:"1px solid #8A6A38",
-  padding:"15px 28px", borderRadius:999,
+  background:ACCENT_GRADIENT,
+  color:"#FFFFFF", border:"none",
+  padding:"15px 28px", borderRadius:16,
   fontFamily:"Inter, sans-serif", fontSize:15.5, fontWeight:700,
   cursor:"pointer", letterSpacing:0.2,
-  boxShadow:"0 3px 0 #7C6032, 0 8px 16px rgba(0,0,0,.28), inset 0 1px 0 rgba(255,255,255,.5)",
-  display:"inline-flex", alignItems:"center", justifyContent:"center", gap:8
+  boxShadow:"0 12px 32px rgba(88,91,255,.35)",
+  display:"inline-flex", alignItems:"center", justifyContent:"center", gap:10
 };
-const secondaryBtn = { background:"transparent", color:"#B8935F", border:"1.5px solid #B8935F", padding:"11px 20px", borderRadius:12, fontFamily:"Inter, sans-serif", fontSize:14.5, fontWeight:600, cursor:"pointer" };
-const backBtn = { display:"flex", alignItems:"center", gap:2, background:"none", border:"none", color:"#B8935F", fontFamily:"Inter, sans-serif", fontSize:14, cursor:"pointer", padding:0, marginBottom:12 };
-const navBar = { display:"flex", borderTop:"1px solid rgba(255,255,255,0.12)", background:GLOW_BG, position:"sticky", bottom:0 };
-const navBtn = active => ({ flex:1, display:"flex", flexDirection:"column", alignItems:"center", padding:"10px 0 12px", background:"none", border:"none", cursor:"pointer", color: active ? "#D6AE6E" : "#9BA5A0" });
-const matchCard = { background:"#fff", borderRadius:18, padding:16, marginBottom:14, boxShadow:"0 1px 3px rgba(20,20,15,.06)" };
+const secondaryBtn = { background:"rgba(96,112,255,0.12)", color:"#a0aaff", border:"1.5px solid rgba(108,124,255,0.3)", padding:"11px 20px", borderRadius:12, fontFamily:"Inter, sans-serif", fontSize:14.5, fontWeight:600, cursor:"pointer" };
+const backBtn = { display:"flex", alignItems:"center", gap:2, background:"none", border:"none", color:"#8290d9", fontFamily:"Inter, sans-serif", fontSize:14, cursor:"pointer", padding:0, marginBottom:12 };
+const navBar = { display:"flex", gap:4, padding:7, margin:"0 14px 14px", background:"rgba(12,16,31,0.88)", border:"1px solid rgba(255,255,255,0.09)", borderRadius:23, boxShadow:"0 20px 60px rgba(0,0,0,.5)", position:"sticky", bottom:14 };
+const navBtn = active => ({ flex:1, display:"flex", flexDirection:"column", alignItems:"center", padding:"10px 0", background: active ? "rgba(93,108,255,0.15)" : "none", borderRadius:17, border:"none", cursor:"pointer", color: active ? "#a0aaff" : "#626a80", gap:4 });
+const matchCard = { background:"linear-gradient(145deg, rgba(22,27,48,0.95), rgba(11,15,29,0.95))", border:"1px solid rgba(255,255,255,0.07)", borderRadius:22, padding:16, marginBottom:14 };
 const avatarMd = { width:52, height:52, borderRadius:"50%", background:"#EFE9DC", color:"#B8935F", display:"flex", alignItems:"center", justifyContent:"center", fontFamily:"Lora, serif", fontSize:20, flexShrink:0 };
 const avatarSm = { width:38, height:38, borderRadius:"50%", background:"#EFE9DC", color:"#B8935F", display:"flex", alignItems:"center", justifyContent:"center", fontFamily:"Lora, serif", fontSize:15, flexShrink:0, marginRight:10 };
 const emptyState = { textAlign:"center", color:"#9B9585", fontFamily:"Inter, sans-serif", fontSize:14, padding:"60px 20px" };
