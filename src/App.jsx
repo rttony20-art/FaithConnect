@@ -984,7 +984,7 @@ function MenuDrawer({ open, onClose, onLogOut, onNavigate }) {
 function MatchHero({ count, onMeetSomeone }) {
   return (
     <div style={{
-      position:"relative", minHeight:600, overflow:"hidden", display:"flex", alignItems:"flex-end",
+      position:"relative", minHeight:560, overflow:"hidden", display:"flex", alignItems:"flex-end",
       padding:"0 22px 42px", boxSizing:"border-box",
       background:"linear-gradient(90deg,#050819 0%,#070b1c 48%,#090b18 100%)"
     }}>
@@ -992,7 +992,7 @@ function MatchHero({ count, onMeetSomeone }) {
         src={FAITHCONNECT_HERO}
         alt="Hands forming a heart around a sunrise"
         style={{
-          position:"absolute", right:"-2%", bottom:"3%", width:"68%", height:"72%",
+          position:"absolute", right:"-2%", bottom:"15%", width:"68%", height:"72%",
           objectFit:"contain", objectPosition:"center bottom", opacity:0.98, pointerEvents:"none",
           filter:"saturate(1.05) contrast(1.02)"
         }}
