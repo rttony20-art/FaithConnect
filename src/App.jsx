@@ -1200,8 +1200,8 @@ function FeatureCard({ title, description, gradient, Icon, onConnect }) {
         <div style={{ flex:1, minWidth:0 }}>
           <div style={{ fontFamily:"Lora, serif", fontWeight:600, fontSize:20, color:"#F8F4EA", marginBottom:7 }}>{title}</div>
           <p style={{ fontFamily:"Inter, sans-serif", fontSize:13.5, color:"#bfc4d8", lineHeight:1.45, margin:"0 0 14px", maxWidth:250 }}>{description}</p>
-          <button onClick={onConnect} style={{ border:"none", background:"none", padding:0, color:"#d7d9e8", fontFamily:"Inter, sans-serif", fontSize:13.5, fontWeight:600, cursor:"pointer", display:"flex", alignItems:"center", gap:7 }}>
-            Connect <ArrowRight size={17}/>
+          <button onClick={onConnect} style={{ display:"inline-flex", alignItems:"center", justifyContent:"center", gap:8, padding:"9px 16px", borderRadius:999, border:"1px solid #ff5cb0", color:"#fff", background:"rgba(15,10,30,.42)", boxShadow:"0 0 14px rgba(255,92,176,.16)", fontFamily:"Inter, sans-serif", fontSize:12.5, fontWeight:600, cursor:"pointer" }}>
+            Meet someone <ArrowRight size={15}/>
           </button>
         </div>
       </div>
@@ -1209,7 +1209,36 @@ function FeatureCard({ title, description, gradient, Icon, onConnect }) {
   );
 }
 
+const DAILY_BIBLE_VERSES = [
+  { text:"I can do all things through Christ which strengtheneth me.", ref:"Philippians 4:13" },
+  { text:"Trust in the LORD with all thine heart; and lean not unto thine own understanding.", ref:"Proverbs 3:5" },
+  { text:"The LORD is my shepherd; I shall not want.", ref:"Psalm 23:1" },
+  { text:"Be strong and of a good courage; fear not, nor be afraid.", ref:"Deuteronomy 31:6" },
+  { text:"This is the day which the LORD hath made; we will rejoice and be glad in it.", ref:"Psalm 118:24" },
+  { text:"Let all your things be done with charity.", ref:"1 Corinthians 16:14" },
+  { text:"The LORD is my light and my salvation; whom shall I fear?", ref:"Psalm 27:1" },
+  { text:"Cast thy burden upon the LORD, and he shall sustain thee.", ref:"Psalm 55:22" },
+  { text:"And above all things have fervent charity among yourselves.", ref:"1 Peter 4:8" },
+  { text:"Rejoice in the Lord alway: and again I say, Rejoice.", ref:"Philippians 4:4" },
+  { text:"For God hath not given us the spirit of fear; but of power, and of love, and of a sound mind.", ref:"2 Timothy 1:7" },
+  { text:"Commit thy works unto the LORD, and thy thoughts shall be established.", ref:"Proverbs 16:3" },
+  { text:"The LORD is nigh unto all them that call upon him.", ref:"Psalm 145:18" },
+  { text:"Let your light so shine before men, that they may see your good works.", ref:"Matthew 5:16" },
+  { text:"My grace is sufficient for thee: for my strength is made perfect in weakness.", ref:"2 Corinthians 12:9" },
+  { text:"Wait on the LORD: be of good courage, and he shall strengthen thine heart.", ref:"Psalm 27:14" },
+  { text:"A friend loveth at all times.", ref:"Proverbs 17:17" },
+  { text:"Iron sharpeneth iron; so a man sharpeneth the countenance of his friend.", ref:"Proverbs 27:17" }
+];
+
+function getDailyVerse() {
+  const now = new Date();
+  const dayKey = Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()) / 86400000;
+  const index = Math.floor(dayKey) % DAILY_BIBLE_VERSES.length;
+  return DAILY_BIBLE_VERSES[index];
+}
+
 function TodaysWordCard() {
+  const verse = getDailyVerse();
   return (
     <div style={{ position:"relative", background:"linear-gradient(120deg,#15182b,#080a15)", border:"1px solid rgba(255,255,255,.08)", borderRadius:22, padding:"24px", overflow:"hidden", marginBottom:16 }}>
       <div style={{ position:"absolute", inset:0, background:"radial-gradient(circle at 80% 20%, rgba(130,103,255,.2), transparent 35%)", pointerEvents:"none" }} />
@@ -1217,9 +1246,9 @@ function TodaysWordCard() {
         <div style={{ fontFamily:"Inter, sans-serif", fontSize:9, letterSpacing:3, color:"#7887e8", marginBottom:13 }}>TODAY'S WORD</div>
         <div style={{ fontSize:24, color:"#ff72c8", textShadow:"0 0 20px rgba(255,114,200,.55)", marginBottom:12 }}>♡</div>
         <h3 style={{ fontFamily:"Lora, serif", fontSize:19, lineHeight:1.35, fontWeight:500, color:"#F8F4EA", margin:0 }}>
-          "Iron sharpens iron, and one person sharpens another."
+          “{verse.text}”
         </h3>
-        <p style={{ fontFamily:"Inter, sans-serif", fontSize:12, color:"#757d95", marginTop:11 }}>Proverbs 27:17</p>
+        <p style={{ fontFamily:"Inter, sans-serif", fontSize:12, color:"#757d95", marginTop:11 }}>{verse.ref}</p>
       </div>
     </div>
   );
