@@ -230,35 +230,36 @@ function PhotoSlot({ label, preview, existingUrl, onPick, big, emoji, emojiColor
   );
 }
 
-function dicebearUrl(seed) {
-  return `https://api.dicebear.com/9.x/avataaars/svg?seed=${encodeURIComponent(seed)}&backgroundColor=B8935F,7A1330,4E6E52,378ADD,9C7A48&eyes=default,happy,hearts,wink,squint&mouth=smile,twinkle,default&eyebrows=default,defaultNatural,raisedExcited,raisedExcitedNatural`;
-}
-function AvatarPicker({ selected, onPick, baseSeed }) {
-  const [round, setRound] = useState(0);
-  const seeds = Array.from({ length: 9 }, (_, i) => `${baseSeed || "believer"}-${round}-${i}`);
+const FAITHCONNECT_AVATARS = [
+  "/avatars/avatar-01.png", "/avatars/avatar-02.png", "/avatars/avatar-03.png", "/avatars/avatar-04.png",
+  "/avatars/avatar-05.png", "/avatars/avatar-06.png", "/avatars/avatar-07.png", "/avatars/avatar-08.png",
+  "/avatars/avatar-09.png", "/avatars/avatar-10.png", "/avatars/avatar-11.png", "/avatars/avatar-12.png"
+];
+
+function AvatarPicker({ selected, onPick }) {
   return (
-    <div style={{ display:"flex", alignItems:"center", gap:10, marginTop:10 }}>
-      <div style={{ display:"grid", gridTemplateColumns:"repeat(3, 1fr)", gap:8, flex:1 }}>
-        {seeds.map(seed => {
-          const url = dicebearUrl(seed);
-          return (
-            <button key={seed} type="button" onClick={() => onPick(url)} style={{
-              width:"100%", aspectRatio:"1", borderRadius:"50%", padding:0, cursor:"pointer", overflow:"hidden",
-              border: selected === url ? "2.5px solid #F8F4EA" : "2px solid rgba(248,244,234,0.3)",
-              background:"#3E2E14"
-            }}>
-              <img src={url} alt="" style={{ width:"100%", height:"100%" }} />
-            </button>
-          );
-        })}
-      </div>
-      <button type="button" onClick={() => setRound(r => r + 1)} style={{
-        display:"flex", flexDirection:"column", alignItems:"center", gap:4, background:"none", border:"none",
-        color:"#D6AE6E", fontFamily:"Inter, sans-serif", fontSize:12, fontWeight:600, cursor:"pointer", padding:"0 2px", flexShrink:0
+    <div style={{ width:"100%", marginTop:10 }}>
+      <div style={{
+        display:"grid", gridTemplateColumns:"repeat(4, 1fr)", gap:10,
+        width:"100%", maxWidth:430, margin:"0 auto"
       }}>
-        <ArrowRight size={20} />
-        Next
-      </button>
+        {FAITHCONNECT_AVATARS.map((url, i) => (
+          <button key={url} type="button" onClick={() => onPick(url)} aria-label={`Choose FaithConnect avatar ${i + 1}`} style={{
+            width:"100%", aspectRatio:"1", borderRadius:"50%", padding:2, cursor:"pointer", overflow:"hidden",
+            border: selected === url ? "3px solid #F8F4EA" : "2px solid rgba(248,244,234,0.22)",
+            background: selected === url ? "linear-gradient(135deg,#526cff,#8d5cff)" : "rgba(255,255,255,0.03)",
+            boxShadow: selected === url ? "0 0 18px rgba(82,108,255,0.45)" : "none",
+            transition:"transform .18s ease, box-shadow .18s ease, border-color .18s ease"
+          }}>
+            <img src={url} alt="" style={{ width:"100%", height:"100%", objectFit:"cover", display:"block", borderRadius:"50%" }} />
+          </button>
+        ))}
+      </div>
+      <div style={{
+        textAlign:"center", color:"#8F9BB8", fontFamily:"Inter, sans-serif", fontSize:11.5, marginTop:10
+      }}>
+        Choose the avatar that represents you. You can use your real photo instead.
+      </div>
     </div>
   );
 }
@@ -644,7 +645,7 @@ export default function App() {
           </p>
           <div style={{ display:"flex", flexDirection:"column", alignItems:"center", marginBottom:8 }}>
             <PhotoSlot label="Profile photo" preview={avatarPreview} existingUrl={form.avatarUrl} emoji={form.avatarEmoji} emojiColor={form.avatarColor} onPick={pickAvatar} big />
-            <div style={{ fontFamily:"Inter, sans-serif", fontSize:12, color:"#B9C9BC", marginTop:8 }}>Or pick an avatar instead of a photo:</div>
+            <div style={{ fontFamily:"Inter, sans-serif", fontSize:12, color:"#B9C9BC", marginTop:8 }}>Or choose a FaithConnect avatar instead:</div>
             <AvatarPicker selected={form.avatarUrl} baseSeed={form.username || form.name} onPick={url => { setAvatarFile(null); setAvatarPreview(null); setForm({ ...form, avatarUrl:url, avatarEmoji:null, avatarColor:null }); }} />
           </div>
           <Field label="Add three pictures of yourself for others to view — optional">
@@ -752,7 +753,7 @@ export default function App() {
           <h2 style={heading}>Edit your profile</h2>
           <div style={{ display:"flex", flexDirection:"column", alignItems:"center", marginBottom:8 }}>
             <PhotoSlot label="Profile photo" preview={avatarPreview} existingUrl={form.avatarUrl} emoji={form.avatarEmoji} emojiColor={form.avatarColor} onPick={pickAvatar} big />
-            <div style={{ fontFamily:"Inter, sans-serif", fontSize:12, color:"#B9C9BC", marginTop:8 }}>Or pick an avatar instead of a photo:</div>
+            <div style={{ fontFamily:"Inter, sans-serif", fontSize:12, color:"#B9C9BC", marginTop:8 }}>Or choose a FaithConnect avatar instead:</div>
             <AvatarPicker selected={form.avatarUrl} baseSeed={form.username || form.name} onPick={url => { setAvatarFile(null); setAvatarPreview(null); setForm({ ...form, avatarUrl:url, avatarEmoji:null, avatarColor:null }); }} />
           </div>
           <Field label="Add three pictures of yourself for others to view — optional">
