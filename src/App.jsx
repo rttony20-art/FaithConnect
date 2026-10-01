@@ -984,7 +984,7 @@ function MenuDrawer({ open, onClose, onLogOut, onNavigate }) {
 function MatchHero({ count, onMeetSomeone }) {
   return (
     <div style={{
-      position:"relative", minHeight:560, overflow:"hidden", display:"flex", alignItems:"flex-end",
+      position:"relative", minHeight:500, overflow:"hidden", display:"flex", alignItems:"flex-end",
       padding:"0 22px 42px", boxSizing:"border-box",
       background:"linear-gradient(90deg,#050819 0%,#070b1c 48%,#090b18 100%)"
     }}>
@@ -1011,9 +1011,6 @@ function MatchHero({ count, onMeetSomeone }) {
         <p style={{ fontFamily:"Inter, sans-serif", fontSize:15, lineHeight:1.55, color:"#d0d3df", margin:"0 0 25px", maxWidth:330 }}>
           Meet someone who shares your faith, values, and desire to grow.
         </p>
-        <button onClick={onMeetSomeone} style={{ ...ctaBtn, padding:"15px 25px", borderRadius:18, boxShadow:"0 0 28px rgba(128,74,255,.38), 0 12px 32px rgba(0,0,0,.3)" }}>
-          <UserPlus size={21}/> Start Matching <ArrowRight size={19}/>
-        </button>
       </div>
     </div>
   );
