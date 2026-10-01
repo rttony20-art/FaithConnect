@@ -230,35 +230,138 @@ function PhotoSlot({ label, preview, existingUrl, onPick, big, emoji, emojiColor
   );
 }
 
-const FAITHCONNECT_AVATARS = [
-  "/avatars/avatar-01.png", "/avatars/avatar-02.png", "/avatars/avatar-03.png", "/avatars/avatar-04.png",
-  "/avatars/avatar-05.png", "/avatars/avatar-06.png", "/avatars/avatar-07.png", "/avatars/avatar-08.png",
-  "/avatars/avatar-09.png", "/avatars/avatar-10.png", "/avatars/avatar-11.png", "/avatars/avatar-12.png"
-];
+// FaithConnect's built-in avatar library.
+// These are local files in /public/avatars, so the picker does NOT depend on
+// an external avatar API and cannot show broken-image icons when offline/API access fails.
+const AVATAR_PRESETS = Array.from({ length: 24 }, (_, i) => {
+  const n = i + 1;
+  // The generated set alternates male/female in each row: M,F,M,F.
+  const gender = i % 2 === 0 ? "Male" : "Female";
+  return {
+    id: `faith-avatar-${String(n).padStart(2, "0")}`,
+    gender,
+    url: `/avatars/avatar-${String(n).padStart(2, "0")}.png`
+  };
+});
 
 function AvatarPicker({ selected, onPick }) {
+  const [tab, setTab] = useState("All");
+  const [showCreator, setShowCreator] = useState(false);
+  const [creatorGender, setCreatorGender] = useState("Male");
+  const [creatorBase, setCreatorBase] = useState(0);
+
+  const visible = tab === "All" ? AVATAR_PRESETS : AVATAR_PRESETS.filter(a => a.gender === tab);
+  const creatorPool = AVATAR_PRESETS.filter(a => a.gender === creatorGender);
+  const creatorAvatar = creatorPool[creatorBase % creatorPool.length] || creatorPool[0];
+
+  function surpriseMe() {
+    const pool = AVATAR_PRESETS.filter(a => a.gender === creatorGender);
+    if (!pool.length) return;
+    setCreatorBase(Math.floor(Math.random() * pool.length));
+  }
+
   return (
     <div style={{ width:"100%", marginTop:10 }}>
       <div style={{
-        display:"grid", gridTemplateColumns:"repeat(4, 1fr)", gap:10,
+        textAlign:"center", color:"#B9C9BC", fontFamily:"Inter, sans-serif", fontSize:12,
+        marginBottom:10
+      }}>
+        Choose a FaithConnect avatar that represents you.
+      </div>
+
+      <div style={{ display:"flex", gap:7, justifyContent:"center", flexWrap:"wrap", marginBottom:12 }}>
+        {["All", "Male", "Female"].map(t => (
+          <button key={t} type="button" onClick={() => setTab(t)} style={{
+            padding:"7px 14px", borderRadius:999, cursor:"pointer", fontFamily:"Inter, sans-serif", fontSize:12,
+            border: tab === t ? "1.5px solid #D6AE6E" : "1px solid rgba(248,244,234,0.25)",
+            background: tab === t ? "rgba(184,147,95,.22)" : "rgba(255,255,255,.03)",
+            color: tab === t ? "#F8F4EA" : "#9FAAC1"
+          }}>{t}</button>
+        ))}
+        <button type="button" onClick={() => setShowCreator(v => !v)} style={{
+          padding:"7px 14px", borderRadius:999, cursor:"pointer", fontFamily:"Inter, sans-serif", fontSize:12,
+          border:"1.5px solid rgba(141,92,255,.7)", background:"rgba(141,92,255,.12)", color:"#E7DDFF"
+        }}>{showCreator ? "Close" : "Create my avatar"}</button>
+      </div>
+
+      <div style={{
+        display:"grid", gridTemplateColumns:"repeat(4, minmax(0, 1fr))", gap:10,
         width:"100%", maxWidth:430, margin:"0 auto"
       }}>
-        {FAITHCONNECT_AVATARS.map((url, i) => (
-          <button key={url} type="button" onClick={() => onPick(url)} aria-label={`Choose FaithConnect avatar ${i + 1}`} style={{
+        {visible.map(a => (
+          <button key={a.id} type="button" onClick={() => onPick(a.url)} aria-label={`Choose ${a.gender.toLowerCase()} avatar`} style={{
             width:"100%", aspectRatio:"1", borderRadius:"50%", padding:2, cursor:"pointer", overflow:"hidden",
-            border: selected === url ? "3px solid #F8F4EA" : "2px solid rgba(248,244,234,0.22)",
-            background: selected === url ? "linear-gradient(135deg,#526cff,#8d5cff)" : "rgba(255,255,255,0.03)",
-            boxShadow: selected === url ? "0 0 18px rgba(82,108,255,0.45)" : "none",
-            transition:"transform .18s ease, box-shadow .18s ease, border-color .18s ease"
+            border: selected === a.url ? "3px solid #F8F4EA" : "2px solid rgba(248,244,234,.22)",
+            background: selected === a.url ? "linear-gradient(135deg,#526CFF,#8D5CFF)" : "rgba(255,255,255,.03)",
+            boxShadow: selected === a.url ? "0 0 18px rgba(82,108,255,.45)" : "none"
           }}>
-            <img src={url} alt="" style={{ width:"100%", height:"100%", objectFit:"cover", display:"block", borderRadius:"50%" }} />
+            <img
+              src={a.url}
+              alt=""
+              style={{ width:"100%", height:"100%", objectFit:"cover", display:"block", borderRadius:"50%" }}
+            />
           </button>
         ))}
       </div>
-      <div style={{
-        textAlign:"center", color:"#8F9BB8", fontFamily:"Inter, sans-serif", fontSize:11.5, marginTop:10
-      }}>
-        Choose the avatar that represents you. You can use your real photo instead.
+
+      {showCreator && (
+        <div style={{
+          margin:"14px auto 0", maxWidth:430, padding:14, borderRadius:18,
+          border:"1px solid rgba(141,92,255,.35)", background:"rgba(12,16,32,.82)"
+        }}>
+          <div style={{ color:"#F8F4EA", fontFamily:"Inter, sans-serif", fontWeight:700, fontSize:14 }}>
+            Create your avatar
+          </div>
+          <div style={{ color:"#8F9BB8", fontFamily:"Inter, sans-serif", fontSize:11.5, marginTop:4 }}>
+            Start with a character you like, then browse the options until you find the one that represents you.
+          </div>
+
+          <div style={{ display:"flex", alignItems:"center", gap:14, marginTop:12 }}>
+            <img src={creatorAvatar?.url} alt="Avatar preview" style={{
+              width:94, height:94, borderRadius:"50%", border:"2px solid #8D5CFF", background:"#0B1020"
+            }} />
+            <div style={{ flex:1 }}>
+              <div style={{ display:"flex", gap:7, flexWrap:"wrap" }}>
+                {['Male','Female'].map(g => (
+                  <button key={g} type="button" onClick={() => { setCreatorGender(g); setCreatorBase(0); }} style={{
+                    padding:"7px 11px", borderRadius:999, border: creatorGender === g ? "1.5px solid #D6AE6E" : "1px solid rgba(248,244,234,.2)",
+                    background: creatorGender === g ? "rgba(184,147,95,.2)" : "transparent", color:"#F8F4EA", cursor:"pointer", fontSize:12
+                  }}>{g}</button>
+                ))}
+              </div>
+              <button type="button" onClick={surpriseMe} style={{
+                marginTop:9, padding:"7px 11px", borderRadius:999,
+                border:"1px solid rgba(248,244,234,.25)", background:"transparent", color:"#F8F4EA", cursor:"pointer", fontSize:12
+              }}>Surprise me</button>
+            </div>
+          </div>
+
+          <div style={{ marginTop:12, color:"#9FAAC1", fontFamily:"Inter, sans-serif", fontSize:11.5 }}>
+            Choose your base avatar:
+          </div>
+          <div style={{
+            display:"grid", gridTemplateColumns:"repeat(6, 1fr)", gap:7, marginTop:8
+          }}>
+            {creatorPool.map((a, i) => (
+              <button key={a.id} type="button" onClick={() => setCreatorBase(i)} style={{
+                aspectRatio:"1", padding:1, borderRadius:"50%", overflow:"hidden", cursor:"pointer",
+                border: creatorAvatar?.id === a.id ? "2px solid #F8F4EA" : "1px solid rgba(248,244,234,.18)",
+                background:"rgba(255,255,255,.03)"
+              }}>
+                <img src={a.url} alt="" style={{ width:"100%", height:"100%", objectFit:"cover", borderRadius:"50%", display:"block" }} />
+              </button>
+            ))}
+          </div>
+
+          <button type="button" onClick={() => onPick(creatorAvatar.url)} style={{
+            width:"100%", marginTop:12, padding:"10px 14px", border:0, borderRadius:999,
+            background:"linear-gradient(135deg,#526CFF,#8D5CFF)", color:"white", fontWeight:700, cursor:"pointer"
+          }}>Use this avatar</button>
+        </div>
+      )}
+
+      <div style={{ textAlign:"center", color:"#8F9BB8", fontFamily:"Inter, sans-serif", fontSize:11.5, marginTop:10 }}>
+        24 original FaithConnect avatars — 12 male and 12 female. You can still use your real photo instead.
       </div>
     </div>
   );
