@@ -1003,9 +1003,10 @@ function MatchHero({ count, onMeetSomeone }) {
           <span style={{ width:27, height:2, background:"linear-gradient(90deg,#8a5cff,#ff67c7)" }} />
           <span style={{ fontFamily:"Inter, sans-serif", fontSize:9, letterSpacing:3, color:"#d2d4e4" }}>FAITH CONNECT</span>
         </div>
-        <h1 style={{ fontFamily:"Lora, serif", fontSize:39, lineHeight:1.02, letterSpacing:-1.4, fontWeight:600, color:"#F8F4EA", margin:"0 0 18px" }}>
-          Shared Faith.<br/>Meaningful Connection.<br/>
-          <span style={{ background:"linear-gradient(90deg,#c7b1ff,#ff48c8)", WebkitBackgroundClip:"text", backgroundClip:"text", color:"transparent" }}>Growing Together.</span>
+        <h1 style={{ fontFamily:"Lora, serif", fontSize:22, lineHeight:1.22, letterSpacing:0.2, fontStyle:"italic", fontWeight:500, color:"#F8F4EA", margin:"0 0 16px", maxWidth:290, textShadow:"0 2px 14px rgba(0,0,0,.45)" }}>
+          <span style={{ opacity:.96 }}>Shared Faith.</span><br/>
+          <span style={{ opacity:.92 }}>Meaningful Connection.</span><br/>
+          <span style={{ background:"linear-gradient(90deg,#c7b1ff,#ff72d5)", WebkitBackgroundClip:"text", backgroundClip:"text", color:"transparent" }}>Growing Together.</span>
         </h1>
         <p style={{ fontFamily:"Inter, sans-serif", fontSize:15, lineHeight:1.55, color:"#d0d3df", margin:"0 0 25px", maxWidth:330 }}>
           Meet someone who shares your faith, values, and desire to grow.
