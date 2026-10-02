@@ -958,7 +958,7 @@ export default function App() {
         <div style={{ position:"relative" }}>
           <TopBar onMenu={() => setMenuOpen(true)} dark overlay onLogo={() => setScreen("matches")} lightMode={lightMode} onToggleTheme={() => setLightMode(v => !v)} />
           <MenuDrawer open={menuOpen} onClose={() => setMenuOpen(false)} onLogOut={logOut} onNavigate={setScreen} />
-          <MatchHero count={matches.length} onMeetSomeone={() => setScreen("meetSomeone")} />
+          <MatchHero count={matches.length} onMeetSomeone={() => setScreen("meetSomeone")} lightMode={lightMode} />
         </div>
 
         <div style={{ background:"var(--fc-bg)", padding:"0 0 110px" }}>
@@ -1125,12 +1125,14 @@ function MenuDrawer({ open, onClose, onLogOut, onNavigate }) {
   );
 }
 
-function MatchHero({ count, onMeetSomeone }) {
+function MatchHero({ count, onMeetSomeone, lightMode }) {
   return (
     <div style={{
       position:"relative", minHeight:500, overflow:"hidden", display:"flex", alignItems:"flex-end",
       padding:"0 22px 42px", boxSizing:"border-box",
-      background:"linear-gradient(90deg,#050819 0%,#070b1c 48%,#090b18 100%)"
+      background: lightMode
+        ? "linear-gradient(180deg,#bfe7ff 0%,#eaf8ff 43%,#ffffff 72%,#dfeaf5 100%)"
+        : "linear-gradient(90deg,#050819 0%,#070b1c 48%,#090b18 100%)"
     }}>
       <img
         src={FAITHCONNECT_HERO}
@@ -1138,21 +1140,39 @@ function MatchHero({ count, onMeetSomeone }) {
         style={{
           position:"absolute", right:"-1%", bottom:"0", width:"66%", height:"100%",
           objectFit:"cover", objectPosition:"center center", opacity:0.98, pointerEvents:"none",
-          filter:"saturate(1.08) contrast(1.03)"
+          filter: lightMode ? "saturate(.72) brightness(1.12) contrast(.98)" : "saturate(1.08) contrast(1.03)",
+          mixBlendMode: lightMode ? "normal" : "normal"
         }}
       />
-      <div style={{ position:"absolute", inset:0, background:"linear-gradient(90deg, rgba(5,9,25,.96) 0%, rgba(5,9,25,.78) 35%, rgba(5,9,25,.16) 67%, rgba(5,9,25,0) 100%), linear-gradient(180deg, rgba(4,7,20,.25) 0%, rgba(4,7,20,0) 45%, rgba(4,7,20,.92) 100%)", pointerEvents:"none" }} />
+      {lightMode && (
+        <>
+          <div style={{
+            position:"absolute", inset:0, pointerEvents:"none",
+            background:
+              "radial-gradient(ellipse 34% 13% at 74% 19%, rgba(255,255,255,.92) 0%, rgba(255,255,255,.62) 42%, rgba(255,255,255,0) 72%)," +
+              "radial-gradient(ellipse 28% 11% at 91% 31%, rgba(255,255,255,.82) 0%, rgba(255,255,255,.45) 46%, rgba(255,255,255,0) 74%)," +
+              "radial-gradient(ellipse 31% 12% at 55% 34%, rgba(255,255,255,.72) 0%, rgba(255,255,255,.32) 48%, rgba(255,255,255,0) 76%)," +
+              "linear-gradient(180deg, rgba(190,231,255,.22) 0%, rgba(255,255,255,.08) 52%, rgba(255,255,255,0) 72%)",
+            zIndex:1
+          }} />
+          <div style={{
+            position:"absolute", inset:0, pointerEvents:"none", zIndex:1,
+            background:"linear-gradient(90deg, rgba(235,248,255,.98) 0%, rgba(235,248,255,.84) 31%, rgba(235,248,255,.20) 58%, rgba(235,248,255,0) 78%), linear-gradient(180deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0) 54%, rgba(255,255,255,.18) 70%, rgba(29,48,74,.50) 100%)"
+          }} />
+        </>
+      )}
+      <div style={{ position:"absolute", inset:0, zIndex: lightMode ? 2 : 1, background: lightMode ? "linear-gradient(180deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0) 55%, rgba(5,10,25,.18) 72%, rgba(5,9,25,.82) 100%)" : "linear-gradient(90deg, rgba(5,9,25,.96) 0%, rgba(5,9,25,.78) 35%, rgba(5,9,25,.16) 67%, rgba(5,9,25,0) 100%), linear-gradient(180deg, rgba(4,7,20,.25) 0%, rgba(4,7,20,0) 45%, rgba(4,7,20,.92) 100%)", pointerEvents:"none" }} />
       <div style={{ position:"relative", zIndex:2, maxWidth:360 }}>
         <div style={{ display:"flex", alignItems:"center", gap:9, marginBottom:15 }}>
           <span style={{ width:27, height:2, background:"linear-gradient(90deg,#8a5cff,#ff67c7)" }} />
-          <span style={{ fontFamily:"Inter, sans-serif", fontSize:9, letterSpacing:3, color:"#d2d4e4" }}>FAITH CONNECT</span>
+          <span style={{ fontFamily:"Inter, sans-serif", fontSize:9, letterSpacing:3, color: lightMode ? "#35516a" : "#d2d4e4" }}>FAITH CONNECT</span>
         </div>
-        <h1 style={{ fontFamily:"Lora, serif", fontSize:22, lineHeight:1.22, letterSpacing:0.2, fontStyle:"italic", fontWeight:500, color:"#F8F4EA", margin:"0 0 16px", maxWidth:290, textShadow:"0 2px 14px rgba(0,0,0,.45)" }}>
+        <h1 style={{ fontFamily:"Lora, serif", fontSize:22, lineHeight:1.22, letterSpacing:0.2, fontStyle:"italic", fontWeight:500, color: lightMode ? "#17324b" : "#F8F4EA", margin:"0 0 16px", maxWidth:290, textShadow:"0 2px 14px rgba(0,0,0,.45)" }}>
           <span style={{ opacity:.96 }}>Shared Faith.</span><br/>
           <span style={{ opacity:.92 }}>Meaningful Connection.</span><br/>
           <span style={{ background:"linear-gradient(90deg,#c7b1ff,#ff72d5)", WebkitBackgroundClip:"text", backgroundClip:"text", color:"transparent" }}>Growing Together.</span>
         </h1>
-        <p style={{ fontFamily:"Inter, sans-serif", fontSize:15, lineHeight:1.55, color:"#d0d3df", margin:"0 0 25px", maxWidth:330 }}>
+        <p style={{ fontFamily:"Inter, sans-serif", fontSize:15, lineHeight:1.55, color: lightMode ? "#3e596e" : "#d0d3df", margin:"0 0 25px", maxWidth:330 }}>
           Meet someone who shares your faith, values, and desire to grow.
         </p>
       </div>
