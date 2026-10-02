@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
-import { Heart, MessageCircle, Phone, Video, Mic, MicOff, PhoneOff, Send, User, ChevronLeft, Check, X, Camera, VideoOff, Square, SkipForward, Menu, LogOut, Info, Shield, HelpCircle, Eye, EyeOff, Home, UserPlus, Sun, Percent, ArrowRight } from "lucide-react";
+import { Heart, MessageCircle, Phone, Video, Mic, MicOff, PhoneOff, Send, User, ChevronLeft, Check, X, Camera, VideoOff, Square, SkipForward, Menu, LogOut, Info, Shield, HelpCircle, Eye, EyeOff, Home, UserPlus, Sun, Moon, Percent, ArrowRight } from "lucide-react";
 
 /* ---------- design tokens ----------
 Ink Navy #16233F (dark surfaces), Ivory #F8F4EA (light surfaces),
@@ -16,6 +16,7 @@ const DENOMS = ["Non-denominational","Baptist","Catholic","Methodist","Pentecost
 
 // Experimental dark background: soft green glow blobs on black, in place of solid navy.
 // To revert, change GLOW_BG back to the string "#16233F".
+const LIGHT_BG = 'linear-gradient(180deg, #F7F9FC 0%, #EEF2F7 55%, #E8EDF5 100%)';
 const GLOW_BG = 'radial-gradient(circle at 50% 20%, rgba(93,124,255,0.16), transparent 45%), radial-gradient(circle at 15% 45%, rgba(86,108,255,0.16), transparent 40%), radial-gradient(circle at 85% 75%, rgba(171,71,255,0.14), transparent 45%), linear-gradient(180deg, #080b17 0%, #070a14 55%, #090b16 100%)';
 const ACCENT_GRADIENT = 'linear-gradient(100deg, #526cff, #8d5cff)';
 // Cinematic FaithConnect hero artwork generated for this layout. Kept inline so the app works as a single file.
@@ -443,6 +444,9 @@ export default function App() {
   const matchesScrollRef = useRef(null);
   useEffect(() => { if (screen === "matches" && matchesScrollRef.current) matchesScrollRef.current.scrollTop = 0; }, [screen]);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [lightMode, setLightMode] = useState(() => { try { return localStorage.getItem("faithconnect-theme") === "light"; } catch { return false; } });
+  useEffect(() => { try { localStorage.setItem("faithconnect-theme", lightMode ? "light" : "dark"); } catch {} }, [lightMode]);
+  useEffect(() => { document.documentElement.style.setProperty("--fc-bg", lightMode ? LIGHT_BG : GLOW_BG); }, [lightMode]);
 
   async function logOut() {
     try { await sdel("supabase-session", false); } catch {}
@@ -691,7 +695,7 @@ export default function App() {
 
   if (screen === "resetPassword") {
     return (
-      <div style={{ ...page, background: GLOW_BG }}>
+      <div style={{ ...page, background:"var(--fc-bg)" }}>
         <FontLoader />
         <div style={{ flex:1, display:"flex", flexDirection:"column", justifyContent:"center", padding:"0 28px" }}>
           <h1 style={{ fontFamily:"Lora, serif", fontSize:26, color:"#F8F4EA", marginBottom:8 }}>Set a new password</h1>
@@ -724,7 +728,7 @@ export default function App() {
     return (
       <div style={page}>
         <FontLoader />
-        <div style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "center", padding: "40px 28px", background:GLOW_BG }}>
+        <div style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "center", padding: "40px 28px", background:"var(--fc-bg)" }}>
           <div style={{ fontFamily: "Lora, serif", fontSize: 15, letterSpacing: 1, color: "#B8935F", marginBottom: 10 }}>a faith-centered matchmaking app</div>
           <h1 style={{ fontFamily: "Lora, serif", fontSize: 40, lineHeight: 1.15, color: "#F8F4EA", fontWeight: 600, margin: "0 0 18px" }}>
             Built on shared conviction, not just chemistry.
@@ -779,7 +783,7 @@ export default function App() {
     return (
       <div style={page}>
         <FontLoader />
-        <div style={{ flex: 1, overflowY: "auto", padding: "28px 22px 100px", background:GLOW_BG }}>
+        <div style={{ flex: 1, overflowY: "auto", padding: "28px 22px 100px", background:"var(--fc-bg)" }}>
           <h2 style={heading}>Tell us about you</h2>
           <p style={{ fontFamily:"Inter, sans-serif", fontSize:13, color:"#8A8578", lineHeight:1.5, marginTop:-8, marginBottom:18 }}>
             What you share on this page is how we match you with someone else — other members can see it to find out if you're a good match.
@@ -862,9 +866,9 @@ export default function App() {
     return (
       <div style={page}>
         <FontLoader />
-        <TopBar onMenu={() => setMenuOpen(true)} dark overlay={false} onLogo={() => setScreen("matches")} />
+        <TopBar onMenu={() => setMenuOpen(true)} dark={!lightMode} overlay={false} onLogo={() => setScreen("matches")} lightMode={lightMode} onToggleTheme={() => setLightMode(v => !v)} />
         <MenuDrawer open={menuOpen} onClose={() => setMenuOpen(false)} onLogOut={logOut} onNavigate={setScreen} />
-        <div style={{ flex:1, overflowY:"auto", padding:"8px 22px 100px", background:GLOW_BG }}>
+        <div style={{ flex:1, overflowY:"auto", padding:"8px 22px 100px", background:"var(--fc-bg)" }}>
           <div style={{ margin:"0 auto 14px", display:"flex", justifyContent:"center" }}><AvatarCircle profile={myProfile} size={74} fontSize={28} /></div>
           <h2 style={{...heading, textAlign:"center", color:"#F8F4EA"}}>{myProfile.name}, {myProfile.age}</h2>
           <p style={{textAlign:"center", color:"#B9C9BC", fontFamily:"Inter, sans-serif", fontSize:14, marginTop:-8}}>{myProfile.city} · {myProfile.denom}</p>
@@ -889,7 +893,7 @@ export default function App() {
     return (
       <div style={page}>
         <FontLoader />
-        <div style={{ flex: 1, overflowY: "auto", padding: "20px 22px 100px", background:GLOW_BG }}>
+        <div style={{ flex: 1, overflowY: "auto", padding: "20px 22px 100px", background:"var(--fc-bg)" }}>
           <button onClick={()=>setScreen("profile")} style={backBtn}><ChevronLeft size={18}/> Back</button>
           <h2 style={heading}>Edit your profile</h2>
           <div style={{ display:"flex", flexDirection:"column", alignItems:"center", marginBottom:8 }}>
@@ -921,13 +925,13 @@ export default function App() {
     return (
       <div style={page}>
         <FontLoader />
-        <TopBar onMenu={() => setMenuOpen(true)} dark overlay={false} onLogo={() => setScreen("matches")} />
+        <TopBar onMenu={() => setMenuOpen(true)} dark={!lightMode} overlay={false} onLogo={() => setScreen("matches")} lightMode={lightMode} onToggleTheme={() => setLightMode(v => !v)} />
         <MenuDrawer open={menuOpen} onClose={() => setMenuOpen(false)} onLogOut={logOut} onNavigate={setScreen} />
-        <div style={{ padding: "10px 22px 8px", background:GLOW_BG }}>
+        <div style={{ padding: "10px 22px 8px", background:"var(--fc-bg)" }}>
           <button onClick={() => setScreen("matches")} style={{ ...backBtn, color:"#D6AE6E", marginBottom:8 }}><ChevronLeft size={18}/> Back</button>
           <h2 style={{...heading, color:"#F8F4EA"}}>Messages</h2>
         </div>
-        <div style={{ flex:1, overflowY:"auto", padding:"0 16px 100px", background:GLOW_BG }}>
+        <div style={{ flex:1, overflowY:"auto", padding:"0 16px 100px", background:"var(--fc-bg)" }}>
           {conversations.length === 0 && <div style={{...emptyState, color:"#B9C9BC"}}>No conversations yet. Start one from your matches.</div>}
           {conversations.map(c => (
             <button key={c.otherId} onClick={() => { setActiveConvo({ otherId: c.otherId, otherProfile: c.otherProfile }); setScreen("chat"); }} style={convoRow}>
@@ -950,14 +954,14 @@ export default function App() {
   return (
     <div style={page}>
       <FontLoader />
-      <div ref={matchesScrollRef} style={{ flex:1, overflowY:"auto", background:GLOW_BG }}>
+      <div ref={matchesScrollRef} style={{ flex:1, overflowY:"auto", background:"var(--fc-bg)" }}>
         <div style={{ position:"relative" }}>
-          <TopBar onMenu={() => setMenuOpen(true)} dark overlay onLogo={() => setScreen("matches")} />
+          <TopBar onMenu={() => setMenuOpen(true)} dark overlay onLogo={() => setScreen("matches")} lightMode={lightMode} onToggleTheme={() => setLightMode(v => !v)} />
           <MenuDrawer open={menuOpen} onClose={() => setMenuOpen(false)} onLogOut={logOut} onNavigate={setScreen} />
           <MatchHero count={matches.length} onMeetSomeone={() => setScreen("meetSomeone")} />
         </div>
 
-        <div style={{ background:GLOW_BG, padding:"0 0 110px" }}>
+        <div style={{ background:"var(--fc-bg)", padding:"0 0 110px" }}>
           <div style={{ padding:"0 16px" }}>
             <div style={{
               marginTop:18, padding:"25px 18px 18px", borderRadius:26,
@@ -1039,7 +1043,7 @@ function FontLoader() {
   return <style>{`@import url('https://fonts.googleapis.com/css2?family=Lora:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap');`}</style>;
 }
 
-function TopBar({ onMenu, dark, overlay, onLogo }) {
+function TopBar({ onMenu, dark, overlay, onLogo, lightMode, onToggleTheme }) {
   return (
     <div style={{
       display:"flex", alignItems:"center", justifyContent:"space-between", padding:"16px 16px 4px",
@@ -1059,16 +1063,15 @@ function TopBar({ onMenu, dark, overlay, onLogo }) {
           </div>
         </button>
       </div>
-      <div style={{ width:36, height:36, borderRadius:"50%", background:"rgba(255,255,255,0.05)", border:"1px solid rgba(255,255,255,0.08)", display:"flex", alignItems:"center", justifyContent:"center" }}>
-        <Heart size={16} color={dark ? "#F8F4EA" : "#22252B"} />
-      </div>
+      <button type="button" onClick={onToggleTheme} aria-label={lightMode ? "Switch to dark mode" : "Switch to light mode"} title={lightMode ? "Dark mode" : "Light mode"} style={{ width:38, height:38, borderRadius:"50%", background: lightMode ? "rgba(255,255,255,.78)" : "rgba(255,255,255,0.05)", border: lightMode ? "1px solid rgba(22,35,63,.12)" : "1px solid rgba(255,255,255,0.08)", display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", boxShadow: lightMode ? "0 6px 18px rgba(22,35,63,.10)" : "none" }}>
+        {lightMode ? <Moon size={17} color="#16233F" /> : <Sun size={17} color="#F8D27A" />}
+      </button>
     </div>
   );
 }
 
 function MenuDrawer({ open, onClose, onLogOut, onNavigate }) {
   const [inviteMsg, setInviteMsg] = useState("");
-  const [lightMode, setLightMode] = useState(false);
   const items = [
     { icon: Home, label: "Home", action: () => onNavigate("matches") },
     { icon: Heart, label: "Connect", action: () => onNavigate("meetSomeone") },
@@ -1084,7 +1087,6 @@ function MenuDrawer({ open, onClose, onLogOut, onNavigate }) {
         } catch { setInviteMsg("Copy this page's link from your browser to invite a friend."); }
         setTimeout(() => setInviteMsg(""), 3000);
       } },
-    { icon: Sun, label: lightMode ? "Dark mode" : "Light mode", action: () => setLightMode(v => !v), note: "Coming soon" },
   ];
   return (
     <>
@@ -1093,7 +1095,7 @@ function MenuDrawer({ open, onClose, onLogOut, onNavigate }) {
         opacity: open ? 1 : 0, pointerEvents: open ? "auto" : "none", transition:"opacity .25s"
       }} />
       <div style={{
-        position:"fixed", top:0, left:0, bottom:0, width:260, background:GLOW_BG, zIndex:21,
+        position:"fixed", top:0, left:0, bottom:0, width:260, background:"var(--fc-bg)", zIndex:21,
         transform: open ? "translateX(0)" : "translateX(-100%)", transition:"transform .28s ease", padding:"22px 18px", boxShadow:"2px 0 20px rgba(0,0,0,.3)"
       }}>
         <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:24 }}>
@@ -1206,12 +1208,12 @@ function SecurityScreen({ myId, myProfile, onBack, onUsernameChanged }) {
   return (
     <div style={page}>
       <FontLoader />
-      <div style={{ padding:"18px 22px 8px", background:GLOW_BG }}>
+      <div style={{ padding:"18px 22px 8px", background:"var(--fc-bg)" }}>
         <button onClick={onBack} style={{ ...backBtn, color:"#D6AE6E", marginBottom:10 }}><ChevronLeft size={18}/> Back</button>
         <h2 style={{ ...heading, color:"#F8F4EA" }}>Security</h2>
         <p style={{ fontFamily:"Inter, sans-serif", fontSize:13.5, color:"#C9C2AF", margin:"0 0 16px" }}>Change your username or password anytime.</p>
       </div>
-      <div style={{ flex:1, overflowY:"auto", padding:"0 22px 100px", background:GLOW_BG }}>
+      <div style={{ flex:1, overflowY:"auto", padding:"0 22px 100px", background:"var(--fc-bg)" }}>
         <div style={{ background:"#5C4520", border:"1.5px solid #9C7A48", borderRadius:16, padding:18, marginBottom:16 }}>
           <label style={{ fontFamily:"Inter, sans-serif", fontSize:13, color:"#F0E6C8", display:"block", marginBottom:8 }}>Username</label>
           <input value={newUsername} onChange={e=>setNewUsername(e.target.value)} style={{ ...input, background:"#3E2E14", color:"#F8F4EA", border:"1.5px solid #9C7A48", marginBottom:10 }} />
@@ -1234,12 +1236,12 @@ function MatchListScreen({ matches, myProfile, onOpenChat, onBack }) {
   return (
     <div style={page}>
       <FontLoader />
-      <div style={{ padding:"18px 16px 4px", background:GLOW_BG }}>
+      <div style={{ padding:"18px 16px 4px", background:"var(--fc-bg)" }}>
         <button onClick={onBack} style={{ ...backBtn, color:"#B8935F", marginBottom:10 }}><ChevronLeft size={18}/> Back</button>
         <h2 style={{ fontFamily:"Lora, serif", fontSize:22, color:"#F8F4EA", margin:"0 0 4px" }}>See who you match with</h2>
         <p style={{ fontFamily:"Inter, sans-serif", fontSize:13.5, color:"#B9C9BC", margin:"0 0 16px" }}>Tap someone to reveal your match %</p>
       </div>
-      <div style={{ flex:1, overflowY:"auto", padding:"16px 16px 100px", background:GLOW_BG, display:"flex", flexWrap:"wrap", gap:12, alignContent:"flex-start" }}>
+      <div style={{ flex:1, overflowY:"auto", padding:"16px 16px 100px", background:"var(--fc-bg)", display:"flex", flexWrap:"wrap", gap:12, alignContent:"flex-start" }}>
         {matches.length === 0 && <div style={emptyState}>No matches yet — check back once more people join.</div>}
         {matches.map(({ profile, score }) => (
           <button key={profile.id} onClick={() => setReveal({ profile, score })} style={{
@@ -1294,7 +1296,7 @@ function MatchRevealOverlay({ myProfile, other, score, onClose, onSayHello }) {
   }
 
   return (
-    <div style={{ position:"fixed", inset:0, background:GLOW_BG, zIndex:50, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", padding:24 }}>
+    <div style={{ position:"fixed", inset:0, background:"var(--fc-bg)", zIndex:50, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", padding:24 }}>
       <FontLoader />
       <button onClick={onClose} style={{ position:"absolute", top:20, left:16, background:"none", border:"none", cursor:"pointer" }}><X size={24} color="#F8F4EA" /></button>
       <div style={{ display:"flex", alignItems:"center", gap:20 }}>
@@ -1640,7 +1642,7 @@ function ChatScreen({ myId, myProfile, other, onBack }) {
         <button onClick={() => startCall("audio")} style={iconBtn}><Phone size={19} color="#F8F4EA" /></button>
         <button onClick={() => startCall("video")} style={iconBtn}><Video size={19} color="#F8F4EA" /></button>
       </div>
-      <div style={{ flex:1, overflowY:"auto", padding:"16px 14px", background:GLOW_BG, display:"flex", flexDirection:"column" }}>
+      <div style={{ flex:1, overflowY:"auto", padding:"16px 14px", background:"var(--fc-bg)", display:"flex", flexDirection:"column" }}>
         {messages.length === 0 && <div style={emptyState}>Say hello — your conversation starts here.</div>}
         {messages.map((m, i) => (
           <div key={i} style={{ alignSelf: m.sender === myId ? "flex-end" : "flex-start", maxWidth:"75%", marginBottom:10 }}>
@@ -1651,7 +1653,7 @@ function ChatScreen({ myId, myProfile, other, onBack }) {
         ))}
         <div ref={bottomRef} />
       </div>
-      {callErr && <div style={{fontSize:12, color:"#B5616B", fontFamily:"Inter, sans-serif", padding:"4px 14px", background:GLOW_BG}}>{callErr}</div>}
+      {callErr && <div style={{fontSize:12, color:"#B5616B", fontFamily:"Inter, sans-serif", padding:"4px 14px", background:"var(--fc-bg)"}}>{callErr}</div>}
       <div style={composer}>
         <button onClick={recording ? stopRecording : startRecording} style={{ ...iconBtnLight, background: recording ? "#B5616B" : "#EFE9DC" }}>
           {recording ? <Square size={17} color="#fff" /> : <Mic size={18} color="#4A4A45" />}
@@ -1908,7 +1910,7 @@ function RandomConnectScreen({ myId, myProfile, onBack, variant = "faith" }) {
           <div style={{ flex:1, fontFamily:"Lora, serif", fontSize:16.5, color:"#F8F4EA" }}>{partner?.name || "Believer"}</div>
           <button onClick={skip} style={iconBtn}><SkipForward size={18} color="#F8F4EA" /></button>
         </div>
-        <div style={{ flex:1, overflowY:"auto", padding:"16px 14px", background:GLOW_BG, display:"flex", flexDirection:"column" }}>
+        <div style={{ flex:1, overflowY:"auto", padding:"16px 14px", background:"var(--fc-bg)", display:"flex", flexDirection:"column" }}>
           {messages.length === 0 && <div style={emptyState}>Say hello and share what's on your heart.</div>}
           {messages.map((m, i) => (
             <div key={i} style={{ alignSelf: m.sender === myId ? "flex-end" : "flex-start", maxWidth:"75%", marginBottom:10 }}>
@@ -2037,7 +2039,7 @@ function SonarReveal({ online, active, variant = "faith" }) {
 }
 
 /* ---------------- styles ---------------- */
-const page = { display:"flex", flexDirection:"column", height:"100dvh", maxWidth:460, margin:"0 auto", fontFamily:"Inter, sans-serif", background:GLOW_BG, overflow:"hidden" };
+const page = { display:"flex", flexDirection:"column", height:"100dvh", maxWidth:460, margin:"0 auto", fontFamily:"Inter, sans-serif", background:"var(--fc-bg, #080b17)", overflow:"hidden" };
 const heading = { fontFamily:"Lora, serif", fontSize:24, color:"#F8F4EA", margin:"0 0 14px", fontWeight:600 };
 const input = { width:"100%", padding:"10px 12px", borderRadius:10, border:"1.5px solid rgba(255,255,255,0.15)", fontFamily:"Inter, sans-serif", fontSize:14.5, background:"#151b30", color:"#F8F4EA", boxSizing:"border-box" };
 const primaryBtn = { background:ACCENT_GRADIENT, color:"#FFFFFF", border:"none", padding:"13px 26px", borderRadius:12, fontFamily:"Inter, sans-serif", fontSize:15, fontWeight:600, cursor:"pointer", boxShadow:"0 8px 24px rgba(88,91,255,.3)" };
@@ -2059,7 +2061,7 @@ const avatarMd = { width:52, height:52, borderRadius:"50%", background:"#EFE9DC"
 const avatarSm = { width:38, height:38, borderRadius:"50%", background:"#EFE9DC", color:"#B8935F", display:"flex", alignItems:"center", justifyContent:"center", fontFamily:"Lora, serif", fontSize:15, flexShrink:0, marginRight:10 };
 const emptyState = { textAlign:"center", color:"#9B9585", fontFamily:"Inter, sans-serif", fontSize:14, padding:"60px 20px" };
 const convoRow = { display:"flex", alignItems:"center", width:"100%", background:"#fff", border:"none", borderRadius:14, padding:12, marginBottom:10, cursor:"pointer", boxShadow:"0 1px 2px rgba(20,20,15,.05)" };
-const chatHeader = { display:"flex", alignItems:"center", padding:"14px 12px", background:GLOW_BG };
+const chatHeader = { display:"flex", alignItems:"center", padding:"14px 12px", background:"var(--fc-bg)" };
 const iconBtn = { background:"rgba(255,255,255,.1)", border:"none", borderRadius:10, width:36, height:36, display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", marginLeft:6 };
 const composer = { display:"flex", alignItems:"center", gap:8, padding:"10px 12px", background:"#fff", borderTop:"1px solid #E5DFD1" };
 const iconBtnLight = { width:38, height:38, borderRadius:"50%", border:"none", background:"#EFE9DC", display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", flexShrink:0 };
