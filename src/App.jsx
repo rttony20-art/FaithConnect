@@ -244,154 +244,115 @@ const AVATAR_PRESETS = Array.from({ length: 24 }, (_, i) => {
   };
 });
 
+function makeFaithAvatarSvg({ skin, hair, eyes, mouth, shirt, accessory }) {
+  const skins = { warm:"#C98B68", tan:"#A96E4D", deep:"#754733", rich:"#5A3426", golden:"#D9A071", light:"#E7B58F", cocoa:"#8B563B" };
+  const hairs = {
+    short:"M67 104 C62 55 83 25 128 25 C173 25 194 55 189 104 L174 92 C168 61 151 48 128 48 C104 48 87 61 82 92 Z",
+    curls:"M62 104 C48 75 57 34 91 24 C107 9 139 11 157 25 C191 35 207 75 194 106 L178 92 C181 63 160 46 143 45 C116 38 89 52 82 84 Z",
+    fade:"M70 98 C67 63 88 35 128 35 C168 35 189 63 186 98 L169 87 C164 61 148 51 128 51 C108 51 92 61 87 87 Z",
+    long:"M63 118 C52 78 61 36 94 23 C132 8 176 31 190 69 L190 143 L170 133 L169 86 C163 57 145 46 126 46 C99 46 83 64 82 94 L81 135 Z",
+    bob:"M61 116 L59 70 C62 31 91 15 128 15 C165 15 194 31 197 70 L195 116 L177 103 L173 67 C164 45 147 39 128 39 C108 39 91 45 82 67 L79 103 Z",
+    locs:"M65 112 C55 72 67 28 105 22 C143 13 181 35 190 73 L180 125 L165 112 L169 73 C159 48 144 43 128 43 C106 43 90 54 85 78 L82 121 Z",
+    bun:"M68 103 C62 60 86 32 128 32 C170 32 194 60 188 103 L172 90 C167 62 150 50 128 50 C106 50 89 62 84 90 Z M157 34 C160 12 179 4 193 17 C205 28 197 47 177 48 Z",
+    waves:"M64 109 C55 72 65 37 98 23 C137 7 179 32 191 70 C197 89 193 113 186 130 L169 111 C172 81 160 56 137 48 C111 39 89 56 83 83 L81 122 Z"
+  };
+  const eyeMap = {
+    soft:'<path d="M92 103 Q104 94 116 103"/><path d="M140 103 Q152 94 164 103"/>',
+    bright:'<circle cx="105" cy="102" r="6"/><circle cx="151" cy="102" r="6"/>',
+    wink:'<path d="M91 103 Q104 94 116 103"/><path d="M140 103 Q151 111 164 101"/>',
+    bold:'<path d="M91 99 Q104 89 117 99"/><path d="M139 99 Q152 89 165 99"/><circle cx="104" cy="102" r="4"/><circle cx="152" cy="102" r="4"/>',
+    happy:'<path d="M91 105 Q104 91 117 105"/><path d="M139 105 Q152 91 165 105"/>'
+  };
+  const mouthMap = {
+    smile:'<path d="M111 130 Q128 145 145 130"/>',
+    calm:'<path d="M114 133 Q128 137 142 133"/>',
+    open:'<path d="M112 130 Q128 148 144 130 Q140 146 128 148 Q116 146 112 130 Z" fill="#6E3040"/>',
+    small:'<path d="M121 134 Q128 138 135 134"/>',
+    laugh:'<path d="M108 128 Q128 151 148 128 Q143 151 128 153 Q113 151 108 128 Z" fill="#6E3040"/><path d="M114 134 Q128 138 142 134" stroke="#F8F4EA" stroke-width="3"/>'
+  };
+  const shirts = { navy:"#253B72", purple:"#6242A8", rose:"#9D4D70", teal:"#277D83", gold:"#A9783F", sage:"#4F7862" };
+  const accessories = {
+    none:'',
+    glasses:'<rect x="84" y="91" width="38" height="24" rx="10" fill="none" stroke="#E8D7B5" stroke-width="4"/><rect x="134" y="91" width="38" height="24" rx="10" fill="none" stroke="#E8D7B5" stroke-width="4"/><path d="M122 101 H134" stroke="#E8D7B5" stroke-width="4"/>',
+    star:'<path d="M186 72 l4 9 10 1-8 6 3 10-9-5-9 5 3-10-8-6 10-1z" fill="#D6AE6E"/>',
+    cross:'<circle cx="186" cy="88" r="13" fill="#8D5CFF"/><path d="M186 80 V96 M178 88 H194" stroke="#F8F4EA" stroke-width="3" stroke-linecap="round"/>',
+    hoop:'<circle cx="82" cy="119" r="7" fill="none" stroke="#D6AE6E" stroke-width="4"/><circle cx="174" cy="119" r="7" fill="none" stroke="#D6AE6E" stroke-width="4"/>'
+  };
+  const skinColor = skins[skin] || skins.warm;
+  const hairPath = hairs[hair] || hairs.short;
+  const eye = eyeMap[eyes] || eyeMap.soft;
+  const mouthSvg = mouthMap[mouth] || mouthMap.smile;
+  const shirtColor = shirts[shirt] || shirts.navy;
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
+    <defs><linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#526CFF"/><stop offset="1" stop-color="#8D5CFF"/></linearGradient></defs>
+    <circle cx="128" cy="128" r="126" fill="url(#bg)"/>
+    <circle cx="128" cy="119" r="94" fill="#0B1020" opacity=".32"/>
+    <path d="M61 245 C65 194 91 171 128 171 C165 171 191 194 195 245Z" fill="${shirtColor}"/>
+    <path d="M105 169 Q128 185 151 169 L151 195 Q128 211 105 195Z" fill="${skinColor}"/>
+    <ellipse cx="128" cy="110" rx="59" ry="70" fill="${skinColor}"/>
+    <ellipse cx="70" cy="111" rx="9" ry="15" fill="${skinColor}"/><ellipse cx="186" cy="111" rx="9" ry="15" fill="${skinColor}"/>
+    <path d="${hairPath}" fill="#211A22"/>
+    <g fill="none" stroke="#2A2028" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">${eye}</g>
+    <path d="M128 106 Q121 118 128 122" fill="none" stroke="#7D4B3A" stroke-width="3" stroke-linecap="round"/>
+    <g fill="none" stroke="#7A3F45" stroke-width="3" stroke-linecap="round">${mouthSvg}</g>
+    <g>${accessories[accessory] || ''}</g>
+    <circle cx="128" cy="128" r="122" fill="none" stroke="rgba(255,255,255,.22)" stroke-width="3"/>
+  </svg>`;
+}
+
+function faithAvatarDataUrl(options) {
+  return `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(makeFaithAvatarSvg(options))}`;
+}
+
 function AvatarPicker({ selected, onPick }) {
   const [tab, setTab] = useState("All");
   const [avatarPage, setAvatarPage] = useState(0);
   const [showCreator, setShowCreator] = useState(false);
-  const [creatorGender, setCreatorGender] = useState("Male");
-  const [creatorBase, setCreatorBase] = useState(0);
+  const [builder, setBuilder] = useState({ skin:"warm", hair:"short", eyes:"soft", mouth:"smile", shirt:"navy", accessory:"none" });
+  const customUrl = faithAvatarDataUrl(builder);
 
   const visible = tab === "All" ? AVATAR_PRESETS : AVATAR_PRESETS.filter(a => a.gender === tab);
   const pageSize = 5;
   const pageCount = Math.ceil(visible.length / pageSize);
   const safePage = Math.min(avatarPage, Math.max(0, pageCount - 1));
   const pageAvatars = visible.slice(safePage * pageSize, safePage * pageSize + pageSize);
-  const creatorPool = AVATAR_PRESETS.filter(a => a.gender === creatorGender);
-  const creatorAvatar = creatorPool[creatorBase % creatorPool.length] || creatorPool[0];
 
-  function changeTab(t) {
-    setTab(t);
-    setAvatarPage(0);
+  function changeTab(t) { setTab(t); setAvatarPage(0); }
+  function nextAvatars() { setAvatarPage(p => (p + 1) % pageCount); }
+  function setPart(part, value) { setBuilder(prev => ({ ...prev, [part]: value })); }
+  function randomizeBuilder() {
+    const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
+    setBuilder({ skin:pick(["warm","tan","deep","rich","golden","light","cocoa"]), hair:pick(["short","curls","fade","long","bob","locs","bun","waves"]), eyes:pick(["soft","bright","wink","bold","happy"]), mouth:pick(["smile","calm","open","small","laugh"]), shirt:pick(["navy","purple","rose","teal","gold","sage"]), accessory:pick(["none","glasses","star","cross","hoop"]) });
   }
-
-  function nextAvatars() {
-    setAvatarPage(p => (p + 1) % pageCount);
-  }
-
-  function surpriseMe() {
-    const pool = AVATAR_PRESETS.filter(a => a.gender === creatorGender);
-    if (!pool.length) return;
-    setCreatorBase(Math.floor(Math.random() * pool.length));
-  }
+  const options = {
+    skin:["warm","tan","deep","rich","golden","light","cocoa"], hair:["short","curls","fade","long","bob","locs","bun","waves"],
+    eyes:["soft","bright","wink","bold","happy"], mouth:["smile","calm","open","small","laugh"], shirt:["navy","purple","rose","teal","gold","sage"], accessory:["none","glasses","star","cross","hoop"]
+  };
+  const labels = { skin:"Skin", hair:"Hair", eyes:"Eyes", mouth:"Mouth", shirt:"Clothes", accessory:"Accessory" };
 
   return (
     <div style={{ width:"100%", marginTop:10 }}>
-      <div style={{
-        textAlign:"center", color:"#B9C9BC", fontFamily:"Inter, sans-serif", fontSize:12,
-        marginBottom:9
-      }}>
+      <div style={{ textAlign:"center", color:"#B9C9BC", fontFamily:"Inter, sans-serif", fontSize:12, marginBottom:9 }}>
         Choose a FaithConnect avatar that represents you.
       </div>
-
       <div style={{ display:"flex", gap:7, justifyContent:"center", flexWrap:"wrap", marginBottom:10 }}>
-        {["All", "Male", "Female"].map(t => (
-          <button key={t} type="button" onClick={() => changeTab(t)} style={{
-            padding:"7px 14px", borderRadius:999, cursor:"pointer", fontFamily:"Inter, sans-serif", fontSize:12,
-            border: tab === t ? "1.5px solid #D6AE6E" : "1px solid rgba(248,244,234,0.25)",
-            background: tab === t ? "rgba(184,147,95,.22)" : "rgba(255,255,255,.03)",
-            color: tab === t ? "#F8F4EA" : "#9FAAC1"
-          }}>{t}</button>
-        ))}
-        <button type="button" onClick={() => setShowCreator(v => !v)} style={{
-          padding:"7px 14px", borderRadius:999, cursor:"pointer", fontFamily:"Inter, sans-serif", fontSize:12,
-          border:"1.5px solid rgba(141,92,255,.7)", background:"rgba(141,92,255,.12)", color:"#E7DDFF"
-        }}>{showCreator ? "Close" : "Create my avatar"}</button>
+        {["All","Male","Female"].map(t => <button key={t} type="button" onClick={() => changeTab(t)} style={{ padding:"7px 14px", borderRadius:999, cursor:"pointer", fontFamily:"Inter, sans-serif", fontSize:12, border:tab===t?"1.5px solid #D6AE6E":"1px solid rgba(248,244,234,.25)", background:tab===t?"rgba(184,147,95,.22)":"rgba(255,255,255,.03)", color:tab===t?"#F8F4EA":"#9FAAC1" }}>{t}</button>)}
+        <button type="button" onClick={() => setShowCreator(v => !v)} style={{ padding:"7px 14px", borderRadius:999, cursor:"pointer", fontFamily:"Inter, sans-serif", fontSize:12, border:"1.5px solid rgba(141,92,255,.7)", background:"rgba(141,92,255,.12)", color:"#E7DDFF" }}>{showCreator ? "Close" : "Create my avatar"}</button>
       </div>
-
-      <div style={{
-        display:"grid", gridTemplateColumns:"repeat(5, minmax(0, 1fr))", gap:8,
-        width:"100%", maxWidth:430, margin:"0 auto"
-      }}>
-        {pageAvatars.map(a => (
-          <button key={a.id} type="button" onClick={() => onPick(a.url)} aria-label={`Choose ${a.gender.toLowerCase()} avatar`} style={{
-            width:"100%", aspectRatio:"1", borderRadius:"50%", padding:2, cursor:"pointer", overflow:"hidden",
-            border: selected === a.url ? "3px solid #F8F4EA" : "2px solid rgba(248,244,234,.22)",
-            background: selected === a.url ? "linear-gradient(135deg,#526CFF,#8D5CFF)" : "rgba(255,255,255,.03)",
-            boxShadow: selected === a.url ? "0 0 18px rgba(82,108,255,.45)" : "none"
-          }}>
-            <img
-              src={a.url}
-              alt=""
-              style={{ width:"100%", height:"100%", objectFit:"cover", display:"block", borderRadius:"50%" }}
-            />
-          </button>
-        ))}
+      <div style={{ display:"grid", gridTemplateColumns:"repeat(5,minmax(0,1fr))", gap:8, width:"100%", maxWidth:430, margin:"0 auto" }}>
+        {pageAvatars.map(a => <button key={a.id} type="button" onClick={() => onPick(a.url)} aria-label={`Choose ${a.gender.toLowerCase()} avatar`} style={{ width:"100%", aspectRatio:"1", borderRadius:"50%", padding:2, cursor:"pointer", overflow:"hidden", border:selected===a.url?"3px solid #F8F4EA":"2px solid rgba(248,244,234,.22)", background:selected===a.url?"linear-gradient(135deg,#526CFF,#8D5CFF)":"rgba(255,255,255,.03)", boxShadow:selected===a.url?"0 0 18px rgba(82,108,255,.45)":"none" }}><img src={a.url} alt="" style={{width:"100%",height:"100%",objectFit:"cover",display:"block",borderRadius:"50%"}} /></button>)}
       </div>
+      {pageCount > 1 && <div style={{display:"flex",justifyContent:"center",marginTop:10}}><button type="button" onClick={nextAvatars} style={{padding:"8px 17px",borderRadius:999,cursor:"pointer",fontFamily:"Inter,sans-serif",fontSize:12,border:"1px solid rgba(141,92,255,.55)",background:"rgba(141,92,255,.10)",color:"#E7DDFF"}}>Next avatars →</button></div>}
+      <div style={{textAlign:"center",color:"#69748D",fontFamily:"Inter,sans-serif",fontSize:10.5,marginTop:6}}>Showing {safePage*pageSize+1}–{Math.min((safePage+1)*pageSize,visible.length)} of {visible.length}</div>
 
-      {pageCount > 1 && (
-        <div style={{ display:"flex", justifyContent:"center", marginTop:10 }}>
-          <button type="button" onClick={nextAvatars} style={{
-            padding:"8px 17px", borderRadius:999, cursor:"pointer", fontFamily:"Inter, sans-serif", fontSize:12,
-            border:"1px solid rgba(141,92,255,.55)", background:"rgba(141,92,255,.10)", color:"#E7DDFF"
-          }}>
-            Next avatars →
-          </button>
+      {showCreator && <div style={{margin:"14px auto 0",maxWidth:430,padding:14,borderRadius:18,border:"1px solid rgba(141,92,255,.35)",background:"rgba(12,16,32,.86)"}}>
+        <div style={{display:"flex",alignItems:"center",gap:14}}>
+          <img src={customUrl} alt="Your custom FaithConnect avatar" style={{width:100,height:100,borderRadius:"50%",border:"2px solid #8D5CFF",boxShadow:"0 0 24px rgba(141,92,255,.25)"}} />
+          <div style={{flex:1}}><div style={{color:"#F8F4EA",fontFamily:"Inter,sans-serif",fontWeight:700,fontSize:14}}>Build your own avatar</div><div style={{color:"#8F9BB8",fontFamily:"Inter,sans-serif",fontSize:11.5,marginTop:4,lineHeight:1.45}}>No AI and no external service. Mix the features to create your own FaithConnect character.</div><button type="button" onClick={randomizeBuilder} style={{marginTop:9,padding:"7px 12px",borderRadius:999,border:"1px solid rgba(248,244,234,.25)",background:"transparent",color:"#F8F4EA",cursor:"pointer",fontSize:12}}>Surprise me</button></div>
         </div>
-      )}
-
-      <div style={{ textAlign:"center", color:"#69748D", fontFamily:"Inter, sans-serif", fontSize:10.5, marginTop:6 }}>
-        Showing {safePage * pageSize + 1}–{Math.min((safePage + 1) * pageSize, visible.length)} of {visible.length}
-      </div>
-
-      {showCreator && (
-        <div style={{
-          margin:"14px auto 0", maxWidth:430, padding:14, borderRadius:18,
-          border:"1px solid rgba(141,92,255,.35)", background:"rgba(12,16,32,.82)"
-        }}>
-          <div style={{ color:"#F8F4EA", fontFamily:"Inter, sans-serif", fontWeight:700, fontSize:14 }}>
-            Create your avatar
-          </div>
-          <div style={{ color:"#8F9BB8", fontFamily:"Inter, sans-serif", fontSize:11.5, marginTop:4 }}>
-            Start with a character you like, then browse the options until you find the one that represents you.
-          </div>
-
-          <div style={{ display:"flex", alignItems:"center", gap:14, marginTop:12 }}>
-            <img src={creatorAvatar?.url} alt="Avatar preview" style={{
-              width:94, height:94, borderRadius:"50%", border:"2px solid #8D5CFF", background:"#0B1020"
-            }} />
-            <div style={{ flex:1 }}>
-              <div style={{ display:"flex", gap:7, flexWrap:"wrap" }}>
-                {["Male","Female"].map(g => (
-                  <button key={g} type="button" onClick={() => { setCreatorGender(g); setCreatorBase(0); }} style={{
-                    padding:"7px 11px", borderRadius:999, border: creatorGender === g ? "1.5px solid #D6AE6E" : "1px solid rgba(248,244,234,.2)",
-                    background: creatorGender === g ? "rgba(184,147,95,.2)" : "transparent", color:"#F8F4EA", cursor:"pointer", fontSize:12
-                  }}>{g}</button>
-                ))}
-              </div>
-              <button type="button" onClick={surpriseMe} style={{
-                marginTop:9, padding:"7px 11px", borderRadius:999,
-                border:"1px solid rgba(248,244,234,.25)", background:"transparent", color:"#F8F4EA", cursor:"pointer", fontSize:12
-              }}>Surprise me</button>
-            </div>
-          </div>
-
-          <div style={{ marginTop:12, color:"#9FAAC1", fontFamily:"Inter, sans-serif", fontSize:11.5 }}>
-            Choose your base avatar:
-          </div>
-          <div style={{
-            display:"grid", gridTemplateColumns:"repeat(6, 1fr)", gap:7, marginTop:8
-          }}>
-            {creatorPool.map((a, i) => (
-              <button key={a.id} type="button" onClick={() => setCreatorBase(i)} style={{
-                aspectRatio:"1", padding:1, borderRadius:"50%", overflow:"hidden", cursor:"pointer",
-                border: creatorAvatar?.id === a.id ? "2px solid #F8F4EA" : "1px solid rgba(248,244,234,.18)",
-                background:"rgba(255,255,255,.03)"
-              }}>
-                <img src={a.url} alt="" style={{ width:"100%", height:"100%", objectFit:"cover", borderRadius:"50%", display:"block" }} />
-              </button>
-            ))}
-          </div>
-
-          <button type="button" onClick={() => onPick(creatorAvatar.url)} style={{
-            width:"100%", marginTop:12, padding:"10px 14px", border:0, borderRadius:999,
-            background:"linear-gradient(135deg,#526CFF,#8D5CFF)", color:"white", fontWeight:700, cursor:"pointer"
-          }}>Use this avatar</button>
-        </div>
-      )}
-
-      <div style={{ textAlign:"center", color:"#8F9BB8", fontFamily:"Inter, sans-serif", fontSize:11.5, marginTop:10 }}>
-        24 original FaithConnect avatars — 12 male and 12 female. You can still use your real photo instead.
-      </div>
+        <div style={{marginTop:13}}>{Object.keys(options).map(part => <div key={part} style={{marginTop:10}}><div style={{color:"#9FAAC1",fontFamily:"Inter,sans-serif",fontSize:11.5,marginBottom:6}}>{labels[part]}</div><div style={{display:"flex",gap:6,overflowX:"auto",paddingBottom:2}}>{options[part].map(value => <button key={value} type="button" onClick={() => setPart(part,value)} style={{flex:"0 0 auto",padding:"7px 9px",borderRadius:999,border:builder[part]===value?"1.5px solid #D6AE6E":"1px solid rgba(248,244,234,.18)",background:builder[part]===value?"rgba(184,147,95,.22)":"rgba(255,255,255,.03)",color:builder[part]===value?"#F8F4EA":"#9FAAC1",cursor:"pointer",fontSize:10.5,textTransform:"capitalize"}}>{value}</button>)}</div></div>)}</div>
+        <button type="button" onClick={() => onPick(customUrl)} style={{width:"100%",marginTop:15,padding:"11px 14px",border:0,borderRadius:999,background:"linear-gradient(135deg,#526CFF,#8D5CFF)",color:"white",fontWeight:700,cursor:"pointer"}}>Use my custom avatar</button>
+      </div>}
     </div>
   );
 }
