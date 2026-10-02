@@ -309,11 +309,38 @@ function AvatarPicker({ selected, onPick }) {
   const [avatarPage, setAvatarPage] = useState(0);
   const [showCreator, setShowCreator] = useState(false);
   const [builder, setBuilder] = useState({ skin:"warm", hair:"short", eyes:"soft", mouth:"smile", shirt:"navy", accessory:"none" });
+  const [loadedAvatarIds, setLoadedAvatarIds] = useState([]);
+  const [avatarLoading, setAvatarLoading] = useState(true);
   const customUrl = faithAvatarDataUrl(builder);
 
-  const visible = tab === "All" ? AVATAR_PRESETS : AVATAR_PRESETS.filter(a => a.gender === tab);
+  // Preload every FaithConnect avatar. If a file is missing/corrupt, it is
+  // simply excluded instead of showing a broken-image icon.
+  useEffect(() => {
+    let cancelled = false;
+    setAvatarLoading(true);
+    setLoadedAvatarIds([]);
+
+    const results = AVATAR_PRESETS.map(a => new Promise(resolve => {
+      const img = new Image();
+      img.onload = () => resolve(a.id);
+      img.onerror = () => resolve(null);
+      img.src = a.url;
+    }));
+
+    Promise.all(results).then(ids => {
+      if (cancelled) return;
+      setLoadedAvatarIds(ids.filter(Boolean));
+      setAvatarLoading(false);
+    });
+
+    return () => { cancelled = true; };
+  }, []);
+
+  const loadedSet = new Set(loadedAvatarIds);
+  const validPresets = AVATAR_PRESETS.filter(a => loadedSet.has(a.id));
+  const visible = tab === "All" ? validPresets : validPresets.filter(a => a.gender === tab);
   const pageSize = 5;
-  const pageCount = Math.ceil(visible.length / pageSize);
+  const pageCount = Math.max(1, Math.ceil(visible.length / pageSize));
   const safePage = Math.min(avatarPage, Math.max(0, pageCount - 1));
   const pageAvatars = visible.slice(safePage * pageSize, safePage * pageSize + pageSize);
 
@@ -339,11 +366,32 @@ function AvatarPicker({ selected, onPick }) {
         {["All","Male","Female"].map(t => <button key={t} type="button" onClick={() => changeTab(t)} style={{ padding:"7px 14px", borderRadius:999, cursor:"pointer", fontFamily:"Inter, sans-serif", fontSize:12, border:tab===t?"1.5px solid #D6AE6E":"1px solid rgba(248,244,234,.25)", background:tab===t?"rgba(184,147,95,.22)":"rgba(255,255,255,.03)", color:tab===t?"#F8F4EA":"#9FAAC1" }}>{t}</button>)}
         <button type="button" onClick={() => setShowCreator(v => !v)} style={{ padding:"7px 14px", borderRadius:999, cursor:"pointer", fontFamily:"Inter, sans-serif", fontSize:12, border:"1.5px solid rgba(141,92,255,.7)", background:"rgba(141,92,255,.12)", color:"#E7DDFF" }}>{showCreator ? "Close" : "Create my avatar"}</button>
       </div>
-      <div style={{ display:"grid", gridTemplateColumns:"repeat(5,minmax(0,1fr))", gap:8, width:"100%", maxWidth:430, margin:"0 auto" }}>
-        {pageAvatars.map(a => <button key={a.id} type="button" onClick={() => onPick(a.url)} aria-label={`Choose ${a.gender.toLowerCase()} avatar`} style={{ width:"100%", aspectRatio:"1", borderRadius:"50%", padding:2, cursor:"pointer", overflow:"hidden", border:selected===a.url?"3px solid #F8F4EA":"2px solid rgba(248,244,234,.22)", background:selected===a.url?"linear-gradient(135deg,#526CFF,#8D5CFF)":"rgba(255,255,255,.03)", boxShadow:selected===a.url?"0 0 18px rgba(82,108,255,.45)":"none" }}><img src={a.url} alt="" style={{width:"100%",height:"100%",objectFit:"cover",display:"block",borderRadius:"50%"}} /></button>)}
+      <div style={{ display:"grid", gridTemplateColumns:"repeat(5,minmax(0,1fr))", gap:8, width:"100%", maxWidth:430, margin:"0 auto", minHeight:74 }}>
+        {avatarLoading ? (
+          <div style={{ gridColumn:"1 / -1", textAlign:"center", color:"#69748D", fontFamily:"Inter,sans-serif", fontSize:11, padding:"25px 0" }}>
+            Loading avatars…
+          </div>
+        ) : pageAvatars.length ? (
+          pageAvatars.map(a => <button key={a.id} type="button" onClick={() => onPick(a.url)} aria-label={`Choose ${a.gender.toLowerCase()} avatar`} style={{ width:"100%", aspectRatio:"1", borderRadius:"50%", padding:2, cursor:"pointer", overflow:"hidden", border:selected===a.url?"3px solid #F8F4EA":"2px solid rgba(248,244,234,.22)", background:selected===a.url?"linear-gradient(135deg,#526CFF,#8D5CFF)":"rgba(255,255,255,.03)", boxShadow:selected===a.url?"0 0 18px rgba(82,108,255,.45)":"none" }}>
+            <img
+              src={a.url}
+              alt=""
+              onError={() => setLoadedAvatarIds(prev => prev.filter(id => id !== a.id))}
+              style={{width:"100%",height:"100%",objectFit:"cover",display:"block",borderRadius:"50%"}}
+            />
+          </button>)
+        ) : (
+          <div style={{ gridColumn:"1 / -1", textAlign:"center", color:"#9FAAC1", fontFamily:"Inter,sans-serif", fontSize:11, padding:"20px 0" }}>
+            No avatar files could be loaded. Check that the files are in <b>/public/avatars/</b>.
+          </div>
+        )}
       </div>
       {pageCount > 1 && <div style={{display:"flex",justifyContent:"center",marginTop:10}}><button type="button" onClick={nextAvatars} style={{padding:"8px 17px",borderRadius:999,cursor:"pointer",fontFamily:"Inter,sans-serif",fontSize:12,border:"1px solid rgba(141,92,255,.55)",background:"rgba(141,92,255,.10)",color:"#E7DDFF"}}>Next avatars →</button></div>}
-      <div style={{textAlign:"center",color:"#69748D",fontFamily:"Inter,sans-serif",fontSize:10.5,marginTop:6}}>Showing {safePage*pageSize+1}–{Math.min((safePage+1)*pageSize,visible.length)} of {visible.length}</div>
+      {!avatarLoading && visible.length > 0 && (
+        <div style={{textAlign:"center",color:"#69748D",fontFamily:"Inter,sans-serif",fontSize:10.5,marginTop:6}}>
+          Showing {safePage*pageSize+1}–{Math.min((safePage+1)*pageSize,visible.length)} of {visible.length}
+        </div>
+      )}
 
       {showCreator && <div style={{margin:"14px auto 0",maxWidth:430,padding:14,borderRadius:18,border:"1px solid rgba(141,92,255,.35)",background:"rgba(12,16,32,.86)"}}>
         <div style={{display:"flex",alignItems:"center",gap:14}}>
