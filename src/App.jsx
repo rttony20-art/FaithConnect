@@ -246,13 +246,27 @@ const AVATAR_PRESETS = Array.from({ length: 24 }, (_, i) => {
 
 function AvatarPicker({ selected, onPick }) {
   const [tab, setTab] = useState("All");
+  const [avatarPage, setAvatarPage] = useState(0);
   const [showCreator, setShowCreator] = useState(false);
   const [creatorGender, setCreatorGender] = useState("Male");
   const [creatorBase, setCreatorBase] = useState(0);
 
   const visible = tab === "All" ? AVATAR_PRESETS : AVATAR_PRESETS.filter(a => a.gender === tab);
+  const pageSize = 5;
+  const pageCount = Math.ceil(visible.length / pageSize);
+  const safePage = Math.min(avatarPage, Math.max(0, pageCount - 1));
+  const pageAvatars = visible.slice(safePage * pageSize, safePage * pageSize + pageSize);
   const creatorPool = AVATAR_PRESETS.filter(a => a.gender === creatorGender);
   const creatorAvatar = creatorPool[creatorBase % creatorPool.length] || creatorPool[0];
+
+  function changeTab(t) {
+    setTab(t);
+    setAvatarPage(0);
+  }
+
+  function nextAvatars() {
+    setAvatarPage(p => (p + 1) % pageCount);
+  }
 
   function surpriseMe() {
     const pool = AVATAR_PRESETS.filter(a => a.gender === creatorGender);
@@ -264,14 +278,14 @@ function AvatarPicker({ selected, onPick }) {
     <div style={{ width:"100%", marginTop:10 }}>
       <div style={{
         textAlign:"center", color:"#B9C9BC", fontFamily:"Inter, sans-serif", fontSize:12,
-        marginBottom:10
+        marginBottom:9
       }}>
         Choose a FaithConnect avatar that represents you.
       </div>
 
-      <div style={{ display:"flex", gap:7, justifyContent:"center", flexWrap:"wrap", marginBottom:12 }}>
+      <div style={{ display:"flex", gap:7, justifyContent:"center", flexWrap:"wrap", marginBottom:10 }}>
         {["All", "Male", "Female"].map(t => (
-          <button key={t} type="button" onClick={() => setTab(t)} style={{
+          <button key={t} type="button" onClick={() => changeTab(t)} style={{
             padding:"7px 14px", borderRadius:999, cursor:"pointer", fontFamily:"Inter, sans-serif", fontSize:12,
             border: tab === t ? "1.5px solid #D6AE6E" : "1px solid rgba(248,244,234,0.25)",
             background: tab === t ? "rgba(184,147,95,.22)" : "rgba(255,255,255,.03)",
@@ -285,10 +299,10 @@ function AvatarPicker({ selected, onPick }) {
       </div>
 
       <div style={{
-        display:"grid", gridTemplateColumns:"repeat(4, minmax(0, 1fr))", gap:10,
+        display:"grid", gridTemplateColumns:"repeat(5, minmax(0, 1fr))", gap:8,
         width:"100%", maxWidth:430, margin:"0 auto"
       }}>
-        {visible.map(a => (
+        {pageAvatars.map(a => (
           <button key={a.id} type="button" onClick={() => onPick(a.url)} aria-label={`Choose ${a.gender.toLowerCase()} avatar`} style={{
             width:"100%", aspectRatio:"1", borderRadius:"50%", padding:2, cursor:"pointer", overflow:"hidden",
             border: selected === a.url ? "3px solid #F8F4EA" : "2px solid rgba(248,244,234,.22)",
@@ -302,6 +316,21 @@ function AvatarPicker({ selected, onPick }) {
             />
           </button>
         ))}
+      </div>
+
+      {pageCount > 1 && (
+        <div style={{ display:"flex", justifyContent:"center", marginTop:10 }}>
+          <button type="button" onClick={nextAvatars} style={{
+            padding:"8px 17px", borderRadius:999, cursor:"pointer", fontFamily:"Inter, sans-serif", fontSize:12,
+            border:"1px solid rgba(141,92,255,.55)", background:"rgba(141,92,255,.10)", color:"#E7DDFF"
+          }}>
+            Next avatars →
+          </button>
+        </div>
+      )}
+
+      <div style={{ textAlign:"center", color:"#69748D", fontFamily:"Inter, sans-serif", fontSize:10.5, marginTop:6 }}>
+        Showing {safePage * pageSize + 1}–{Math.min((safePage + 1) * pageSize, visible.length)} of {visible.length}
       </div>
 
       {showCreator && (
@@ -322,7 +351,7 @@ function AvatarPicker({ selected, onPick }) {
             }} />
             <div style={{ flex:1 }}>
               <div style={{ display:"flex", gap:7, flexWrap:"wrap" }}>
-                {['Male','Female'].map(g => (
+                {["Male","Female"].map(g => (
                   <button key={g} type="button" onClick={() => { setCreatorGender(g); setCreatorBase(0); }} style={{
                     padding:"7px 11px", borderRadius:999, border: creatorGender === g ? "1.5px solid #D6AE6E" : "1px solid rgba(248,244,234,.2)",
                     background: creatorGender === g ? "rgba(184,147,95,.2)" : "transparent", color:"#F8F4EA", cursor:"pointer", fontSize:12
