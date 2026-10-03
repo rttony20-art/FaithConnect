@@ -868,7 +868,7 @@ export default function App() {
       <div style={page}>
         <FontLoader />
         <TopBar onMenu={() => setMenuOpen(true)} dark={!lightMode} overlay={false} onLogo={() => setScreen("matches")} lightMode={lightMode} onToggleTheme={() => setLightMode(v => !v)} />
-        <MenuDrawer open={menuOpen} onClose={() => setMenuOpen(false)} onLogOut={logOut} onNavigate={setScreen} />
+        <MenuDrawer open={menuOpen} onClose={() => setMenuOpen(false)} onLogOut={logOut} onNavigate={setScreen} lightMode={lightMode} />
         <div style={{ flex:1, overflowY:"auto", padding:"8px 22px 100px", background:"var(--fc-bg)" }}>
           <div style={{ margin:"0 auto 14px", display:"flex", justifyContent:"center" }}><AvatarCircle profile={myProfile} size={74} fontSize={28} /></div>
           <h2 style={{...heading, textAlign:"center", color:"#F8F4EA"}}>{myProfile.name}, {myProfile.age}</h2>
@@ -927,7 +927,7 @@ export default function App() {
       <div style={page}>
         <FontLoader />
         <TopBar onMenu={() => setMenuOpen(true)} dark={!lightMode} overlay={false} onLogo={() => setScreen("matches")} lightMode={lightMode} onToggleTheme={() => setLightMode(v => !v)} />
-        <MenuDrawer open={menuOpen} onClose={() => setMenuOpen(false)} onLogOut={logOut} onNavigate={setScreen} />
+        <MenuDrawer open={menuOpen} onClose={() => setMenuOpen(false)} onLogOut={logOut} onNavigate={setScreen} lightMode={lightMode} />
         <div style={{ padding: "10px 22px 8px", background:"var(--fc-bg)" }}>
           <button onClick={() => setScreen("matches")} style={{ ...backBtn, color:"#D6AE6E", marginBottom:8 }}><ChevronLeft size={18}/> Back</button>
           <h2 style={{...heading, color:"#F8F4EA"}}>Messages</h2>
@@ -958,7 +958,7 @@ export default function App() {
       <div ref={matchesScrollRef} style={{ flex:1, overflowY:"auto", background:"var(--fc-bg)" }}>
         <div style={{ position:"relative" }}>
           <TopBar onMenu={() => setMenuOpen(true)} dark overlay onLogo={() => setScreen("matches")} lightMode={lightMode} onToggleTheme={() => setLightMode(v => !v)} />
-          <MenuDrawer open={menuOpen} onClose={() => setMenuOpen(false)} onLogOut={logOut} onNavigate={setScreen} />
+          <MenuDrawer open={menuOpen} onClose={() => setMenuOpen(false)} onLogOut={logOut} onNavigate={setScreen} lightMode={lightMode} />
           <MatchHero count={matches.length} onMeetSomeone={() => setScreen("meetSomeone")} lightMode={lightMode} />
         </div>
 
@@ -1084,7 +1084,7 @@ function TopBar({ onMenu, dark, overlay, onLogo, lightMode, onToggleTheme }) {
   );
 }
 
-function MenuDrawer({ open, onClose, onLogOut, onNavigate }) {
+function MenuDrawer({ open, onClose, onLogOut, onNavigate, lightMode }) {
   const [inviteMsg, setInviteMsg] = useState("");
   const items = [
     { icon: Home, label: "Home", action: () => onNavigate("matches") },
@@ -1113,25 +1113,25 @@ function MenuDrawer({ open, onClose, onLogOut, onNavigate }) {
         transform: open ? "translateX(0)" : "translateX(-100%)", transition:"transform .28s ease", padding:"22px 18px", boxShadow:"2px 0 20px rgba(0,0,0,.3)"
       }}>
         <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:24 }}>
-          <span style={{ fontFamily:"Lora, serif", fontSize:19, color:"#F8F4EA" }}>FaithConnect</span>
-          <button onClick={onClose} style={{ background:"none", border:"none", cursor:"pointer" }}><X size={20} color="#C9C2AF" /></button>
+          <span style={{ fontFamily:"Lora, serif", fontSize:19, color:lightMode ? "#16233F" : "#F8F4EA" }}>FaithConnect</span>
+          <button onClick={onClose} style={{ background:"none", border:"none", cursor:"pointer" }}><X size={20} color={lightMode ? "#8A8578" : "#C9C2AF"} /></button>
         </div>
         {items.map(({ icon: Icon, label, action, note }) => (
           <button key={label} onClick={() => { action(); if (!note) onClose(); }} style={{
             display:"flex", alignItems:"center", gap:12, width:"100%", background:"none", border:"none",
-            padding:"12px 4px", cursor:"pointer", color:"#E8E3D6", fontFamily:"Inter, sans-serif", fontSize:14.5, textAlign:"left"
+            padding:"12px 4px", cursor:"pointer", color:lightMode ? "#34445A" : "#E8E3D6", fontFamily:"Inter, sans-serif", fontSize:14.5, textAlign:"left"
           }}>
-            <Icon size={18} color="#B8935F" /> {label}
+            <Icon size={18} color={lightMode ? "#9A6F2F" : "#B8935F"} /> {label}
             {note && <span style={{ marginLeft:"auto", fontSize:11, color:"#6B7690" }}>{note}</span>}
           </button>
         ))}
-        {inviteMsg && <div style={{ fontFamily:"Inter, sans-serif", fontSize:12, color:"#8AAE8E", padding:"4px 4px 0" }}>{inviteMsg}</div>}
-        <div style={{ borderTop:"1px solid #6B5327", marginTop:14, paddingTop:14 }}>
+        {inviteMsg && <div style={{ fontFamily:"Inter, sans-serif", fontSize:12, color:lightMode ? "#4D7B55" : "#8AAE8E", padding:"4px 4px 0" }}>{inviteMsg}</div>}
+        <div style={{ borderTop:lightMode ? "1px solid rgba(138,133,120,.38)" : "1px solid #6B5327", marginTop:14, paddingTop:14 }}>
           <button onClick={onLogOut} style={{
             display:"flex", alignItems:"center", gap:12, width:"100%", background:"none", border:"none",
-            padding:"12px 4px", cursor:"pointer", color:"#D9A6A6", fontFamily:"Inter, sans-serif", fontSize:14.5, textAlign:"left"
+            padding:"12px 4px", cursor:"pointer", color:lightMode ? "#B45D67" : "#D9A6A6", fontFamily:"Inter, sans-serif", fontSize:14.5, textAlign:"left"
           }}>
-            <LogOut size={18} color="#D9A6A6" /> Log out
+            <LogOut size={18} color={lightMode ? "#B45D67" : "#D9A6A6"} /> Log out
           </button>
         </div>
       </div>
