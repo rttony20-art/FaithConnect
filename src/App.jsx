@@ -1142,8 +1142,8 @@ function MenuDrawer({ open, onClose, onLogOut, onNavigate, lightMode }) {
 function MatchHero({ count, onMeetSomeone, lightMode }) {
   return (
     <div style={{
-      position:"relative", minHeight:500, overflow:"hidden", display:"flex", alignItems:"flex-start",
-      padding:"200px 22px 42px", boxSizing:"border-box",
+      position:"relative", minHeight: lightMode ? 0 : 500, height: lightMode ? "auto" : 500, aspectRatio: lightMode ? "640 / 540" : undefined, overflow:"hidden", display:"flex", alignItems:"flex-start",
+      padding: lightMode ? "112px 22px 24px" : "200px 22px 42px", boxSizing:"border-box",
       background: lightMode ? "#dceeff" : "#050819"
     }}>
       <img
@@ -1162,14 +1162,14 @@ function MatchHero({ count, onMeetSomeone, lightMode }) {
       <div style={{ position:"relative", zIndex:2, width:"100%", maxWidth:360 }}>
         <div style={{ display:"flex", alignItems:"center", gap:9, marginBottom:15 }}>
           <span style={{ width:27, height:2, background:"linear-gradient(90deg,#526cff,#8d5cff)" }} />
-          <span style={{ fontFamily:"Inter, sans-serif", fontSize:9, letterSpacing:3, color: lightMode ? "#17324b" : "#d2d4e4", textShadow: lightMode ? "none" : "0 2px 8px rgba(0,0,0,.45)" }}>FAITH CONNECT</span>
+          <span style={{ fontFamily:"Inter, sans-serif", fontSize:9, letterSpacing:3, color: lightMode ? "#FFFFFF" : "#d2d4e4", textShadow: lightMode ? "0 2px 8px rgba(0,0,0,.45)" : "0 2px 8px rgba(0,0,0,.45)" }}>FAITH CONNECT</span>
         </div>
-        <h1 style={{ fontFamily:"Lora, serif", fontSize:22, lineHeight:1.22, letterSpacing:0.2, fontStyle:"italic", fontWeight:600, color: lightMode ? "#102B49" : "#F8F4EA", margin:"0 0 14px", maxWidth:330, textShadow: lightMode ? "none" : "0 2px 14px rgba(0,0,0,.55)" }}>
+        <h1 style={{ fontFamily:"Lora, serif", fontSize:21, lineHeight:1.2, letterSpacing:0.2, fontStyle:"italic", fontWeight:600, color: lightMode ? "#FFFFFF" : "#F8F4EA", margin:"0 0 14px", maxWidth:330, textShadow: lightMode ? "0 2px 10px rgba(0,0,0,.48)" : "0 2px 14px rgba(0,0,0,.55)" }}>
           <span>Shared Faith.</span><br/>
           <span>Meaningful Connection.</span><br/>
-          <span style={{ color: lightMode ? "#8EC5FF" : "#c7b1ff" }}>Growing Together.</span>
+          <span style={{ color: lightMode ? "#9ED0FF" : "#c7b1ff" }}>Growing Together.</span>
         </h1>
-        <p style={{ fontFamily:"Inter, sans-serif", fontSize:14, lineHeight:1.5, color: lightMode ? "#FFFFFF" : "#d0d3df", margin:"0 0 18px", maxWidth:330, fontWeight:500, textShadow: lightMode ? "0 2px 10px rgba(0,0,0,.42)" : "0 2px 8px rgba(0,0,0,.45)" }}>
+        <p style={{ fontFamily:"Inter, sans-serif", fontSize:14, lineHeight:1.5, color: lightMode ? "#FFFFFF" : "#d0d3df", margin:"0 0 18px", maxWidth:345, fontWeight:500, textShadow: lightMode ? "0 2px 10px rgba(0,0,0,.42)" : "0 2px 8px rgba(0,0,0,.45)" }}>
           Meet someone who shares your faith, values, and desire to grow.
         </p>
       </div>
