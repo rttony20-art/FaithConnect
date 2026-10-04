@@ -1738,18 +1738,25 @@ function RandomConnectScreen({ myId, myProfile, onBack, variant = "faith" }) {
       if (k === `presence:${myId}`) continue;
       const p = await sget(k, true);
       if (!p || now - p.ts >= 45000) continue;
-      if (isLove && myProfile?.seeking && myProfile.seeking !== "Everyone" && p.gender && p.gender !== myProfile.seeking) continue;
+      // Find Your Match is gender-opposite only. Iron Sharpens Iron is unrestricted.
+      if (isLove) {
+        const wantedGender = myProfile?.gender === "Male" ? "Female" : myProfile?.gender === "Female" ? "Male" : null;
+        if (!wantedGender || p.gender !== wantedGender) continue;
+      }
       entries.push({ id: k.replace("presence:", ""), name: p.name, gender: p.gender });
     }
     setOnline(entries);
   }
 
   function isCompatible(entry) {
+    // Iron Sharpens Iron: anyone can match anyone.
     if (!isLove) return true;
-    if (!entry.gender || !entry.seeking || !myProfile?.gender || !myProfile?.seeking) return true;
-    const iSeekThem = myProfile.seeking === "Everyone" || myProfile.seeking === entry.gender;
-    const theySeekMe = entry.seeking === "Everyone" || entry.seeking === myProfile.gender;
-    return iSeekThem && theySeekMe;
+
+    // Find Your Match: registered Male -> Female, registered Female -> Male.
+    // Do not use the optional "seeking" preference to override this rule.
+    const wantedGender = myProfile?.gender === "Male" ? "Female" : myProfile?.gender === "Female" ? "Male" : null;
+    if (!wantedGender || entry.gender !== wantedGender) return false;
+    return true;
   }
 
   function cleanQueue(list) {
