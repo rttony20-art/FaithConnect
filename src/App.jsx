@@ -30,6 +30,20 @@ function convoId(a, b) { return [a, b].sort().join("-"); }
 /* ---------- Supabase (real accounts + profiles) — plain HTTP, no external library ---------- */
 const SUPABASE_URL = "https://vyhhyqegboenrznkjjjc.supabase.co";
 const SUPABASE_ANON_KEY = "sb_publishable_E5w6gJK9yQKrvJNWyzhhlg_i78m_wde";
+// Supabase Realtime is used for cross-browser chat delivery. Broadcast keeps the
+// conversation live between separate Chrome/Opera/phone clients without relying
+// on browser-local storage.
+let realtimeClientPromise = null;
+async function getRealtimeClient() {
+  if (!realtimeClientPromise) {
+    realtimeClientPromise = import("https://esm.sh/@supabase/supabase-js@2.107.0")
+      .then(({ createClient }) => createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+        auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false }
+      }));
+  }
+  return realtimeClientPromise;
+}
+
 
 async function supaAuth(action, body, extraHeaders = {}) {
   const res = await fetch(`${SUPABASE_URL}/auth/v1/${action}`, {
@@ -1466,17 +1480,54 @@ function ChatScreen({ myId, myProfile, other, onBack }) {
   const remoteVideoRef = useRef(null);
   const remoteAudioRef = useRef(null);
   const iceSeen = useRef(0);
-  const pollRef = useRef(null);
   const callPollRef = useRef(null);
   const inCallScreen = useRef(false);
+  const chatChannelRef = useRef(null);
+  const callChannelRef = useRef(null);
+  const callSignalsRef = useRef([]);
 
   useEffect(() => {
-    loadMessages();
-    pollRef.current = setInterval(loadMessages, 2500);
-    callPollRef.current = setInterval(pollCall, 1800);
-    return () => { clearInterval(pollRef.current); clearInterval(callPollRef.current); teardown(); };
+    let cancelled = false;
+    (async () => {
+      try {
+        const client = await getRealtimeClient();
+        if (cancelled) return;
+        const channel = client.channel(`faithconnect-chat-${cid}`, {
+          config: { broadcast: { self: false, ack: true } }
+        });
+        channel.on("broadcast", { event: "message" }, ({ payload }) => {
+          const msg = payload?.message;
+          if (!msg || msg.sender === myId) return;
+          setMessages(prev => prev.some(m => m.id === msg.id) ? prev : [...prev, msg]);
+        });
+        channel.subscribe(status => {
+          if (status === "SUBSCRIBED") chatChannelRef.current = channel;
+        });
+        const callChannel = client.channel(`faithconnect-call-${cid}`, { config: { broadcast: { self: false, ack: true } } });
+        callChannel.on("broadcast", { event: "signal" }, ({ payload }) => {
+          const sig = payload?.signal;
+          if (!sig || sig.sender === myId) return;
+          callSignalsRef.current.push(sig);
+          handleCallSignal(sig);
+        });
+        callChannel.subscribe(status => { if (status === "SUBSCRIBED") callChannelRef.current = callChannel; });
+      } catch (e) {
+        console.error("Chat realtime connection failed", e);
+      }
+    })();
+    return () => {
+      cancelled = true;
+      clearInterval(callPollRef.current);
+      const ch = chatChannelRef.current;
+      const cch = callChannelRef.current;
+      chatChannelRef.current = null;
+      callChannelRef.current = null;
+      if (ch) { try { ch.unsubscribe(); } catch {} }
+      if (cch) { try { cch.unsubscribe(); } catch {} }
+      teardown();
+    };
     // eslint-disable-next-line
-  }, []);
+  }, [cid, myId]);
 
   const shouldStickToBottom = () => {
     const el = chatScrollRef.current;
@@ -1491,15 +1542,48 @@ function ChatScreen({ myId, myProfile, other, onBack }) {
   }, [messages]);
 
   async function loadMessages() {
-    const thread = await sget(chatKey, true);
-    setMessages(thread || []);
+    // Live messages arrive through Supabase Realtime. Do not overwrite the
+    // conversation from localStorage/window.storage because those stores are
+    // isolated between normal browsers.
   }
 
   async function sendMessage(type, content) {
-    const thread = (await sget(chatKey, true)) || [];
-    thread.push({ sender: myId, type, text: type === "text" ? content : undefined, content: type === "voice" ? content : undefined, ts: Date.now() });
-    await sset(chatKey, thread, true);
-    setMessages(thread);
+    const msg = {
+      id: `${myId}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      sender: myId,
+      type,
+      text: type === "text" ? content : undefined,
+      content: type === "voice" ? content : undefined,
+      ts: Date.now()
+    };
+    setMessages(prev => [...prev, msg]);
+    try {
+      let channel = chatChannelRef.current;
+      if (!channel) {
+        const client = await getRealtimeClient();
+        channel = client.channel(`faithconnect-chat-${cid}`, {
+          config: { broadcast: { self: false, ack: true } }
+        });
+        channel.on("broadcast", { event: "message" }, ({ payload }) => {
+          const incoming = payload?.message;
+          if (!incoming || incoming.sender === myId) return;
+          setMessages(prev => prev.some(m => m.id === incoming.id) ? prev : [...prev, incoming]);
+        });
+        await new Promise((resolve, reject) => {
+          const timeout = setTimeout(() => reject(new Error("Chat connection timed out")), 7000);
+          channel.subscribe(status => {
+            if (status === "SUBSCRIBED") { clearTimeout(timeout); resolve(); }
+            else if (status === "CHANNEL_ERROR" || status === "TIMED_OUT") { clearTimeout(timeout); reject(new Error(status)); }
+          });
+        });
+        chatChannelRef.current = channel;
+      }
+      const result = await channel.send({ type: "broadcast", event: "message", payload: { message: msg } });
+      if (result !== "ok" && result?.status && result.status !== "ok") console.error("Chat send failed", result);
+    } catch (e) {
+      console.error("Chat send failed", e);
+      setCallErr("Message could not be delivered. Check your internet connection and try again.");
+    }
     setText("");
   }
 
@@ -1525,82 +1609,77 @@ function ChatScreen({ myId, myProfile, other, onBack }) {
 
   const iceCfg = { iceServers: [{ urls: "stun:stun.l.google.com:19302" }] };
 
+  async function getCallChannel() {
+    if (callChannelRef.current) return callChannelRef.current;
+    const client = await getRealtimeClient();
+    const channel = client.channel(`faithconnect-call-${cid}`, { config: { broadcast: { self: false, ack: true } } });
+    channel.on("broadcast", { event: "signal" }, ({ payload }) => {
+      const sig = payload?.signal;
+      if (!sig || sig.sender === myId) return;
+      handleCallSignal(sig);
+    });
+    await new Promise((resolve, reject) => {
+      const t = setTimeout(() => reject(new Error("Call signaling timed out")), 7000);
+      channel.subscribe(status => { if (status === "SUBSCRIBED") { clearTimeout(t); resolve(); } else if (status === "CHANNEL_ERROR" || status === "TIMED_OUT") { clearTimeout(t); reject(new Error(status)); } });
+    });
+    callChannelRef.current = channel;
+    return channel;
+  }
+  async function sendCallSignal(signal) {
+    const channel = await getCallChannel();
+    return channel.send({ type: "broadcast", event: "signal", payload: { signal: { ...signal, sender: myId } } });
+  }
+  async function handleCallSignal(sig) {
+    try {
+      if (sig.type === "offer" && !inCallScreen.current) {
+        cur.current = { caller: sig.sender, mode: sig.mode, offer: sig.offer, iceCaller: [], iceCallee: [], status: "ringing" };
+        setCallMode(sig.mode); setCallStatus("ringing"); inCallScreen.current = true;
+      } else if (sig.type === "answer" && pcRef.current && pcRef.current.signalingState !== "stable") {
+        await pcRef.current.setRemoteDescription(sig.answer);
+        setCallStatus("active");
+      } else if (sig.type === "ice" && pcRef.current && sig.candidate) {
+        try { await pcRef.current.addIceCandidate(sig.candidate); } catch {}
+      } else if (sig.type === "end") {
+        endCallLocal();
+      }
+    } catch (e) { console.error("Call signal error", e); }
+  }
   async function startCall(mode) {
     setCallErr("");
     try {
+      const channel = await getCallChannel();
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: mode === "video" });
       localStreamRef.current = stream;
       if (mode === "video" && localVideoRef.current) localVideoRef.current.srcObject = stream;
       const pc = new RTCPeerConnection(iceCfg);
-      pcRef.current = pc;
-      stream.getTracks().forEach(t => pc.addTrack(t, stream));
+      pcRef.current = pc; stream.getTracks().forEach(t => pc.addTrack(t, stream));
       const remoteStream = new MediaStream();
       pc.ontrack = e => { remoteStream.addTrack(e.track); if (remoteVideoRef.current) remoteVideoRef.current.srcObject = remoteStream; if (remoteAudioRef.current) remoteAudioRef.current.srcObject = remoteStream; };
-      const myIce = [];
-      pc.onicecandidate = e => { if (e.candidate) { myIce.push(e.candidate); sset(callKey, { ...(cur.current||{}), iceCaller: myIce }, true); } };
-      const offer = await pc.createOffer();
-      await pc.setLocalDescription(offer);
-      cur.current = { caller: myId, mode, offer, iceCaller: [], iceCallee: [], answer: null, status: "ringing" };
-      await sset(callKey, cur.current, true);
+      pc.onicecandidate = e => { if (e.candidate) sendCallSignal({ type: "ice", candidate: e.candidate }); };
+      const offer = await pc.createOffer(); await pc.setLocalDescription(offer);
+      cur.current = { caller: myId, mode, status: "ringing" };
+      await channel.send({ type: "broadcast", event: "signal", payload: { signal: { type: "offer", sender: myId, mode, offer: pc.localDescription } } });
       setCallMode(mode); setCallStatus("calling"); inCallScreen.current = true;
     } catch { setCallErr("Couldn't access camera/microphone for the call."); }
   }
-
-  const cur = useRef(null);
-  const answeredIce = useRef(new Set());
-
-  async function pollCall() {
-    const state = await sget(callKey, true);
-    if (!state) return;
-    cur.current = state;
-    if (state.status === "ringing" && state.caller !== myId && !inCallScreen.current) {
-      setCallMode(state.mode); setCallStatus("ringing"); inCallScreen.current = true;
-      return;
-    }
-    if (state.status === "active" && callStatus !== "active" && pcRef.current) {
-      // caller side: apply answer once
-      if (state.answer && pcRef.current.signalingState !== "stable") {
-        try { await pcRef.current.setRemoteDescription(state.answer); } catch {}
-      }
-      setCallStatus("active");
-    }
-    // apply new ICE candidates
-    if (pcRef.current) {
-      const remoteList = (state.caller === myId ? state.iceCallee : state.iceCaller) || [];
-      for (let i = answeredIce.current.size; i < remoteList.length; i++) {
-        try { await pcRef.current.addIceCandidate(remoteList[i]); } catch {}
-        answeredIce.current.add(i);
-      }
-    }
-    if (state.status === "ended" && callStatus !== "idle" && callStatus !== "ended") {
-      endCallLocal();
-    }
-  }
-
   async function acceptCall() {
     setCallErr("");
     try {
-      const state = cur.current || await sget(callKey, true);
+      const state = cur.current; if (!state?.offer) throw new Error("No call offer");
+      await getCallChannel();
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: state.mode === "video" });
       localStreamRef.current = stream;
       if (state.mode === "video" && localVideoRef.current) localVideoRef.current.srcObject = stream;
-      const pc = new RTCPeerConnection(iceCfg);
-      pcRef.current = pc;
-      stream.getTracks().forEach(t => pc.addTrack(t, stream));
+      const pc = new RTCPeerConnection(iceCfg); pcRef.current = pc; stream.getTracks().forEach(t => pc.addTrack(t, stream));
       const remoteStream = new MediaStream();
       pc.ontrack = e => { remoteStream.addTrack(e.track); if (remoteVideoRef.current) remoteVideoRef.current.srcObject = remoteStream; if (remoteAudioRef.current) remoteAudioRef.current.srcObject = remoteStream; };
-      const myIce = [];
-      pc.onicecandidate = e => { if (e.candidate) { myIce.push(e.candidate); sset(callKey, { ...cur.current, iceCallee: myIce }, true); } };
-      await pc.setRemoteDescription(state.offer);
-      const answer = await pc.createAnswer();
-      await pc.setLocalDescription(answer);
-      cur.current = { ...state, answer, iceCallee: [], status: "active" };
-      await sset(callKey, cur.current, true);
-      setCallStatus("active");
+      pc.onicecandidate = e => { if (e.candidate) sendCallSignal({ type: "ice", candidate: e.candidate }); };
+      await pc.setRemoteDescription(state.offer); const answer = await pc.createAnswer(); await pc.setLocalDescription(answer);
+      await sendCallSignal({ type: "answer", answer: pc.localDescription }); setCallStatus("active");
     } catch { setCallErr("Couldn't join the call — camera/mic may be blocked."); }
   }
 
-  function declineCall() { setCallMode(null); setCallStatus("idle"); inCallScreen.current = false; sset(callKey, { ...(cur.current||{}), status: "ended" }, true); }
+  function declineCall() { sendCallSignal({ type: "end" }).catch(()=>{}); endCallLocal(); }
 
   function teardown() {
     pcRef.current?.close(); pcRef.current = null;
@@ -1610,7 +1689,7 @@ function ChatScreen({ myId, myProfile, other, onBack }) {
     teardown(); setCallStatus("idle"); setCallMode(null); inCallScreen.current = false; answeredIce.current = new Set();
   }
   async function hangUp() {
-    await sset(callKey, { ...(cur.current||{}), status: "ended" }, true);
+    await sendCallSignal({ type: "end" }).catch(()=>{});
     endCallLocal();
   }
 
