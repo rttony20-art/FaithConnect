@@ -950,18 +950,18 @@ export default function App() {
         <MenuDrawer open={menuOpen} onClose={() => setMenuOpen(false)} onLogOut={logOut} onNavigate={setScreen} lightMode={lightMode} />
         <div style={{ flex:1, overflowY:"auto", padding:"8px 22px 100px", background:"var(--fc-bg)" }}>
           <div style={{ margin:"0 auto 14px", display:"flex", justifyContent:"center" }}><AvatarCircle profile={myProfile} size={74} fontSize={28} /></div>
-          <h2 style={{...heading, textAlign:"center", color:"#F8F4EA"}}>{myProfile.name}, {myProfile.age}</h2>
-          <p style={{textAlign:"center", color:"#B9C9BC", fontFamily:"Inter, sans-serif", fontSize:14, marginTop:-8}}>{myProfile.city} · {myProfile.denom}</p>
+          <h2 style={{...heading, textAlign:"center", color: lightMode ? "#16233F" : "#F8F4EA"}}>{myProfile.name}, {myProfile.age}</h2>
+          <p style={{textAlign:"center", color: lightMode ? "#5C6D82" : "#B9C9BC", fontFamily:"Inter, sans-serif", fontSize:14, marginTop:-8}}>{myProfile.city} · {myProfile.denom}</p>
           {myProfile.photoUrls && myProfile.photoUrls.length > 0 && (
             <div style={{ display:"flex", gap:8, marginTop:16, overflowX:"auto" }}>
               {myProfile.photoUrls.map((u,i) => <img key={i} src={u} alt="" style={{ width:100, height:130, objectFit:"cover", borderRadius:12, flexShrink:0 }} />)}
             </div>
           )}
-          <p style={{fontFamily:"Inter, sans-serif", fontSize:14.5, color:"#E4E7E2", lineHeight:1.6, marginTop:18}}>{myProfile.bio}</p>
-          <div style={{marginTop:18}}><Tag list={myProfile.values} /></div>
-          <div style={{marginTop:8}}><Tag list={myProfile.hobbies} /></div>
-          <div style={{marginTop:8}}><Tag list={myProfile.goals} /></div>
-          <button onClick={() => setScreen("profile-edit")} style={{...secondaryBtn, width:"100%", marginTop:24}}>Edit profile</button>
+          <p style={{fontFamily:"Inter, sans-serif", fontSize:14.5, color: lightMode ? "#34445A" : "#E4E7E2", lineHeight:1.6, marginTop:18}}>{myProfile.bio}</p>
+          <div style={{marginTop:18}}><Tag list={myProfile.values} lightMode={lightMode} /></div>
+          <div style={{marginTop:8}}><Tag list={myProfile.hobbies} lightMode={lightMode} /></div>
+          <div style={{marginTop:8}}><Tag list={myProfile.goals} lightMode={lightMode} /></div>
+          <button onClick={() => setScreen("profile-edit")} style={{...secondaryBtn, width:"100%", marginTop:24, background: lightMode ? "rgba(61,115,255,.10)" : secondaryBtn.background, color: lightMode ? "#356AE8" : secondaryBtn.color, borderColor: lightMode ? "rgba(61,115,255,.28)" : "rgba(108,124,255,.3)"}}>Edit profile</button>
         </div>
         {nav}
       </div>
@@ -1125,10 +1125,10 @@ function PreferenceSection({ number, title, list, sel, onToggle, limit, lightMod
   );
 }
 
-function Tag({ list }) {
+function Tag({ list, lightMode=false }) {
   if (!list || !list.length) return null;
   return <div>{list.filter(Boolean).map(t => (
-    <span key={t} style={{ display:"inline-block", fontSize:12, fontFamily:"Inter, sans-serif", color:"#F8F4EA", background:"rgba(96,112,255,0.18)", border:"1px solid rgba(108,124,255,0.3)", padding:"4px 10px", borderRadius:999, marginRight:6, marginBottom:6 }}>{t}</span>
+    <span key={t} style={{ display:"inline-block", fontSize:12, fontFamily:"Inter, sans-serif", color: lightMode ? "#33445A" : "#F8F4EA", background: lightMode ? "rgba(96,112,255,0.10)" : "rgba(96,112,255,0.18)", border: lightMode ? "1px solid rgba(77,105,170,0.25)" : "1px solid rgba(108,124,255,0.3)", padding:"5px 10px", borderRadius:999, marginRight:6, marginBottom:6 }}>{t}</span>
   ))}</div>;
 }
 function FontLoader() {
