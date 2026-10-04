@@ -1813,6 +1813,8 @@ function RandomConnectScreen({ myId, myProfile, onBack, variant = "faith" }) {
   const callStateRef = useRef(null);
   const myQueueEntryTs = useRef(null);
   const matchChannelRef = useRef(null);
+  const queueChannelRef = useRef(null);
+  const queueTopicRef = useRef(null);
   const matchTopicRef = useRef(null);
   const matchSessionRef = useRef(null);
   const matchPeerRef = useRef(null);
@@ -1838,6 +1840,10 @@ function RandomConnectScreen({ myId, myProfile, onBack, variant = "faith" }) {
     clearInterval(searchPollRef.current); clearInterval(chatPollRef.current); clearInterval(callPollRef.current);
     clearTimeout(revealTimer.current);
     const ch = matchChannelRef.current;
+    const qch = queueChannelRef.current;
+    queueChannelRef.current = null;
+    queueTopicRef.current = null;
+    if (qch) { try { qch.untrack(); } catch {} try { qch.unsubscribe(); } catch {} }
     matchChannelRef.current = null;
     matchTopicRef.current = null;
     matchSessionRef.current = null;
@@ -1890,36 +1896,118 @@ function RandomConnectScreen({ myId, myProfile, onBack, variant = "faith" }) {
     return !!wantedGender && entry.gender === wantedGender;
   }
 
-  function cleanQueue(list) {
-    return (list || []).filter(e => e.id !== myId);
+  async function ensureQueueChannel() {
+    if (queueChannelRef.current) return queueChannelRef.current;
+    const client = await getRealtimeClient();
+    const topic = `faithconnect-queue-${kp}`;
+    const channel = client.channel(topic, {
+      config: { presence: { key: myId }, broadcast: { self: false, ack: true } }
+    });
+
+    channel.on("presence", { event: "sync" }, () => {
+      tryPairFromQueue(channel);
+    });
+    channel.on("presence", { event: "join" }, () => {
+      tryPairFromQueue(channel);
+    });
+    channel.on("broadcast", { event: "pair" }, ({ payload }) => {
+      const msg = payload || {};
+      if (msg.from !== myId && msg.to !== myId) return;
+      if (!msg.partnerId || (msg.from !== myId && msg.to !== myId)) return;
+      try { channel.untrack(); } catch {}
+      try { channel.unsubscribe(); } catch {}
+      if (queueChannelRef.current === channel) queueChannelRef.current = null;
+      const otherId = msg.from === myId ? msg.to : msg.from;
+      const other = msg.from === myId ? msg.partner : msg.fromProfile;
+      clearInterval(searchPollRef.current);
+      connectTo({ id: otherId, name: other?.name || "Believer" }, mode);
+    });
+
+    await new Promise((resolve, reject) => {
+      let settled = false;
+      const finish = fn => { if (!settled) { settled = true; clearTimeout(timer); fn(); } };
+      const timer = setTimeout(() => finish(() => reject(new Error("Queue channel timed out"))), 9000);
+      channel.subscribe(async status => {
+        if (status === "SUBSCRIBED") {
+          try {
+            await channel.track({
+              id: myId,
+              name: myProfile?.name || "Believer",
+              gender: myProfile?.gender || null,
+              ts: Date.now()
+            });
+            finish(resolve);
+          } catch (e) { finish(() => reject(e)); }
+        } else if (status === "CHANNEL_ERROR" || status === "TIMED_OUT") {
+          finish(() => reject(new Error(status)));
+        }
+      });
+    });
+    queueChannelRef.current = channel;
+    queueTopicRef.current = topic;
+    return channel;
+  }
+
+  function queueUsers(channel) {
+    const state = channel.presenceState();
+    const users = [];
+    Object.values(state || {}).forEach(entries => {
+      (entries || []).forEach(entry => {
+        if (entry?.id && !users.some(u => u.id === entry.id)) users.push(entry);
+      });
+    });
+    return users.filter(u => u.id !== myId && isCompatible(u));
+  }
+
+  async function tryPairFromQueue(channel) {
+    if (stage !== "searching" || queueChannelRef.current !== channel) return;
+    const all = queueUsers(channel);
+    if (!all.length) return;
+
+    // Only the alphabetically first waiting user acts as the matcher. This prevents
+    // two phones from choosing different partners at the same time.
+    const everyone = [{ id: myId, name: myProfile?.name || "Believer", gender: myProfile?.gender || null }, ...all]
+      .sort((a,b) => String(a.id).localeCompare(String(b.id)));
+    if (everyone[0]?.id !== myId) return;
+
+    const candidate = all[Math.floor(Math.random() * all.length)];
+    if (!candidate) return;
+
+    const payload = {
+      from: myId,
+      fromProfile: { name: myProfile?.name || "Believer" },
+      to: candidate.id,
+      partner: { name: candidate.name || "Believer" },
+      partnerId: candidate.id
+    };
+    try {
+      await channel.send({ type:"broadcast", event:"pair", payload });
+      // Broadcast excludes the sender, so connect this phone explicitly too.
+      try { channel.untrack(); } catch {}
+      try { channel.unsubscribe(); } catch {}
+      if (queueChannelRef.current === channel) queueChannelRef.current = null;
+      clearInterval(searchPollRef.current);
+      connectTo({ id:candidate.id, name:candidate.name || "Believer" }, mode);
+    } catch (e) {
+      console.error("FaithConnect queue pairing failed:", e);
+    }
   }
 
   async function startSearch(m) {
-    setMode(m); setStage("searching");
-    const availableNow = await loadPresence();
-
-    // Matching is based on the shared Supabase profiles table so it works across
-    // different browsers/devices. Do not depend on localStorage/window.storage.
-    // Presence polling uses the stored access token and refreshes only after a rejected request.
-    const rows = availableNow.filter(isCompatible);
-    const candidate = rows[Math.floor(Math.random() * rows.length)];
-
-    if (candidate) {
-      connectTo({ id: candidate.id, name: candidate.name }, m);
-      return;
-    }
-
-    // Give the other browser a moment to appear, then refresh the shared list.
+    setMode(m); setStage("searching"); setPartner(null); setSessionId(null); setMessages([]);
     clearInterval(searchPollRef.current);
-    searchPollRef.current = setInterval(async () => {
-      const refreshed = await loadPresence();
-      const available = refreshed.filter(isCompatible);
-      if (available.length) {
-        clearInterval(searchPollRef.current);
-        const picked = available[Math.floor(Math.random() * available.length)];
-        connectTo({ id:picked.id, name:picked.name }, m);
-      }
-    }, 1500);
+    try {
+      await ensureQueueChannel();
+      // Presence sync/join events perform the actual random pairing. There is no
+      // second Connect action: once two people are waiting, the system pairs them.
+      setTimeout(() => {
+        if (queueChannelRef.current) tryPairFromQueue(queueChannelRef.current);
+      }, 300);
+    } catch (e) {
+      console.error("FaithConnect queue setup failed:", e);
+      setCallErr("Could not connect to the matching queue. Please try again.");
+      setStage("setup");
+    }
   }
 
   function connectTo(p, m) {
@@ -2110,8 +2198,8 @@ function RandomConnectScreen({ myId, myProfile, onBack, variant = "faith" }) {
   }
 
   const theme = isLove
-    ? { bg:GLOW_BG, onlineText: n => `${n} people online`, emptyText: "No one's here yet — check back soon", tagline:"Choose how you'd like to connect — chat, voice, or video", findLabel:"Find my match", searchingText:"Hang tight while we find your match" }
-    : { bg:GLOW_BG, onlineText: n => `${n} believers online`, emptyText: "Waiting for believers to join", tagline:"Choose how you'd like to connect — chat, voice, or video", findLabel:"Find a believer", searchingText:"Hang tight while we find someone to share with" };
+    ? { bg:GLOW_BG, onlineText: n => `${n} people online`, emptyText: "No one's here yet — check back soon", tagline:"Choose how you'd like to connect — chat, voice, or video", findLabel:"Connect", searchingText:"Waiting for someone to connect" }
+    : { bg:GLOW_BG, onlineText: n => `${n} believers online`, emptyText: "Waiting for believers to join", tagline:"Choose how you'd like to connect — chat, voice, or video", findLabel:"Connect", searchingText:"Waiting for someone to connect" };
 
   if (stage === "setup") {
     return (
