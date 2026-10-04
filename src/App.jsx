@@ -1730,22 +1730,24 @@ function RandomConnectScreen({ myId, myProfile, onBack, variant = "faith" }) {
   }
 
   async function loadPresence() {
-    const list = await storageList("presence:", true);
-    if (!list) return;
-    const now = Date.now();
-    const entries = [];
-    for (const k of list.keys) {
-      if (k === `presence:${myId}`) continue;
-      const p = await sget(k, true);
-      if (!p || now - p.ts >= 45000) continue;
-      // Find Your Match is gender-opposite only. Iron Sharpens Iron is unrestricted.
-      if (isLove) {
-        const wantedGender = myProfile?.gender === "Male" ? "Female" : myProfile?.gender === "Female" ? "Male" : null;
-        if (!wantedGender || p.gender !== wantedGender) continue;
-      }
-      entries.push({ id: k.replace("presence:", ""), name: p.name, gender: p.gender });
+    // The old version used window.storage/localStorage for presence. On Vercel,
+    // localStorage is private to each browser, so Chrome and Opera could never see
+    // each other. Matching now reads the shared Supabase profiles table instead.
+    try {
+      const rows = await supaRest(`profiles?id=neq.${encodeURIComponent(myId)}&select=id,name,gender,seeking` , { token: (await restoreSupaSession())?.access_token });
+      const wantedGender = isLove
+        ? (myProfile?.gender === "Male" ? "Female" : myProfile?.gender === "Female" ? "Male" : null)
+        : null;
+      const entries = (rows || [])
+        .filter(p => !wantedGender || p.gender === wantedGender)
+        .map(p => ({ id:p.id, name:p.name, gender:p.gender, seeking:p.seeking }));
+      setOnline(entries);
+      return entries;
+    } catch (e) {
+      console.error("FaithConnect matching lookup failed:", e);
+      setOnline([]);
+      return [];
     }
-    setOnline(entries);
   }
 
   function isCompatible(entry) {
@@ -1753,41 +1755,39 @@ function RandomConnectScreen({ myId, myProfile, onBack, variant = "faith" }) {
     if (!isLove) return true;
 
     // Find Your Match: registered Male -> Female, registered Female -> Male.
-    // Do not use the optional "seeking" preference to override this rule.
     const wantedGender = myProfile?.gender === "Male" ? "Female" : myProfile?.gender === "Female" ? "Male" : null;
-    if (!wantedGender || entry.gender !== wantedGender) return false;
-    return true;
+    return !!wantedGender && entry.gender === wantedGender;
   }
 
   function cleanQueue(list) {
-    const now = Date.now();
-    return (list || []).filter(e => e.id !== myId && (e.partner || now - e.ts < 120000));
+    return (list || []).filter(e => e.id !== myId);
   }
 
   async function startSearch(m) {
     setMode(m); setStage("searching");
-    const key = `${kp}queue:${m}`;
-    const list = cleanQueue((await sget(key, true)) || []);
-    const candidate = list.find(e => e.partner == null && isCompatible(e));
-    const myEntry = { id: myId, name: myProfile?.name || "Believer", gender: myProfile?.gender, seeking: myProfile?.seeking, ts: Date.now(), partner: null };
+    const availableNow = await loadPresence();
+
+    // Matching is based on the shared Supabase profiles table so it works across
+    // different browsers/devices. Do not depend on localStorage/window.storage.
+    const rows = availableNow.filter(isCompatible);
+    const candidate = rows[Math.floor(Math.random() * rows.length)];
+
     if (candidate) {
-      candidate.partner = myId;
-      myEntry.partner = candidate.id;
-      await sset(key, [...list, myEntry], true);
       connectTo({ id: candidate.id, name: candidate.name }, m);
-    } else {
-      await sset(key, [...list, myEntry], true);
-      myQueueEntryTs.current = myEntry.ts;
-      searchPollRef.current = setInterval(async () => {
-        const cur = (await sget(key, true)) || [];
-        const mine = cur.find(e => e.id === myId && e.ts === myQueueEntryTs.current);
-        if (mine && mine.partner) {
-          clearInterval(searchPollRef.current);
-          const partnerEntry = cur.find(e => e.id === mine.partner);
-          connectTo({ id: mine.partner, name: partnerEntry?.name || "Believer" }, m);
-        }
-      }, 1500);
+      return;
     }
+
+    // Give the other browser a moment to appear, then refresh the shared list.
+    clearInterval(searchPollRef.current);
+    searchPollRef.current = setInterval(async () => {
+      const refreshed = await loadPresence();
+      const available = refreshed.filter(isCompatible);
+      if (available.length) {
+        clearInterval(searchPollRef.current);
+        const picked = available[Math.floor(Math.random() * available.length)];
+        connectTo({ id:picked.id, name:picked.name }, m);
+      }
+    }, 1500);
   }
 
   function connectTo(p, m) {
