@@ -1700,6 +1700,8 @@ function ChatScreen({ myId, myProfile, other, onBack }) {
   function teardown() {
     pcRef.current?.close(); pcRef.current = null;
     localStreamRef.current?.getTracks().forEach(t => t.stop()); localStreamRef.current = null;
+    remoteStreamRef.current = null;
+    pendingCallSignalsRef.current = [];
   }
   function endCallLocal() {
     teardown(); pendingOfferRef.current = null; callStateRef.current = null;
@@ -1815,6 +1817,8 @@ function RandomConnectScreen({ myId, myProfile, onBack, variant = "faith" }) {
   const matchSessionRef = useRef(null);
   const matchPeerRef = useRef(null);
   const matchLeaderRef = useRef(false);
+  const pendingCallSignalsRef = useRef([]);
+  const remoteStreamRef = useRef(null);
 
   useEffect(() => {
     loadPresence();
@@ -1842,6 +1846,8 @@ function RandomConnectScreen({ myId, myProfile, onBack, variant = "faith" }) {
     if (ch) { try { ch.unsubscribe(); } catch {} }
     pcRef.current?.close(); pcRef.current = null;
     localStreamRef.current?.getTracks().forEach(t => t.stop()); localStreamRef.current = null;
+    remoteStreamRef.current = null;
+    pendingCallSignalsRef.current = [];
   }
 
   async function loadPresence() {
@@ -2024,13 +2030,24 @@ function RandomConnectScreen({ myId, myProfile, onBack, variant = "faith" }) {
       pcRef.current = pc;
       stream.getTracks().forEach(t=>pc.addTrack(t,stream));
       const remoteStream = new MediaStream();
-      pc.ontrack = e => { remoteStream.addTrack(e.track); if(remoteVideoRef.current) remoteVideoRef.current.srcObject=remoteStream; if(remoteAudioRef.current) remoteAudioRef.current.srcObject=remoteStream; };
+      remoteStreamRef.current = remoteStream;
+      pc.ontrack = e => {
+        if (!remoteStream.getTracks().some(t => t.id === e.track.id)) remoteStream.addTrack(e.track);
+        if (remoteVideoRef.current) remoteVideoRef.current.srcObject = remoteStream;
+        if (remoteAudioRef.current) remoteAudioRef.current.srcObject = remoteStream;
+      };
+      // The call can start before React has mounted the video elements. Attach the
+      // local/remote streams again whenever the call screen is rendered below.
+      if (m === "video" && localVideoRef.current) localVideoRef.current.srcObject = stream;
+      if (m === "video" && remoteVideoRef.current && remoteStream.getTracks().length) remoteVideoRef.current.srcObject = remoteStream;
+      if (m !== "video" && remoteAudioRef.current && remoteStream.getTracks().length) remoteAudioRef.current.srcObject = remoteStream;
       pc.onicecandidate = e => {
         if(e.candidate && matchChannelRef.current && matchSessionRef.current) {
           matchChannelRef.current.send({ type:"broadcast", event:"match", payload:{ type:"call", sessionId:matchSessionRef.current, from:myId, signal:{ type:"ice", candidate:e.candidate } } }).catch(()=>{});
         }
       };
       callStateRef.current={ caller:iAmCaller ? myId : p.id, mode:m };
+      await flushPendingCallSignals();
       if (iAmCaller) {
         const offer=await pc.createOffer();
         await pc.setLocalDescription(offer);
@@ -2040,7 +2057,11 @@ function RandomConnectScreen({ myId, myProfile, onBack, variant = "faith" }) {
   }
 
   async function handleRandomCallSignal(signal) {
-    if (!signal || signal.caller === myId || !pcRef.current) return;
+    if (!signal || signal.caller === myId) return;
+    if (!pcRef.current) {
+      pendingCallSignalsRef.current.push(signal);
+      return;
+    }
     try {
       if (signal.type === "offer" && signal.caller !== myId && !pcRef.current.currentRemoteDescription) {
         await pcRef.current.setRemoteDescription(signal.offer);
@@ -2058,6 +2079,23 @@ function RandomConnectScreen({ myId, myProfile, onBack, variant = "faith" }) {
         setCallStatus("connecting");
       }
     } catch(e) { console.error("Temporary call signaling failed",e); }
+  }
+
+  useEffect(() => {
+    const local = localStreamRef.current;
+    const remote = remoteStreamRef.current;
+    if (mode === "video") {
+      if (local && localVideoRef.current) localVideoRef.current.srcObject = local;
+      if (remote && remoteVideoRef.current) remoteVideoRef.current.srcObject = remote;
+    } else if (remote && remoteAudioRef.current) {
+      remoteAudioRef.current.srcObject = remote;
+      remoteAudioRef.current.play?.().catch(() => {});
+    }
+  }, [stage, mode, callStatus]);
+
+  async function flushPendingCallSignals() {
+    const pending = pendingCallSignalsRef.current.splice(0);
+    for (const signal of pending) await handleRandomCallSignal(signal);
   }
 
   function skip() {
