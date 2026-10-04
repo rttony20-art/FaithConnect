@@ -1810,6 +1810,11 @@ function RandomConnectScreen({ myId, myProfile, onBack, variant = "faith" }) {
   const answeredIce = useRef(new Set());
   const callStateRef = useRef(null);
   const myQueueEntryTs = useRef(null);
+  const matchChannelRef = useRef(null);
+  const matchTopicRef = useRef(null);
+  const matchSessionRef = useRef(null);
+  const matchPeerRef = useRef(null);
+  const matchLeaderRef = useRef(false);
 
   useEffect(() => {
     loadPresence();
@@ -1828,6 +1833,13 @@ function RandomConnectScreen({ myId, myProfile, onBack, variant = "faith" }) {
   function clearAll() {
     clearInterval(searchPollRef.current); clearInterval(chatPollRef.current); clearInterval(callPollRef.current);
     clearTimeout(revealTimer.current);
+    const ch = matchChannelRef.current;
+    matchChannelRef.current = null;
+    matchTopicRef.current = null;
+    matchSessionRef.current = null;
+    matchPeerRef.current = null;
+    matchLeaderRef.current = false;
+    if (ch) { try { ch.unsubscribe(); } catch {} }
     pcRef.current?.close(); pcRef.current = null;
     localStreamRef.current?.getTracks().forEach(t => t.stop()); localStreamRef.current = null;
   }
@@ -1906,77 +1918,146 @@ function RandomConnectScreen({ myId, myProfile, onBack, variant = "faith" }) {
 
   function connectTo(p, m) {
     setPartner(p);
-    const sid = `${kp}s-${convoId(myId, p.id)}`;
-    setSessionId(sid);
+    setSessionId(null);
     setStage("connected");
-    if (m === "chat") startRandomChat(sid);
-    else startRandomCall(sid, p, m);
+    matchPeerRef.current = p;
+    matchLeaderRef.current = myId < p.id;
+    if (m === "chat") startRandomChat(p);
+    else startRandomCall(null, p, m);
   }
 
-  /* --- chat mode --- */
-  function startRandomChat(sid) {
-    setMessages([]);
-    const key = `${kp}chat:${sid}`;
-    const load = async () => setMessages((await sget(key, true)) || []);
-    load();
-    chatPollRef.current = setInterval(load, 2000);
+  // Temporary match chat: it is deliberately NOT saved to localStorage/Supabase.
+  // Every new match gets a fresh session id, so meeting the same person later starts empty.
+  async function ensureMatchChannel(p) {
+    if (matchChannelRef.current) return matchChannelRef.current;
+    const client = await getRealtimeClient();
+    const pair = convoId(myId, p.id);
+    const topic = `faithconnect-match-${kp}-${pair}`;
+    const channel = client.channel(topic, { config:{ broadcast:{ self:false, ack:true } } });
+    channel.on("broadcast", { event:"match" }, async ({ payload }) => {
+      const msg = payload || {};
+      if (msg.from === myId) return;
+      if (msg.type === "session_start") {
+        matchSessionRef.current = msg.sessionId;
+        setSessionId(msg.sessionId);
+        if (msg.mode && msg.mode === "chat" && mode === "chat") setMessages([]);
+        return;
+      }
+      if (msg.type === "session_request") {
+        if (matchLeaderRef.current && matchSessionRef.current) {
+          try { await channel.send({ type:"broadcast", event:"match", payload:{ type:"session_start", sessionId:matchSessionRef.current, mode, from:myId } }); } catch {}
+        }
+        return;
+      }
+      if (msg.type === "message") {
+        if (!msg.sessionId || msg.sessionId !== matchSessionRef.current) return;
+        setMessages(prev => [...prev, msg.message]);
+        return;
+      }
+      if (msg.type === "call") {
+        if (!msg.sessionId || msg.sessionId !== matchSessionRef.current) return;
+        await handleRandomCallSignal(msg.signal);
+      }
+    });
+    await new Promise((resolve, reject) => {
+      let settled=false;
+      const timer=setTimeout(()=>{ if(!settled){settled=true;reject(new Error("Match channel timed out"));}},9000);
+      channel.subscribe(status=>{
+        if(status==="SUBSCRIBED" && !settled){settled=true;clearTimeout(timer);resolve();}
+        else if((status==="CHANNEL_ERROR"||status==="TIMED_OUT")&&!settled){settled=true;clearTimeout(timer);reject(new Error(status));}
+      });
+    });
+    matchChannelRef.current=channel;
+    matchTopicRef.current=topic;
+    if (matchLeaderRef.current) {
+      matchSessionRef.current = `session-${genId()}-${Date.now()}`;
+      setSessionId(matchSessionRef.current);
+      await channel.send({ type:"broadcast", event:"match", payload:{ type:"session_start", sessionId:matchSessionRef.current, mode:m, from:myId } });
+    } else {
+      await channel.send({ type:"broadcast", event:"match", payload:{ type:"session_request", from:myId } });
+    }
+    return channel;
   }
+
+  async function waitForMatchSession(p) {
+    await ensureMatchChannel(p);
+    if (matchSessionRef.current) return matchSessionRef.current;
+    for (let i=0;i<20;i++) {
+      if (matchSessionRef.current) return matchSessionRef.current;
+      await new Promise(r=>setTimeout(r,150));
+      if (matchChannelRef.current && !matchLeaderRef.current) {
+        try { await matchChannelRef.current.send({ type:"broadcast", event:"match", payload:{ type:"session_request", from:myId } }); } catch {}
+      }
+    }
+    throw new Error("Match session was not established");
+  }
+
+  async function startRandomChat(p) {
+    clearInterval(chatPollRef.current);
+    setMessages([]);
+    setText("");
+    try { await waitForMatchSession(p); }
+    catch (e) { setCallErr("Could not connect the temporary chat. Please press Next and try again."); }
+  }
+
   async function sendRandomMsg() {
-    if (!text.trim()) return;
-    const key = `${kp}chat:${sessionId}`;
-    const thread = (await sget(key, true)) || [];
-    thread.push({ sender: myId, text: text.trim(), ts: Date.now() });
-    await sset(key, thread, true);
-    setMessages(thread); setText("");
+    if (!text.trim() || !matchChannelRef.current || !matchSessionRef.current) return;
+    const msg={ id:`${myId}-${Date.now()}-${genId()}`, sender:myId, text:text.trim(), ts:Date.now() };
+    setMessages(prev=>[...prev,msg]);
+    setText("");
+    try {
+      await matchChannelRef.current.send({ type:"broadcast", event:"match", payload:{ type:"message", sessionId:matchSessionRef.current, message:msg, from:myId } });
+    } catch { setCallErr("Message could not be delivered. Please stay connected and try again."); }
   }
 
   /* --- call mode (audio/video) --- */
   const iceCfg = { iceServers: [{ urls: "stun:stun.l.google.com:19302" }] };
   async function startRandomCall(sid, p, m) {
     setCallErr(""); setCallStatus("connecting");
-    const key = `${kp}call:${sid}`;
     const iAmCaller = myId < p.id;
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: m === "video" });
+      await waitForMatchSession(p);
+      const stream = await navigator.mediaDevices.getUserMedia({ audio:true, video:m === "video" });
       localStreamRef.current = stream;
       if (m === "video" && localVideoRef.current) localVideoRef.current.srcObject = stream;
-      const pc = new RTCPeerConnection(iceCfg);
+      const pc = new RTCPeerConnection({ iceServers:[{ urls:"stun:stun.l.google.com:19302" }] });
       pcRef.current = pc;
-      stream.getTracks().forEach(t => pc.addTrack(t, stream));
+      stream.getTracks().forEach(t=>pc.addTrack(t,stream));
       const remoteStream = new MediaStream();
-      pc.ontrack = e => { remoteStream.addTrack(e.track); if (remoteVideoRef.current) remoteVideoRef.current.srcObject = remoteStream; if (remoteAudioRef.current) remoteAudioRef.current.srcObject = remoteStream; };
-      const myIce = [];
-      pc.onicecandidate = e => { if (e.candidate) { myIce.push(e.candidate); const base = callStateRef.current || {}; sset(key, { ...base, [iAmCaller ? "iceCaller" : "iceCallee"]: myIce }, true); } };
-
+      pc.ontrack = e => { remoteStream.addTrack(e.track); if(remoteVideoRef.current) remoteVideoRef.current.srcObject=remoteStream; if(remoteAudioRef.current) remoteAudioRef.current.srcObject=remoteStream; };
+      pc.onicecandidate = e => {
+        if(e.candidate && matchChannelRef.current && matchSessionRef.current) {
+          matchChannelRef.current.send({ type:"broadcast", event:"match", payload:{ type:"call", sessionId:matchSessionRef.current, from:myId, signal:{ type:"ice", candidate:e.candidate } } }).catch(()=>{});
+        }
+      };
+      callStateRef.current={ caller:iAmCaller ? myId : p.id, mode:m };
       if (iAmCaller) {
-        const offer = await pc.createOffer();
+        const offer=await pc.createOffer();
         await pc.setLocalDescription(offer);
-        callStateRef.current = { caller: myId, mode: m, offer, iceCaller: [], iceCallee: [], answer: null, status: "ringing" };
-        await sset(key, callStateRef.current, true);
+        await matchChannelRef.current.send({ type:"broadcast", event:"match", payload:{ type:"call", sessionId:matchSessionRef.current, from:myId, signal:{ type:"offer", caller:myId, mode:m, offer } } });
       }
-      callPollRef.current = setInterval(async () => {
-        const state = await sget(key, true);
-        if (!state) return;
-        callStateRef.current = { ...callStateRef.current, ...state };
-        if (!iAmCaller && state.status === "ringing" && pc.signalingState === "stable" && !pc.currentRemoteDescription) {
-          await pc.setRemoteDescription(state.offer);
-          const answer = await pc.createAnswer();
-          await pc.setLocalDescription(answer);
-          callStateRef.current = { ...state, answer, iceCallee: [] };
-          await sset(key, callStateRef.current, true);
-          setCallStatus("active");
-        }
-        if (iAmCaller && state.answer && pc.signalingState !== "stable" && !pc.currentRemoteDescription) {
-          await pc.setRemoteDescription(state.answer);
-          setCallStatus("active");
-        }
-        const remoteList = (iAmCaller ? state.iceCallee : state.iceCaller) || [];
-        for (let i = answeredIce.current.size; i < remoteList.length; i++) {
-          try { await pc.addIceCandidate(remoteList[i]); } catch {}
-          answeredIce.current.add(i);
-        }
-      }, 1500);
-    } catch { setCallErr("Camera/microphone access was blocked."); }
+    } catch(e) { console.error(e); setCallErr("Camera/microphone access was blocked or the match connection failed."); }
+  }
+
+  async function handleRandomCallSignal(signal) {
+    if (!signal || signal.caller === myId || !pcRef.current) return;
+    try {
+      if (signal.type === "offer" && signal.caller !== myId && !pcRef.current.currentRemoteDescription) {
+        await pcRef.current.setRemoteDescription(signal.offer);
+        const answer=await pcRef.current.createAnswer();
+        await pcRef.current.setLocalDescription(answer);
+        await matchChannelRef.current.send({ type:"broadcast", event:"match", payload:{ type:"call", sessionId:matchSessionRef.current, from:myId, signal:{ type:"answer", caller:signal.caller, answer } } });
+        setCallStatus("connecting");
+      } else if (signal.type === "answer" && callStateRef.current?.caller === myId && !pcRef.current.currentRemoteDescription) {
+        await pcRef.current.setRemoteDescription(signal.answer);
+        setCallStatus("active");
+      } else if (signal.type === "ice" && signal.candidate) {
+        try { await pcRef.current.addIceCandidate(signal.candidate); } catch {}
+      } else if (signal.type === "ended") {
+        clearAll();
+        setCallStatus("connecting");
+      }
+    } catch(e) { console.error("Temporary call signaling failed",e); }
   }
 
   function skip() {
