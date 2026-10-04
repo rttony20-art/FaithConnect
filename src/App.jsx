@@ -894,11 +894,13 @@ export default function App() {
           <Field label="A bit about you">
             <textarea style={{...input, height: 80, resize:"none"}} value={form.bio} onChange={e=>setForm({...form,bio:e.target.value})} placeholder="Share your story, your walk with God, what you're hoping to find…" />
           </Field>
-          <Field label="What matters most to you"><Chips list={VALUES} sel={form.values} onToggle={v=>toggle("values",v)} /></Field>
-          <Field label="Hobbies & interests"><Chips list={HOBBIES} sel={form.hobbies} onToggle={v=>toggle("hobbies",v)} /></Field>
-          <Field label="What are you looking for"><Chips list={GOALS} sel={form.goals} onToggle={v=>toggle("goals",v)} /></Field>
-          <Field label="Your personality — pick what fits you"><Chips list={PERSONALITY} sel={form.appearance} onToggle={v=>toggle("appearance",v)} /></Field>
-          <Field label="Personality you're drawn to in a partner"><Chips list={PERSONALITY} sel={form.lookPref} onToggle={v=>toggle("lookPref",v)} /></Field>
+          <div style={{ marginTop:4 }}>
+            <PreferenceSection number="1" title="What matters most to you" list={VALUES} sel={form.values} onToggle={v=>toggle("values",v)} limit={5} />
+            <PreferenceSection number="2" title="Hobbies & interests" list={HOBBIES} sel={form.hobbies} onToggle={v=>toggle("hobbies",v)} limit={5} />
+            <PreferenceSection number="3" title="What are you looking for" list={GOALS} sel={form.goals} onToggle={v=>toggle("goals",v)} limit={3} />
+            <PreferenceSection number="4" title="Your personality" list={PERSONALITY} sel={form.appearance} onToggle={v=>toggle("appearance",v)} limit={5} />
+            <PreferenceSection number="5" title="Personality you're drawn to in a partner" list={PERSONALITY} sel={form.lookPref} onToggle={v=>toggle("lookPref",v)} limit={5} />
+          </div>
           {err && <div style={{color:"#B5616B", fontSize:13, marginTop:6}}>{err}</div>}
           <button onClick={saveProfile} style={{...primaryBtn, width:"100%", marginTop: 20}}>Save & find matches</button>
         </div>
@@ -974,11 +976,13 @@ export default function App() {
           </Field>
           <Field label="Name"><input style={input} value={form.name} onChange={e=>setForm({...form,name:e.target.value})} /></Field>
           <Field label="Bio"><textarea style={{...input, height:80, resize:"none"}} value={form.bio} onChange={e=>setForm({...form,bio:e.target.value})} /></Field>
-          <Field label="What matters most to you"><Chips list={VALUES} sel={form.values} onToggle={v=>toggle("values",v)} /></Field>
-          <Field label="Hobbies & interests"><Chips list={HOBBIES} sel={form.hobbies} onToggle={v=>toggle("hobbies",v)} /></Field>
-          <Field label="What are you looking for"><Chips list={GOALS} sel={form.goals} onToggle={v=>toggle("goals",v)} /></Field>
-          <Field label="Your personality"><Chips list={PERSONALITY} sel={form.appearance} onToggle={v=>toggle("appearance",v)} /></Field>
-          <Field label="Personality you're drawn to"><Chips list={PERSONALITY} sel={form.lookPref} onToggle={v=>toggle("lookPref",v)} /></Field>
+          <div style={{ marginTop:4 }}>
+            <PreferenceSection number="1" title="What matters most to you" list={VALUES} sel={form.values} onToggle={v=>toggle("values",v)} limit={5} />
+            <PreferenceSection number="2" title="Hobbies & interests" list={HOBBIES} sel={form.hobbies} onToggle={v=>toggle("hobbies",v)} limit={5} />
+            <PreferenceSection number="3" title="What are you looking for" list={GOALS} sel={form.goals} onToggle={v=>toggle("goals",v)} limit={3} />
+            <PreferenceSection number="4" title="Your personality" list={PERSONALITY} sel={form.appearance} onToggle={v=>toggle("appearance",v)} limit={5} />
+            <PreferenceSection number="5" title="Personality you're drawn to" list={PERSONALITY} sel={form.lookPref} onToggle={v=>toggle("lookPref",v)} limit={5} />
+          </div>
           <button onClick={saveProfile} style={{...primaryBtn, width:"100%", marginTop:20}}>Save changes</button>
         </div>
       </div>
@@ -1079,6 +1083,30 @@ function Field({ label, children, style }) {
 function Chips({ list, sel, onToggle }) {
   return <div>{list.map(v => <Chip key={v} label={v} active={sel?.includes(v)} onClick={() => onToggle(v)} />)}</div>;
 }
+
+function PreferenceSection({ number, title, list, sel, onToggle, limit }) {
+  const selected = Array.isArray(sel) ? sel.length : 0;
+  return (
+    <section style={{ marginTop: 22, paddingTop: 18, borderTop: "1px solid rgba(255,255,255,.09)" }}>
+      <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", gap:12, marginBottom:10 }}>
+        <div style={{ display:"flex", alignItems:"center", gap:10, minWidth:0 }}>
+          <div style={{ width:28, height:28, borderRadius:"50%", background:"linear-gradient(135deg,#526cff,#8d5cff)", display:"flex", alignItems:"center", justifyContent:"center", color:"#fff", fontFamily:"Inter,sans-serif", fontWeight:700, fontSize:12, boxShadow:"0 0 16px rgba(112,100,255,.3)" }}>{number}</div>
+          <div style={{ fontFamily:"Inter,sans-serif", fontSize:15.5, fontWeight:600, color:"#F8F4EA" }}>{title}</div>
+        </div>
+        <div style={{ fontFamily:"Inter,sans-serif", fontSize:11, color:"#8993b6", whiteSpace:"nowrap" }}>
+          {selected}{limit ? ` / ${limit}` : " selected"}
+        </div>
+      </div>
+      <div style={{ fontFamily:"Inter,sans-serif", fontSize:11.5, color:"#737d9f", marginBottom:8 }}>
+        {limit ? `Select up to ${limit}` : "Choose what fits you"}
+      </div>
+      <div style={{ display:"flex", flexWrap:"wrap", gap:0 }}>
+        {list.map(v => <Chip key={v} label={v} active={sel?.includes(v)} onClick={() => onToggle(v)} />)}
+      </div>
+    </section>
+  );
+}
+
 function Tag({ list }) {
   if (!list || !list.length) return null;
   return <div>{list.filter(Boolean).map(t => (
