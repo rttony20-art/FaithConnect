@@ -37,9 +37,16 @@ let realtimeClientPromise = null;
 async function getRealtimeClient() {
   if (!realtimeClientPromise) {
     realtimeClientPromise = import("https://esm.sh/@supabase/supabase-js@2.107.0")
-      .then(({ createClient }) => createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-        auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false }
-      }));
+      .then(async ({ createClient }) => {
+        const client = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+          auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false }
+        });
+        try {
+          const sess = await sget("supabase-session", false);
+          if (sess?.access_token) client.realtime.setAuth(sess.access_token);
+        } catch {}
+        return client;
+      });
   }
   return realtimeClientPromise;
 }
@@ -652,9 +659,11 @@ export default function App() {
       const session = await sget("supabase-session", false);
       if (!session) return;
       const data = await supaRest(`profiles?id=neq.${myId}&select=*`, { token: session.access_token });
+      const wantedGender = myProfile.gender === "Male" ? "Female" : myProfile.gender === "Female" ? "Male" : null;
       const others = [];
       for (const row of (data || [])) {
         const p = profileFromDb(row);
+        if (wantedGender && p.gender !== wantedGender) continue;
         const iSeekThem = myProfile.seeking === "Everyone" || myProfile.seeking === p.gender;
         const theySeekMe = p.seeking === "Everyone" || p.seeking === myProfile.gender;
         if (!(iSeekThem && theySeekMe)) continue;
@@ -669,17 +678,24 @@ export default function App() {
 
   const loadConversations = useCallback(async () => {
     if (!myId) return;
-    const list = await storageList("chat:", true);
+    const list = await storageList("chat:", false);
     if (!list) return;
+    const session = await sget("supabase-session", false);
     const mine = [];
     for (const k of list.keys) {
       const idpart = k.replace("chat:", "");
-      const [a, b] = idpart.split("-");
-      if (a !== myId && b !== myId) continue;
-      const otherId = a === myId ? b : a;
-      const otherProfile = await sget(`profiles:${otherId}`, true);
-      const thread = await sget(k, true);
+      const otherId = idpart.startsWith(`${myId}-`) ? idpart.slice(myId.length + 1) : idpart.endsWith(`-${myId}`) ? idpart.slice(0, -(myId.length + 1)) : null;
+      if (!otherId) continue;
+      const thread = await sget(k, false);
       if (!thread || !thread.length) continue;
+      let otherProfile = await sget(`profiles:${otherId}`, false);
+      if (!otherProfile) {
+        try {
+          const rows = await supaRest(`profiles?id=eq.${encodeURIComponent(otherId)}&select=*`, { token: session?.access_token });
+          otherProfile = rows?.[0] ? profileFromDb(rows[0]) : null;
+          if (otherProfile) await sset(`profiles:${otherId}`, otherProfile, false);
+        } catch {}
+      }
       mine.push({ otherId, otherProfile, last: thread[thread.length - 1] });
     }
     mine.sort((x, y) => (y.last?.ts||0) - (x.last?.ts||0));
@@ -870,7 +886,7 @@ export default function App() {
   }
 
   if (screen === "matchList") {
-    return <MatchListScreen matches={matches} myProfile={myProfile} onOpenChat={(id, profile) => { setActiveConvo({ otherId: id, otherProfile: profile }); setScreen("chat"); }} onBack={() => setScreen("matches")} />;
+    return <MatchListScreen matches={matches} myProfile={myProfile} onOpenChat={(id, profile) => { setActiveConvo({ otherId: id, otherProfile: profile }); setScreen("chat"); }} onBack={() => setScreen("matches")} nav={nav} />;
   }
 
   if (screen === "security") {
@@ -1012,25 +1028,6 @@ export default function App() {
             <TodaysWordCard />
           </div>
 
-          <div style={{ padding:"0 16px" }}>
-            {matches.map(({ profile, score }) => (
-              <div key={profile.id} style={matchCard}>
-                <div style={{display:"flex", gap:14}}>
-                  <AvatarCircle profile={profile} size={52} fontSize={20} />
-                  <div style={{flex:1}}>
-                    <div style={{display:"flex", justifyContent:"space-between", alignItems:"baseline"}}>
-                      <div style={{fontFamily:"Lora, serif", fontSize:17, color:"#F8F4EA"}}>{profile.name}, {profile.age}</div>
-                      <div style={{fontFamily:"Lora, serif", fontSize:17, color:"#a0aaff", fontWeight:600}}>{score.pct}%</div>
-                    </div>
-                    <div style={{fontFamily:"Inter, sans-serif", fontSize:13, color:"#858ca1"}}>{profile.city} · {profile.denom}</div>
-                  </div>
-                </div>
-                <p style={{fontFamily:"Inter, sans-serif", fontSize:13.5, color:"#a4aabd", lineHeight:1.5, margin:"10px 0"}}>{profile.bio}</p>
-                <Tag list={[...(profile.values||[]).slice(0,2), ...(profile.hobbies||[]).slice(0,2)]} />
-                <button onClick={() => { setActiveConvo({ otherId: profile.id, otherProfile: profile }); setScreen("chat"); }} style={{...secondaryBtn, width:"100%", marginTop:12}}>Say hello</button>
-              </div>
-            ))}
-          </div>
         </div>
       </div>
       {nav}
@@ -1267,42 +1264,36 @@ function SecurityScreen({ myId, myProfile, onBack, onUsernameChanged }) {
   );
 }
 
-function MatchListScreen({ matches, myProfile, onOpenChat, onBack }) {
-  const [reveal, setReveal] = useState(null); // { profile, score } | null
+function MatchListScreen({ matches, myProfile, onOpenChat, onBack, nav }) {
   return (
     <div style={page}>
       <FontLoader />
       <div style={{ padding:"18px 16px 4px", background:"var(--fc-bg)" }}>
         <button onClick={onBack} style={{ ...backBtn, color:"#B8935F", marginBottom:10 }}><ChevronLeft size={18}/> Back</button>
-        <h2 style={{ fontFamily:"Lora, serif", fontSize:22, color:"#F8F4EA", margin:"0 0 4px" }}>See who you match with</h2>
-        <p style={{ fontFamily:"Inter, sans-serif", fontSize:13.5, color:"#B9C9BC", margin:"0 0 16px" }}>Tap someone to reveal your match %</p>
+        <h2 style={{ fontFamily:"Lora, serif", fontSize:24, color:"#F8F4EA", margin:"0 0 4px" }}>Discover</h2>
+        <p style={{ fontFamily:"Inter, sans-serif", fontSize:13.5, color:"#B9C9BC", margin:"0 0 12px" }}>People who match your faith, values, and interests.</p>
       </div>
-      <div style={{ flex:1, overflowY:"auto", padding:"16px 16px 100px", background:"var(--fc-bg)", display:"flex", flexWrap:"wrap", gap:12, alignContent:"flex-start" }}>
+      <div style={{ flex:1, overflowY:"auto", padding:"8px 16px 110px", background:"var(--fc-bg)" }}>
         {matches.length === 0 && <div style={emptyState}>No matches yet — check back once more people join.</div>}
         {matches.map(({ profile, score }) => (
-          <button key={profile.id} onClick={() => setReveal({ profile, score })} style={{
-            width:"calc(50% - 6px)", borderRadius:16, overflow:"hidden", border:"1.5px solid #9C7A48",
-            background:"#3E2E14", cursor:"pointer", padding:0, textAlign:"left"
-          }}>
-            <div style={{ width:"100%", aspectRatio:"1", background: profile.avatarUrl ? `center/cover url(${profile.avatarUrl})` : (profile.avatarEmoji ? profile.avatarColor : "#5C4520"), display:"flex", alignItems:"center", justifyContent:"center", fontSize:34 }}>
-              {!profile.avatarUrl && (profile.avatarEmoji || <span style={{ fontFamily:"Lora, serif", fontSize:34, color:"#D6AE6E" }}>{profile.name?.[0]?.toUpperCase()}</span>)}
+          <div key={profile.id} style={matchCard}>
+            <div style={{display:"flex", gap:14}}>
+              <AvatarCircle profile={profile} size={52} fontSize={20} />
+              <div style={{flex:1}}>
+                <div style={{display:"flex", justifyContent:"space-between", alignItems:"baseline"}}>
+                  <div style={{fontFamily:"Lora, serif", fontSize:17, color:"#F8F4EA"}}>{profile.name}, {profile.age}</div>
+                  <div style={{fontFamily:"Lora, serif", fontSize:17, color:"#a0aaff", fontWeight:600}}>{score.pct}%</div>
+                </div>
+                <div style={{fontFamily:"Inter, sans-serif", fontSize:13, color:"#858ca1"}}>{profile.city} · {profile.denom}</div>
+              </div>
             </div>
-            <div style={{ padding:"8px 10px" }}>
-              <div style={{ fontFamily:"Lora, serif", fontSize:15, color:"#F8F4EA" }}>{profile.name}, {profile.age}</div>
-              <div style={{ fontFamily:"Inter, sans-serif", fontSize:11.5, color:"#C9C2AF" }}>{profile.city}</div>
-            </div>
-          </button>
+            <p style={{fontFamily:"Inter, sans-serif", fontSize:13.5, color:"#a4aabd", lineHeight:1.5, margin:"10px 0"}}>{profile.bio}</p>
+            <Tag list={[...(profile.values||[]).slice(0,2), ...(profile.hobbies||[]).slice(0,2)]} />
+            <button onClick={() => onOpenChat(profile.id, profile)} style={{...secondaryBtn, width:"100%", marginTop:12}}>Say hello</button>
+          </div>
         ))}
       </div>
-      {reveal && (
-        <MatchRevealOverlay
-          myProfile={myProfile}
-          other={reveal.profile}
-          score={reveal.score}
-          onClose={() => setReveal(null)}
-          onSayHello={() => { onOpenChat(reveal.profile.id, reveal.profile); setReveal(null); }}
-        />
-      )}
+      {nav}
     </div>
   );
 }
@@ -1462,15 +1453,14 @@ function ChatScreen({ myId, myProfile, other, onBack }) {
   const [messages, setMessages] = useState([]);
   const [text, setText] = useState("");
   const [recording, setRecording] = useState(false);
-  const [callMode, setCallMode] = useState(null); // null | 'incoming' | 'audio' | 'video'
-  const [callStatus, setCallStatus] = useState("idle"); // idle, calling, ringing, active, ended
+  const [callMode, setCallMode] = useState(null); // null | audio | video
+  const [callStatus, setCallStatus] = useState("idle"); // idle, calling, ringing, active
   const [micOn, setMicOn] = useState(true);
   const [camOn, setCamOn] = useState(true);
   const [callErr, setCallErr] = useState("");
 
   const cid = convoId(myId, other.otherId);
   const chatKey = `chat:${cid}`;
-  const callKey = `call:${cid}`;
   const mediaRecorder = useRef(null);
   const chunks = useRef([]);
   const chatScrollRef = useRef(null);
@@ -1479,223 +1469,250 @@ function ChatScreen({ myId, myProfile, other, onBack }) {
   const localVideoRef = useRef(null);
   const remoteVideoRef = useRef(null);
   const remoteAudioRef = useRef(null);
-  const iceSeen = useRef(0);
-  const callPollRef = useRef(null);
-  const inCallScreen = useRef(false);
+  const answeredIce = useRef(new Set());
   const chatChannelRef = useRef(null);
-  const callChannelRef = useRef(null);
-  const callSignalsRef = useRef([]);
+  const callStateRef = useRef(null);
+  const pendingOfferRef = useRef(null);
+  const myIceRef = useRef([]);
+
+  async function saveThread(thread) {
+    const clean = (thread || []).slice(-100);
+    await sset(chatKey, clean, false);
+    return clean;
+  }
+
+  function mergeMessages(existing, incoming) {
+    const map = new Map();
+    [...(existing || []), ...(incoming || [])].forEach(m => { if (m?.id) map.set(m.id, m); });
+    return [...map.values()].sort((a,b) => (a.ts||0) - (b.ts||0)).slice(-100);
+  }
+
+  async function ensureChannel() {
+    if (chatChannelRef.current) return chatChannelRef.current;
+    const client = await getRealtimeClient();
+    const channel = client.channel(`faithconnect-${cid}`, {
+      config: { broadcast: { self: false, ack: true } }
+    });
+
+    channel.on("broadcast", { event: "message" }, async ({ payload }) => {
+      const msg = payload?.message;
+      if (!msg || msg.sender === myId) return;
+      setMessages(prev => {
+        const merged = mergeMessages(prev, [msg]);
+        saveThread(merged);
+        return merged;
+      });
+    });
+
+    channel.on("broadcast", { event: "history_request" }, async () => {
+      const local = (await sget(chatKey, false)) || [];
+      if (local.length) {
+        try { await channel.send({ type:"broadcast", event:"history_response", payload:{ messages:local } }); } catch {}
+      }
+    });
+
+    channel.on("broadcast", { event: "history_response" }, async ({ payload }) => {
+      const incoming = Array.isArray(payload?.messages) ? payload.messages : [];
+      if (!incoming.length) return;
+      setMessages(prev => {
+        const merged = mergeMessages(prev, incoming);
+        saveThread(merged);
+        return merged;
+      });
+    });
+
+    channel.on("broadcast", { event: "call" }, async ({ payload }) => {
+      await handleCallSignal(payload?.signal);
+    });
+
+    await new Promise((resolve, reject) => {
+      let settled = false;
+      const finish = fn => { if (!settled) { settled = true; clearTimeout(timer); fn(); } };
+      const timer = setTimeout(() => finish(() => reject(new Error("Realtime channel timed out"))), 9000);
+      channel.subscribe(status => {
+        if (status === "SUBSCRIBED") finish(resolve);
+        else if (status === "CHANNEL_ERROR" || status === "TIMED_OUT") finish(() => reject(new Error(status)));
+      });
+    });
+    chatChannelRef.current = channel;
+    // Ask the other browser for any messages it already has. This also recovers
+    // messages sent before this browser finished subscribing.
+    try { await channel.send({ type:"broadcast", event:"history_request", payload:{ from:myId } }); } catch {}
+    return channel;
+  }
+
+  async function broadcastCall(signal) {
+    const ch = await ensureChannel();
+    await ch.send({ type:"broadcast", event:"call", payload:{ signal } });
+  }
 
   useEffect(() => {
     let cancelled = false;
     (async () => {
       try {
-        const client = await getRealtimeClient();
-        if (cancelled) return;
-        const channel = client.channel(`faithconnect-chat-${cid}`, {
-          config: { broadcast: { self: false, ack: true } }
-        });
-        channel.on("broadcast", { event: "message" }, ({ payload }) => {
-          const msg = payload?.message;
-          if (!msg || msg.sender === myId) return;
-          setMessages(prev => prev.some(m => m.id === msg.id) ? prev : [...prev, msg]);
-        });
-        channel.subscribe(status => {
-          if (status === "SUBSCRIBED") chatChannelRef.current = channel;
-        });
-        const callChannel = client.channel(`faithconnect-call-${cid}`, { config: { broadcast: { self: false, ack: true } } });
-        callChannel.on("broadcast", { event: "signal" }, ({ payload }) => {
-          const sig = payload?.signal;
-          if (!sig || sig.sender === myId) return;
-          callSignalsRef.current.push(sig);
-          handleCallSignal(sig);
-        });
-        callChannel.subscribe(status => { if (status === "SUBSCRIBED") callChannelRef.current = callChannel; });
+        const local = (await sget(chatKey, false)) || [];
+        if (!cancelled) setMessages(local);
+        await ensureChannel();
       } catch (e) {
-        console.error("Chat realtime connection failed", e);
+        console.error("FaithConnect realtime chat failed", e);
+        if (!cancelled) setCallErr("Chat connection failed. Please refresh and try again.");
       }
     })();
     return () => {
       cancelled = true;
-      clearInterval(callPollRef.current);
       const ch = chatChannelRef.current;
-      const cch = callChannelRef.current;
       chatChannelRef.current = null;
-      callChannelRef.current = null;
       if (ch) { try { ch.unsubscribe(); } catch {} }
-      if (cch) { try { cch.unsubscribe(); } catch {} }
       teardown();
     };
     // eslint-disable-next-line
   }, [cid, myId]);
 
-  const shouldStickToBottom = () => {
-    const el = chatScrollRef.current;
-    if (!el) return true;
-    return el.scrollHeight - el.scrollTop - el.clientHeight < 120;
-  };
-
   useEffect(() => {
     const el = chatScrollRef.current;
     if (!el) return;
-    if (shouldStickToBottom()) el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
+    const nearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 120;
+    if (nearBottom) el.scrollTo({ top: el.scrollHeight, behavior:"smooth" });
   }, [messages]);
-
-  async function loadMessages() {
-    // Live messages arrive through Supabase Realtime. Do not overwrite the
-    // conversation from localStorage/window.storage because those stores are
-    // isolated between normal browsers.
-  }
 
   async function sendMessage(type, content) {
     const msg = {
-      id: `${myId}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-      sender: myId,
+      id:`${myId}-${Date.now()}-${Math.random().toString(36).slice(2,8)}`,
+      sender:myId,
       type,
-      text: type === "text" ? content : undefined,
-      content: type === "voice" ? content : undefined,
-      ts: Date.now()
+      text:type === "text" ? content : undefined,
+      content:type === "voice" ? content : undefined,
+      ts:Date.now()
     };
-    setMessages(prev => [...prev, msg]);
+    const merged = mergeMessages(messages, [msg]);
+    setMessages(merged);
+    await saveThread(merged);
+    setText("");
     try {
-      let channel = chatChannelRef.current;
-      if (!channel) {
-        const client = await getRealtimeClient();
-        channel = client.channel(`faithconnect-chat-${cid}`, {
-          config: { broadcast: { self: false, ack: true } }
-        });
-        channel.on("broadcast", { event: "message" }, ({ payload }) => {
-          const incoming = payload?.message;
-          if (!incoming || incoming.sender === myId) return;
-          setMessages(prev => prev.some(m => m.id === incoming.id) ? prev : [...prev, incoming]);
-        });
-        await new Promise((resolve, reject) => {
-          const timeout = setTimeout(() => reject(new Error("Chat connection timed out")), 7000);
-          channel.subscribe(status => {
-            if (status === "SUBSCRIBED") { clearTimeout(timeout); resolve(); }
-            else if (status === "CHANNEL_ERROR" || status === "TIMED_OUT") { clearTimeout(timeout); reject(new Error(status)); }
-          });
-        });
-        chatChannelRef.current = channel;
-      }
-      const result = await channel.send({ type: "broadcast", event: "message", payload: { message: msg } });
-      if (result !== "ok" && result?.status && result.status !== "ok") console.error("Chat send failed", result);
+      const ch = await ensureChannel();
+      const result = await ch.send({ type:"broadcast", event:"message", payload:{ message:msg } });
+      if (result !== "ok" && result?.status && result.status !== "ok") throw new Error(String(result));
     } catch (e) {
       console.error("Chat send failed", e);
-      setCallErr("Message could not be delivered. Check your internet connection and try again.");
+      setCallErr("Message could not be delivered. Please keep both people connected and try again.");
     }
-    setText("");
   }
 
   async function startRecording() {
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const stream = await navigator.mediaDevices.getUserMedia({ audio:true });
       const mr = new MediaRecorder(stream);
       chunks.current = [];
       mr.ondataavailable = e => chunks.current.push(e.data);
       mr.onstop = async () => {
-        const blob = new Blob(chunks.current, { type: "audio/webm" });
+        const blob = new Blob(chunks.current, { type:"audio/webm" });
         const reader = new FileReader();
         reader.onloadend = () => sendMessage("voice", reader.result);
         reader.readAsDataURL(blob);
         stream.getTracks().forEach(t => t.stop());
       };
-      mr.start();
-      mediaRecorder.current = mr;
-      setRecording(true);
+      mr.start(); mediaRecorder.current = mr; setRecording(true);
     } catch { setCallErr("Microphone access was blocked — voice notes need mic permission."); }
   }
   function stopRecording() { mediaRecorder.current?.stop(); setRecording(false); }
 
-  const iceCfg = { iceServers: [{ urls: "stun:stun.l.google.com:19302" }] };
+  const iceCfg = { iceServers:[{ urls:"stun:stun.l.google.com:19302" }] };
 
-  async function getCallChannel() {
-    if (callChannelRef.current) return callChannelRef.current;
-    const client = await getRealtimeClient();
-    const channel = client.channel(`faithconnect-call-${cid}`, { config: { broadcast: { self: false, ack: true } } });
-    channel.on("broadcast", { event: "signal" }, ({ payload }) => {
-      const sig = payload?.signal;
-      if (!sig || sig.sender === myId) return;
-      handleCallSignal(sig);
-    });
-    await new Promise((resolve, reject) => {
-      const t = setTimeout(() => reject(new Error("Call signaling timed out")), 7000);
-      channel.subscribe(status => { if (status === "SUBSCRIBED") { clearTimeout(t); resolve(); } else if (status === "CHANNEL_ERROR" || status === "TIMED_OUT") { clearTimeout(t); reject(new Error(status)); } });
-    });
-    callChannelRef.current = channel;
-    return channel;
-  }
-  async function sendCallSignal(signal) {
-    const channel = await getCallChannel();
-    return channel.send({ type: "broadcast", event: "signal", payload: { signal: { ...signal, sender: myId } } });
-  }
-  async function handleCallSignal(sig) {
-    try {
-      if (sig.type === "offer" && !inCallScreen.current) {
-        cur.current = { caller: sig.sender, mode: sig.mode, offer: sig.offer, iceCaller: [], iceCallee: [], status: "ringing" };
-        setCallMode(sig.mode); setCallStatus("ringing"); inCallScreen.current = true;
-      } else if (sig.type === "answer" && pcRef.current && pcRef.current.signalingState !== "stable") {
-        await pcRef.current.setRemoteDescription(sig.answer);
-        setCallStatus("active");
-      } else if (sig.type === "ice" && pcRef.current && sig.candidate) {
-        try { await pcRef.current.addIceCandidate(sig.candidate); } catch {}
-      } else if (sig.type === "end") {
-        endCallLocal();
+  function setupPeer(mode) {
+    const pc = new RTCPeerConnection(iceCfg);
+    pcRef.current = pc;
+    const remoteStream = new MediaStream();
+    pc.ontrack = e => {
+      remoteStream.addTrack(e.track);
+      if (remoteVideoRef.current) remoteVideoRef.current.srcObject = remoteStream;
+      if (remoteAudioRef.current) remoteAudioRef.current.srcObject = remoteStream;
+    };
+    pc.onicecandidate = e => {
+      if (e.candidate) {
+        myIceRef.current.push(e.candidate);
+        broadcastCall({ type:"ice", candidate:e.candidate }).catch(() => {});
       }
-    } catch (e) { console.error("Call signal error", e); }
+    };
+    return pc;
   }
+
   async function startCall(mode) {
     setCallErr("");
     try {
-      const channel = await getCallChannel();
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: mode === "video" });
+      const stream = await navigator.mediaDevices.getUserMedia({ audio:true, video:mode === "video" });
       localStreamRef.current = stream;
+      const pc = setupPeer(mode);
+      stream.getTracks().forEach(t => pc.addTrack(t, stream));
       if (mode === "video" && localVideoRef.current) localVideoRef.current.srcObject = stream;
-      const pc = new RTCPeerConnection(iceCfg);
-      pcRef.current = pc; stream.getTracks().forEach(t => pc.addTrack(t, stream));
-      const remoteStream = new MediaStream();
-      pc.ontrack = e => { remoteStream.addTrack(e.track); if (remoteVideoRef.current) remoteVideoRef.current.srcObject = remoteStream; if (remoteAudioRef.current) remoteAudioRef.current.srcObject = remoteStream; };
-      pc.onicecandidate = e => { if (e.candidate) sendCallSignal({ type: "ice", candidate: e.candidate }); };
-      const offer = await pc.createOffer(); await pc.setLocalDescription(offer);
-      cur.current = { caller: myId, mode, status: "ringing" };
-      await channel.send({ type: "broadcast", event: "signal", payload: { signal: { type: "offer", sender: myId, mode, offer: pc.localDescription } } });
-      setCallMode(mode); setCallStatus("calling"); inCallScreen.current = true;
-    } catch { setCallErr("Couldn't access camera/microphone for the call."); }
+      const offer = await pc.createOffer();
+      await pc.setLocalDescription(offer);
+      callStateRef.current = { caller:myId, mode, offer, status:"ringing" };
+      setCallMode(mode); setCallStatus("calling");
+      await broadcastCall({ type:"offer", caller:myId, mode, offer });
+    } catch (e) {
+      console.error(e); setCallErr("Couldn't access camera/microphone for the call.");
+    }
   }
+
+  async function handleCallSignal(signal) {
+    if (!signal || signal.caller === myId) return;
+    if (signal.type === "offer") {
+      pendingOfferRef.current = signal;
+      callStateRef.current = signal;
+      if (!callMode) { setCallMode(signal.mode); setCallStatus("ringing"); }
+      return;
+    }
+    if (signal.type === "answer" && pcRef.current && callStateRef.current?.caller === myId) {
+      try { await pcRef.current.setRemoteDescription(signal.answer); setCallStatus("active"); } catch (e) { console.error(e); }
+      return;
+    }
+    if (signal.type === "ice" && pcRef.current) {
+      try { await pcRef.current.addIceCandidate(signal.candidate); } catch {}
+      return;
+    }
+    if (signal.type === "ended") endCallLocal();
+  }
+
   async function acceptCall() {
     setCallErr("");
     try {
-      const state = cur.current; if (!state?.offer) throw new Error("No call offer");
-      await getCallChannel();
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: state.mode === "video" });
+      const state = pendingOfferRef.current || callStateRef.current;
+      if (!state?.offer) throw new Error("No incoming call offer");
+      const stream = await navigator.mediaDevices.getUserMedia({ audio:true, video:state.mode === "video" });
       localStreamRef.current = stream;
+      const pc = setupPeer(state.mode);
+      stream.getTracks().forEach(t => pc.addTrack(t, stream));
       if (state.mode === "video" && localVideoRef.current) localVideoRef.current.srcObject = stream;
-      const pc = new RTCPeerConnection(iceCfg); pcRef.current = pc; stream.getTracks().forEach(t => pc.addTrack(t, stream));
-      const remoteStream = new MediaStream();
-      pc.ontrack = e => { remoteStream.addTrack(e.track); if (remoteVideoRef.current) remoteVideoRef.current.srcObject = remoteStream; if (remoteAudioRef.current) remoteAudioRef.current.srcObject = remoteStream; };
-      pc.onicecandidate = e => { if (e.candidate) sendCallSignal({ type: "ice", candidate: e.candidate }); };
-      await pc.setRemoteDescription(state.offer); const answer = await pc.createAnswer(); await pc.setLocalDescription(answer);
-      await sendCallSignal({ type: "answer", answer: pc.localDescription }); setCallStatus("active");
-    } catch { setCallErr("Couldn't join the call — camera/mic may be blocked."); }
+      await pc.setRemoteDescription(state.offer);
+      const answer = await pc.createAnswer();
+      await pc.setLocalDescription(answer);
+      callStateRef.current = { ...state, status:"active" };
+      setCallStatus("active");
+      await broadcastCall({ type:"answer", caller:state.caller, answer });
+    } catch (e) { console.error(e); setCallErr("Couldn't join the call — camera/mic may be blocked."); }
   }
 
-  function declineCall() { sendCallSignal({ type: "end" }).catch(()=>{}); endCallLocal(); }
+  async function declineCall() {
+    try { await broadcastCall({ type:"ended", caller:callStateRef.current?.caller || myId }); } catch {}
+    endCallLocal();
+  }
 
   function teardown() {
     pcRef.current?.close(); pcRef.current = null;
     localStreamRef.current?.getTracks().forEach(t => t.stop()); localStreamRef.current = null;
   }
   function endCallLocal() {
-    teardown(); setCallStatus("idle"); setCallMode(null); inCallScreen.current = false; answeredIce.current = new Set();
+    teardown(); pendingOfferRef.current = null; callStateRef.current = null;
+    setCallStatus("idle"); setCallMode(null); setMicOn(true); setCamOn(true); answeredIce.current = new Set(); myIceRef.current = [];
   }
   async function hangUp() {
-    await sendCallSignal({ type: "end" }).catch(()=>{});
+    try { await broadcastCall({ type:"ended", caller:callStateRef.current?.caller || myId }); } catch {}
     endCallLocal();
   }
 
   if (callMode && callStatus !== "idle") {
     return (
-      <div style={{ ...page, background: "#0A0F0A" }}>
+      <div style={{ ...page, background:"#0A0F0A" }}>
         <FontLoader />
         <div style={{ flex:1, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", position:"relative" }}>
           {callMode === "video" ? (
@@ -1706,17 +1723,13 @@ function ChatScreen({ myId, myProfile, other, onBack }) {
           ) : (
             <>
               <audio ref={remoteAudioRef} autoPlay />
-              <div style={{ width:120, height:120, borderRadius:"50%", background:"#B8935F", display:"flex", alignItems:"center", justifyContent:"center", fontFamily:"Lora, serif", fontSize:42, color:"#2A1F0E" }}>
-                {other.otherProfile?.name?.[0]?.toUpperCase()}
-              </div>
+              <div style={{ width:120, height:120, borderRadius:"50%", background:"#B8935F", display:"flex", alignItems:"center", justifyContent:"center", fontFamily:"Lora, serif", fontSize:42, color:"#2A1F0E" }}>{other.otherProfile?.name?.[0]?.toUpperCase()}</div>
             </>
           )}
           <div style={{ position:"absolute", top:40, color:"#F8F4EA", fontFamily:"Lora, serif", fontSize:19, textAlign:"center" }}>
             {other.otherProfile?.name}
             <div style={{ fontFamily:"Inter, sans-serif", fontSize:13, color:"#B8935F", marginTop:4 }}>
-              {callStatus === "calling" && "Calling…"}
-              {callStatus === "ringing" && "Incoming call"}
-              {callStatus === "active" && "Connected"}
+              {callStatus === "calling" && "Calling…"}{callStatus === "ringing" && "Incoming call"}{callStatus === "active" && "Connected"}
             </div>
           </div>
           {callErr && <div style={{position:"absolute", bottom:190, color:"#E3A6A6", fontSize:12.5, fontFamily:"Inter, sans-serif", textAlign:"center", padding:"0 30px"}}>{callErr}</div>}
@@ -1728,14 +1741,8 @@ function ChatScreen({ myId, myProfile, other, onBack }) {
               </>
             ) : (
               <>
-                <button onClick={() => { localStreamRef.current?.getAudioTracks().forEach(t => t.enabled = !micOn); setMicOn(!micOn); }} style={callBtn(micOn ? "#5C4520" : "#B5616B")}>
-                  {micOn ? <Mic size={20} color="#fff"/> : <MicOff size={20} color="#fff"/>}
-                </button>
-                {callMode === "video" && (
-                  <button onClick={() => { localStreamRef.current?.getVideoTracks().forEach(t => t.enabled = !camOn); setCamOn(!camOn); }} style={callBtn(camOn ? "#5C4520" : "#B5616B")}>
-                    {camOn ? <Camera size={20} color="#fff"/> : <VideoOff size={20} color="#fff"/>}
-                  </button>
-                )}
+                <button onClick={() => { localStreamRef.current?.getAudioTracks().forEach(t => t.enabled=!micOn); setMicOn(!micOn); }} style={callBtn(micOn ? "#5C4520" : "#B5616B")}>{micOn ? <Mic size={20} color="#fff"/> : <MicOff size={20} color="#fff"/>}</button>
+                {callMode === "video" && <button onClick={() => { localStreamRef.current?.getVideoTracks().forEach(t => t.enabled=!camOn); setCamOn(!camOn); }} style={callBtn(camOn ? "#5C4520" : "#B5616B")}>{camOn ? <Camera size={20} color="#fff"/> : <VideoOff size={20} color="#fff"/>}</button>}
                 <button onClick={hangUp} style={callBtn("#B5616B")}><PhoneOff size={20} color="#fff" /></button>
               </>
             )}
@@ -1757,21 +1764,18 @@ function ChatScreen({ myId, myProfile, other, onBack }) {
       </div>
       <div ref={chatScrollRef} style={{ flex:1, minHeight:0, overflowY:"auto", WebkitOverflowScrolling:"touch", overscrollBehavior:"contain", padding:"16px 14px", background:"var(--fc-bg)", display:"flex", flexDirection:"column" }}>
         {messages.length === 0 && <div style={emptyState}>Say hello — your conversation starts here.</div>}
-        {messages.map((m, i) => (
-          <div key={i} style={{ alignSelf: m.sender === myId ? "flex-end" : "flex-start", maxWidth:"75%", marginBottom:10 }}>
-            <div style={{ background: m.sender === myId ? "#B8935F" : "#EFE9DC", color: m.sender === myId ? "#FAF7F0" : "#22252B", padding:"9px 13px", borderRadius: 16, fontFamily:"Inter, sans-serif", fontSize:14.5 }}>
+        {messages.map(m => (
+          <div key={m.id || `${m.sender}-${m.ts}`} style={{ alignSelf:m.sender === myId ? "flex-end" : "flex-start", maxWidth:"75%", marginBottom:10 }}>
+            <div style={{ background:m.sender === myId ? "#B8935F" : "#EFE9DC", color:m.sender === myId ? "#FAF7F0" : "#22252B", padding:"9px 13px", borderRadius:16, fontFamily:"Inter, sans-serif", fontSize:14.5 }}>
               {m.type === "voice" ? <audio controls src={m.content} style={{height:34, maxWidth:200}} /> : m.text}
             </div>
           </div>
         ))}
-        <div style={{ height:1, flexShrink:0 }} />
       </div>
       {callErr && <div style={{fontSize:12, color:"#B5616B", fontFamily:"Inter, sans-serif", padding:"4px 14px", background:"var(--fc-bg)"}}>{callErr}</div>}
       <div style={{ ...composer, flexShrink:0, paddingBottom:"calc(10px + env(safe-area-inset-bottom))" }}>
-        <button onClick={recording ? stopRecording : startRecording} style={{ ...iconBtnLight, background: recording ? "#B5616B" : "#EFE9DC" }}>
-          {recording ? <Square size={17} color="#fff" /> : <Mic size={18} color="#4A4A45" />}
-        </button>
-        <input value={text} onChange={e=>setText(e.target.value)} onKeyDown={e => { if (e.key === "Enter" && text.trim()) sendMessage("text", text.trim()); }} placeholder="Type a message…" style={{ flex:1, border:"none", outline:"none", fontFamily:"Inter, sans-serif", fontSize:14.5, background:"transparent", padding:"10px 4px", minWidth:0 }} />
+        <button onClick={recording ? stopRecording : startRecording} style={{ ...iconBtnLight, background:recording ? "#B5616B" : "#EFE9DC" }}>{recording ? <Square size={17} color="#fff" /> : <Mic size={18} color="#4A4A45" />}</button>
+        <input value={text} onChange={e=>setText(e.target.value)} onKeyDown={e=>{ if(e.key==="Enter" && text.trim()) sendMessage("text", text.trim()); }} placeholder="Type a message…" style={{ flex:1, border:"none", outline:"none", fontFamily:"Inter, sans-serif", fontSize:14.5, background:"transparent", padding:"10px 4px", minWidth:0 }} />
         <button onClick={() => text.trim() && sendMessage("text", text.trim())} style={iconBtnLight}><Send size={18} color="#B8935F" /></button>
       </div>
     </div>
