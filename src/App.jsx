@@ -1042,7 +1042,12 @@ function Tag({ list }) {
   ))}</div>;
 }
 function FontLoader() {
-  return <style>{`@import url('https://fonts.googleapis.com/css2?family=Lora:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap');`}</style>;
+  return <style>{`@import url('https://fonts.googleapis.com/css2?family=Lora:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap');
+    html, body, #root { min-height:100%; }
+    @media (max-width: 700px) {
+      input, textarea { font-size:16px !important; }
+    }
+  `}</style>;
 }
 
 function TopBar({ onMenu, dark, overlay, onLogo, lightMode, onToggleTheme }) {
@@ -1454,7 +1459,7 @@ function ChatScreen({ myId, myProfile, other, onBack }) {
   const callKey = `call:${cid}`;
   const mediaRecorder = useRef(null);
   const chunks = useRef([]);
-  const bottomRef = useRef(null);
+  const chatScrollRef = useRef(null);
   const pcRef = useRef(null);
   const localStreamRef = useRef(null);
   const localVideoRef = useRef(null);
@@ -1473,7 +1478,17 @@ function ChatScreen({ myId, myProfile, other, onBack }) {
     // eslint-disable-next-line
   }, []);
 
-  useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages]);
+  const shouldStickToBottom = () => {
+    const el = chatScrollRef.current;
+    if (!el) return true;
+    return el.scrollHeight - el.scrollTop - el.clientHeight < 120;
+  };
+
+  useEffect(() => {
+    const el = chatScrollRef.current;
+    if (!el) return;
+    if (shouldStickToBottom()) el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
+  }, [messages]);
 
   async function loadMessages() {
     const thread = await sget(chatKey, true);
@@ -1652,7 +1667,7 @@ function ChatScreen({ myId, myProfile, other, onBack }) {
   }
 
   return (
-    <div style={page}>
+    <div style={{ ...page, height:"100dvh", minHeight:0, overflow:"hidden" }}>
       <FontLoader />
       <div style={chatHeader}>
         <button onClick={onBack} style={{ background:"none", border:"none", cursor:"pointer", padding:6, marginRight:4 }}><ChevronLeft size={22} color="#F8F4EA" /></button>
@@ -1661,7 +1676,7 @@ function ChatScreen({ myId, myProfile, other, onBack }) {
         <button onClick={() => startCall("audio")} style={iconBtn}><Phone size={19} color="#F8F4EA" /></button>
         <button onClick={() => startCall("video")} style={iconBtn}><Video size={19} color="#F8F4EA" /></button>
       </div>
-      <div style={{ flex:1, overflowY:"auto", padding:"16px 14px", background:"var(--fc-bg)", display:"flex", flexDirection:"column" }}>
+      <div ref={chatScrollRef} style={{ flex:1, minHeight:0, overflowY:"auto", WebkitOverflowScrolling:"touch", overscrollBehavior:"contain", padding:"16px 14px", background:"var(--fc-bg)", display:"flex", flexDirection:"column" }}>
         {messages.length === 0 && <div style={emptyState}>Say hello — your conversation starts here.</div>}
         {messages.map((m, i) => (
           <div key={i} style={{ alignSelf: m.sender === myId ? "flex-end" : "flex-start", maxWidth:"75%", marginBottom:10 }}>
@@ -1670,14 +1685,14 @@ function ChatScreen({ myId, myProfile, other, onBack }) {
             </div>
           </div>
         ))}
-        <div ref={bottomRef} />
+        <div style={{ height:1, flexShrink:0 }} />
       </div>
       {callErr && <div style={{fontSize:12, color:"#B5616B", fontFamily:"Inter, sans-serif", padding:"4px 14px", background:"var(--fc-bg)"}}>{callErr}</div>}
-      <div style={composer}>
+      <div style={{ ...composer, flexShrink:0, paddingBottom:"calc(10px + env(safe-area-inset-bottom))" }}>
         <button onClick={recording ? stopRecording : startRecording} style={{ ...iconBtnLight, background: recording ? "#B5616B" : "#EFE9DC" }}>
           {recording ? <Square size={17} color="#fff" /> : <Mic size={18} color="#4A4A45" />}
         </button>
-        <input value={text} onChange={e=>setText(e.target.value)} onKeyDown={e => { if (e.key === "Enter" && text.trim()) sendMessage("text", text.trim()); }} placeholder="Type a message…" style={{ flex:1, border:"none", outline:"none", fontFamily:"Inter, sans-serif", fontSize:14.5, background:"transparent", padding:"10px 4px" }} />
+        <input value={text} onChange={e=>setText(e.target.value)} onKeyDown={e => { if (e.key === "Enter" && text.trim()) sendMessage("text", text.trim()); }} placeholder="Type a message…" style={{ flex:1, border:"none", outline:"none", fontFamily:"Inter, sans-serif", fontSize:14.5, background:"transparent", padding:"10px 4px", minWidth:0 }} />
         <button onClick={() => text.trim() && sendMessage("text", text.trim())} style={iconBtnLight}><Send size={18} color="#B8935F" /></button>
       </div>
     </div>
@@ -1703,7 +1718,7 @@ function RandomConnectScreen({ myId, myProfile, onBack, variant = "faith" }) {
   const searchPollRef = useRef(null);
   const chatPollRef = useRef(null);
   const callPollRef = useRef(null);
-  const bottomRef = useRef(null);
+  const chatScrollRef = useRef(null);
   const pcRef = useRef(null);
   const localStreamRef = useRef(null);
   const localVideoRef = useRef(null);
@@ -1720,7 +1735,12 @@ function RandomConnectScreen({ myId, myProfile, onBack, variant = "faith" }) {
     // eslint-disable-next-line
   }, []);
 
-  useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages]);
+  useEffect(() => {
+    const el = chatScrollRef.current;
+    if (!el) return;
+    const nearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 120;
+    if (nearBottom) el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
+  }, [messages]);
 
   function clearAll() {
     clearInterval(searchPollRef.current); clearInterval(chatPollRef.current); clearInterval(callPollRef.current);
@@ -1734,7 +1754,17 @@ function RandomConnectScreen({ myId, myProfile, onBack, variant = "faith" }) {
     // localStorage is private to each browser, so Chrome and Opera could never see
     // each other. Matching now reads the shared Supabase profiles table instead.
     try {
-      const rows = await supaRest(`profiles?id=neq.${encodeURIComponent(myId)}&select=id,name,gender,seeking` , { token: (await restoreSupaSession())?.access_token });
+      const storedSession = await sget("supabase-session", false);
+      let token = storedSession?.access_token || null;
+      let rows;
+      try {
+        rows = await supaRest(`profiles?id=neq.${encodeURIComponent(myId)}&select=id,name,gender,seeking`, { token });
+      } catch (firstErr) {
+        // Refresh only when the stored access token is actually rejected.
+        const fresh = await restoreSupaSession();
+        if (!fresh?.access_token) throw firstErr;
+        rows = await supaRest(`profiles?id=neq.${encodeURIComponent(myId)}&select=id,name,gender,seeking`, { token:fresh.access_token });
+      }
       const wantedGender = isLove
         ? (myProfile?.gender === "Male" ? "Female" : myProfile?.gender === "Female" ? "Male" : null)
         : null;
@@ -1769,6 +1799,7 @@ function RandomConnectScreen({ myId, myProfile, onBack, variant = "faith" }) {
 
     // Matching is based on the shared Supabase profiles table so it works across
     // different browsers/devices. Do not depend on localStorage/window.storage.
+    // Presence polling uses the stored access token and refreshes only after a rejected request.
     const rows = availableNow.filter(isCompatible);
     const candidate = rows[Math.floor(Math.random() * rows.length)];
 
@@ -1928,7 +1959,7 @@ function RandomConnectScreen({ myId, myProfile, onBack, variant = "faith" }) {
   // connected
   if (mode === "chat") {
     return (
-      <div style={page}>
+      <div style={{ ...page, height:"100dvh", minHeight:0, overflow:"hidden" }}>
         <FontLoader />
         <div style={chatHeader}>
           <button onClick={leave} style={{ background:"none", border:"none", cursor:"pointer", padding:6, marginRight:4 }}><ChevronLeft size={22} color="#F8F4EA" /></button>
@@ -1936,17 +1967,17 @@ function RandomConnectScreen({ myId, myProfile, onBack, variant = "faith" }) {
           <div style={{ flex:1, fontFamily:"Lora, serif", fontSize:16.5, color:"#F8F4EA" }}>{partner?.name || "Believer"}</div>
           <button onClick={skip} style={iconBtn}><SkipForward size={18} color="#F8F4EA" /></button>
         </div>
-        <div style={{ flex:1, overflowY:"auto", padding:"16px 14px", background:"var(--fc-bg)", display:"flex", flexDirection:"column" }}>
+        <div ref={chatScrollRef} style={{ flex:1, minHeight:0, overflowY:"auto", WebkitOverflowScrolling:"touch", overscrollBehavior:"contain", padding:"16px 14px", background:"var(--fc-bg)", display:"flex", flexDirection:"column" }}>
           {messages.length === 0 && <div style={emptyState}>Say hello and share what's on your heart.</div>}
           {messages.map((m, i) => (
             <div key={i} style={{ alignSelf: m.sender === myId ? "flex-end" : "flex-start", maxWidth:"75%", marginBottom:10 }}>
               <div style={{ background: m.sender === myId ? "#B8935F" : "#EFE9DC", color: m.sender === myId ? "#FAF7F0" : "#22252B", padding:"9px 13px", borderRadius:16, fontFamily:"Inter, sans-serif", fontSize:14.5 }}>{m.text}</div>
             </div>
           ))}
-          <div ref={bottomRef} />
+          <div style={{ height:1, flexShrink:0 }} />
         </div>
-        <div style={composer}>
-          <input value={text} onChange={e=>setText(e.target.value)} onKeyDown={e => e.key === "Enter" && sendRandomMsg()} placeholder="Type a message…" style={{ flex:1, border:"none", outline:"none", fontFamily:"Inter, sans-serif", fontSize:14.5, background:"transparent", padding:"10px 4px" }} />
+        <div style={{ ...composer, flexShrink:0, paddingBottom:"calc(10px + env(safe-area-inset-bottom))" }}>
+          <input value={text} onChange={e=>setText(e.target.value)} onKeyDown={e => e.key === "Enter" && sendRandomMsg()} placeholder="Type a message…" style={{ flex:1, border:"none", outline:"none", fontFamily:"Inter, sans-serif", fontSize:14.5, background:"transparent", padding:"10px 4px", minWidth:0 }} />
           <button onClick={sendRandomMsg} style={iconBtnLight}><Send size={18} color="#B8935F" /></button>
         </div>
       </div>
@@ -2089,7 +2120,7 @@ const emptyState = { textAlign:"center", color:"#9B9585", fontFamily:"Inter, san
 const convoRow = { display:"flex", alignItems:"center", width:"100%", background:"#fff", border:"none", borderRadius:14, padding:12, marginBottom:10, cursor:"pointer", boxShadow:"0 1px 2px rgba(20,20,15,.05)" };
 const chatHeader = { display:"flex", alignItems:"center", padding:"14px 12px", background:"var(--fc-bg)" };
 const iconBtn = { background:"rgba(255,255,255,.1)", border:"none", borderRadius:10, width:36, height:36, display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", marginLeft:6 };
-const composer = { display:"flex", alignItems:"center", gap:8, padding:"10px 12px", background:"#fff", borderTop:"1px solid #E5DFD1" };
+const composer = { display:"flex", alignItems:"center", gap:8, padding:"10px 12px", background:"#fff", borderTop:"1px solid #E5DFD1", flexShrink:0 };
 const iconBtnLight = { width:38, height:38, borderRadius:"50%", border:"none", background:"#EFE9DC", display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", flexShrink:0 };
 const callBtn = bg => ({ width:58, height:58, borderRadius:"50%", background:bg, border:"none", display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer" });
 
