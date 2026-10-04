@@ -466,13 +466,16 @@ function AvatarPicker({ selected, onPick, gender }) {
     </div>
   );
 }
-function Chip({ label, active, onClick }) {
+function Chip({ label, active, onClick, lightMode=false }) {
+  const border = active ? "1.5px solid #B8935F" : (lightMode ? "1.5px solid rgba(39,61,91,.30)" : "1.5px solid rgba(248,244,234,0.4)");
+  const background = active ? (lightMode ? "#D2AA69" : "#B8935F") : (lightMode ? "rgba(255,255,255,.28)" : "transparent");
+  const color = active ? "#2A1F0E" : (lightMode ? "#26384F" : "#F8F4EA");
   return (
     <button type="button" onClick={onClick} style={{
       padding: "7px 13px", borderRadius: 999, fontSize: 13.5, fontFamily: "Inter, sans-serif",
-      border: active ? "1.5px solid #D6AE6E" : "1.5px solid rgba(248,244,234,0.4)",
-      background: active ? "#B8935F" : "transparent", color: active ? "#2A1F0E" : "#F8F4EA",
-      cursor: "pointer", margin: "3px 5px 3px 0", transition: "all .15s"
+      border, background, color,
+      cursor: "pointer", margin: "3px 5px 3px 0", transition: "all .15s",
+      boxShadow: lightMode && !active ? "0 1px 2px rgba(31,52,79,.04)" : "none"
     }}>{label}</button>
   );
 }
@@ -506,7 +509,13 @@ export default function App() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [lightMode, setLightMode] = useState(() => { try { return localStorage.getItem("faithconnect-theme") === "light"; } catch { return false; } });
   useEffect(() => { try { localStorage.setItem("faithconnect-theme", lightMode ? "light" : "dark"); } catch {} }, [lightMode]);
-  useEffect(() => { document.documentElement.style.setProperty("--fc-bg", lightMode ? LIGHT_BG : GLOW_BG); }, [lightMode]);
+  useEffect(() => {
+    document.documentElement.style.setProperty("--fc-bg", lightMode ? LIGHT_BG : GLOW_BG);
+    document.documentElement.style.setProperty("--fc-text", lightMode ? "#1B2B43" : "#F8F4EA");
+    document.documentElement.style.setProperty("--fc-muted", lightMode ? "#5C6D82" : "#B9C9BC");
+    document.documentElement.style.setProperty("--fc-input-bg", lightMode ? "rgba(255,255,255,.72)" : "#151b30");
+    document.documentElement.style.setProperty("--fc-input-border", lightMode ? "rgba(39,61,91,.22)" : "rgba(255,255,255,.15)");
+  }, [lightMode]);
 
   async function logOut() {
     try { await sdel("supabase-session", false); } catch {}
@@ -853,13 +862,13 @@ export default function App() {
       <div style={page}>
         <FontLoader />
         <div style={{ flex: 1, overflowY: "auto", padding: "28px 22px 100px", background:"var(--fc-bg)" }}>
-          <h2 style={heading}>Tell us about you</h2>
+          <h2 style={{...heading, color:"var(--fc-text)"}}>Tell us about you</h2>
           <p style={{ fontFamily:"Inter, sans-serif", fontSize:13, color:"#8A8578", lineHeight:1.5, marginTop:-8, marginBottom:18 }}>
             What you share on this page is how we match you with someone else — other members can see it to find out if you're a good match.
           </p>
           <div style={{ display:"flex", flexDirection:"column", alignItems:"center", marginBottom:8 }}>
             <PhotoSlot label="Profile photo" preview={avatarPreview} existingUrl={form.avatarUrl} emoji={form.avatarEmoji} emojiColor={form.avatarColor} onPick={pickAvatar} big />
-            <div style={{ fontFamily:"Inter, sans-serif", fontSize:12, color:"#B9C9BC", marginTop:8 }}>Or choose a FaithConnect avatar instead:</div>
+            <div style={{ fontFamily:"Inter, sans-serif", fontSize:12, color:"var(--fc-muted)", marginTop:8 }}>Or choose a FaithConnect avatar instead:</div>
             <AvatarPicker selected={form.avatarUrl} gender={form.gender} onPick={url => { setAvatarFile(null); setAvatarPreview(null); setForm({ ...form, avatarUrl:url, avatarEmoji:null, avatarColor:null }); }} />
           </div>
           <Field label="Add three pictures of yourself for others to view — optional">
@@ -900,11 +909,11 @@ export default function App() {
             <textarea style={{...input, height: 80, resize:"none"}} value={form.bio} onChange={e=>setForm({...form,bio:e.target.value})} placeholder="Share your story, your walk with God, what you're hoping to find…" />
           </Field>
           <div style={{ marginTop:4 }}>
-            <PreferenceSection number="1" title="What matters most to you" list={VALUES} sel={form.values} onToggle={v=>toggle("values",v)} limit={5} />
-            <PreferenceSection number="2" title="Hobbies & interests" list={HOBBIES} sel={form.hobbies} onToggle={v=>toggle("hobbies",v)} limit={5} />
-            <PreferenceSection number="3" title="What are you looking for" list={GOALS} sel={form.goals} onToggle={v=>toggle("goals",v)} limit={3} />
-            <PreferenceSection number="4" title="Your personality" list={PERSONALITY} sel={form.appearance} onToggle={v=>toggle("appearance",v)} limit={5} />
-            <PreferenceSection number="5" title="Personality you're drawn to in a partner" list={PERSONALITY} sel={form.lookPref} onToggle={v=>toggle("lookPref",v)} limit={5} />
+            <PreferenceSection number="1" title="What matters most to you" list={VALUES} sel={form.values} onToggle={v=>toggle("values",v)} limit={5} lightMode={lightMode} />
+            <PreferenceSection number="2" title="Hobbies & interests" list={HOBBIES} sel={form.hobbies} onToggle={v=>toggle("hobbies",v)} limit={5} lightMode={lightMode} />
+            <PreferenceSection number="3" title="What are you looking for" list={GOALS} sel={form.goals} onToggle={v=>toggle("goals",v)} limit={3} lightMode={lightMode} />
+            <PreferenceSection number="4" title="Your personality" list={PERSONALITY} sel={form.appearance} onToggle={v=>toggle("appearance",v)} limit={5} lightMode={lightMode} />
+            <PreferenceSection number="5" title="Personality you're drawn to in a partner" list={PERSONALITY} sel={form.lookPref} onToggle={v=>toggle("lookPref",v)} limit={5} lightMode={lightMode} />
           </div>
           {err && <div style={{color:"#B5616B", fontSize:13, marginTop:6}}>{err}</div>}
           <button onClick={saveProfile} style={{...primaryBtn, width:"100%", marginTop: 20}}>Save & find matches</button>
@@ -966,10 +975,10 @@ export default function App() {
         <FontLoader />
         <div style={{ flex: 1, overflowY: "auto", padding: "20px 22px 100px", background:"var(--fc-bg)" }}>
           <button onClick={()=>setScreen("profile")} style={backBtn}><ChevronLeft size={18}/> Back</button>
-          <h2 style={heading}>Edit your profile</h2>
+          <h2 style={{...heading, color:"var(--fc-text)"}}>Edit your profile</h2>
           <div style={{ display:"flex", flexDirection:"column", alignItems:"center", marginBottom:8 }}>
             <PhotoSlot label="Profile photo" preview={avatarPreview} existingUrl={form.avatarUrl} emoji={form.avatarEmoji} emojiColor={form.avatarColor} onPick={pickAvatar} big />
-            <div style={{ fontFamily:"Inter, sans-serif", fontSize:12, color:"#B9C9BC", marginTop:8 }}>Or choose a FaithConnect avatar instead:</div>
+            <div style={{ fontFamily:"Inter, sans-serif", fontSize:12, color:"var(--fc-muted)", marginTop:8 }}>Or choose a FaithConnect avatar instead:</div>
             <AvatarPicker selected={form.avatarUrl} gender={form.gender} onPick={url => { setAvatarFile(null); setAvatarPreview(null); setForm({ ...form, avatarUrl:url, avatarEmoji:null, avatarColor:null }); }} />
           </div>
           <Field label="Add three pictures of yourself for others to view — optional">
@@ -982,11 +991,11 @@ export default function App() {
           <Field label="Name"><input style={input} value={form.name} onChange={e=>setForm({...form,name:e.target.value})} /></Field>
           <Field label="Bio"><textarea style={{...input, height:80, resize:"none"}} value={form.bio} onChange={e=>setForm({...form,bio:e.target.value})} /></Field>
           <div style={{ marginTop:4 }}>
-            <PreferenceSection number="1" title="What matters most to you" list={VALUES} sel={form.values} onToggle={v=>toggle("values",v)} limit={5} />
-            <PreferenceSection number="2" title="Hobbies & interests" list={HOBBIES} sel={form.hobbies} onToggle={v=>toggle("hobbies",v)} limit={5} />
-            <PreferenceSection number="3" title="What are you looking for" list={GOALS} sel={form.goals} onToggle={v=>toggle("goals",v)} limit={3} />
-            <PreferenceSection number="4" title="Your personality" list={PERSONALITY} sel={form.appearance} onToggle={v=>toggle("appearance",v)} limit={5} />
-            <PreferenceSection number="5" title="Personality you're drawn to" list={PERSONALITY} sel={form.lookPref} onToggle={v=>toggle("lookPref",v)} limit={5} />
+            <PreferenceSection number="1" title="What matters most to you" list={VALUES} sel={form.values} onToggle={v=>toggle("values",v)} limit={5} lightMode={lightMode} />
+            <PreferenceSection number="2" title="Hobbies & interests" list={HOBBIES} sel={form.hobbies} onToggle={v=>toggle("hobbies",v)} limit={5} lightMode={lightMode} />
+            <PreferenceSection number="3" title="What are you looking for" list={GOALS} sel={form.goals} onToggle={v=>toggle("goals",v)} limit={3} lightMode={lightMode} />
+            <PreferenceSection number="4" title="Your personality" list={PERSONALITY} sel={form.appearance} onToggle={v=>toggle("appearance",v)} limit={5} lightMode={lightMode} />
+            <PreferenceSection number="5" title="Personality you're drawn to" list={PERSONALITY} sel={form.lookPref} onToggle={v=>toggle("lookPref",v)} limit={5} lightMode={lightMode} />
           </div>
           <button onClick={saveProfile} style={{...primaryBtn, width:"100%", marginTop:20}}>Save changes</button>
         </div>
@@ -1080,7 +1089,7 @@ export default function App() {
 function Field({ label, children, style }) {
   return (
     <div style={{ marginBottom: 16, ...style }}>
-      <label style={{ fontFamily:"Inter, sans-serif", fontSize:13, color:"#C9C2AF", display:"block", marginBottom:6 }}>{label}</label>
+      <label style={{ fontFamily:"Inter, sans-serif", fontSize:13, color:"var(--fc-muted, #C9C2AF)", display:"block", marginBottom:6 }}>{label}</label>
       {children}
     </div>
   );
@@ -1089,24 +1098,28 @@ function Chips({ list, sel, onToggle }) {
   return <div>{list.map(v => <Chip key={v} label={v} active={sel?.includes(v)} onClick={() => onToggle(v)} />)}</div>;
 }
 
-function PreferenceSection({ number, title, list, sel, onToggle, limit }) {
+function PreferenceSection({ number, title, list, sel, onToggle, limit, lightMode=false }) {
   const selected = Array.isArray(sel) ? sel.length : 0;
+  const sectionBorder = lightMode ? "1px solid rgba(30,55,90,.12)" : "1px solid rgba(255,255,255,.09)";
+  const titleColor = lightMode ? "#1B2B43" : "#F8F4EA";
+  const helperColor = lightMode ? "#5C6D82" : "#737d9f";
+  const countColor = lightMode ? "#68788D" : "#8993b6";
   return (
-    <section style={{ marginTop: 22, paddingTop: 18, borderTop: "1px solid rgba(255,255,255,.09)" }}>
+    <section style={{ marginTop: 22, paddingTop: 18, borderTop: sectionBorder }}>
       <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", gap:12, marginBottom:10 }}>
         <div style={{ display:"flex", alignItems:"center", gap:10, minWidth:0 }}>
           <div style={{ width:28, height:28, borderRadius:"50%", background:"linear-gradient(135deg,#526cff,#8d5cff)", display:"flex", alignItems:"center", justifyContent:"center", color:"#fff", fontFamily:"Inter,sans-serif", fontWeight:700, fontSize:12, boxShadow:"0 0 16px rgba(112,100,255,.3)" }}>{number}</div>
-          <div style={{ fontFamily:"Inter,sans-serif", fontSize:15.5, fontWeight:600, color:"#F8F4EA" }}>{title}</div>
+          <div style={{ fontFamily:"Inter,sans-serif", fontSize:15.5, fontWeight:600, color:titleColor }}>{title}</div>
         </div>
-        <div style={{ fontFamily:"Inter,sans-serif", fontSize:11, color:"#8993b6", whiteSpace:"nowrap" }}>
+        <div style={{ fontFamily:"Inter,sans-serif", fontSize:11, color:countColor, whiteSpace:"nowrap" }}>
           {selected}{limit ? ` / ${limit}` : " selected"}
         </div>
       </div>
-      <div style={{ fontFamily:"Inter,sans-serif", fontSize:11.5, color:"#737d9f", marginBottom:8 }}>
+      <div style={{ fontFamily:"Inter,sans-serif", fontSize:11.5, color:helperColor, marginBottom:8 }}>
         {limit ? `Select up to ${limit}` : "Choose what fits you"}
       </div>
       <div style={{ display:"flex", flexWrap:"wrap", gap:0 }}>
-        {list.map(v => <Chip key={v} label={v} active={sel?.includes(v)} onClick={() => onToggle(v)} />)}
+        {list.map(v => <Chip key={v} label={v} active={sel?.includes(v)} onClick={() => onToggle(v)} lightMode={lightMode} />)}
       </div>
     </section>
   );
@@ -2454,7 +2467,7 @@ function SonarReveal({ online, active, variant = "faith" }) {
 /* ---------------- styles ---------------- */
 const page = { display:"flex", flexDirection:"column", height:"100dvh", maxWidth:460, margin:"0 auto", fontFamily:"Inter, sans-serif", background:"var(--fc-bg, #080b17)", overflow:"hidden" };
 const heading = { fontFamily:"Lora, serif", fontSize:24, color:"#F8F4EA", margin:"0 0 14px", fontWeight:600 };
-const input = { width:"100%", padding:"10px 12px", borderRadius:10, border:"1.5px solid rgba(255,255,255,0.15)", fontFamily:"Inter, sans-serif", fontSize:14.5, background:"#151b30", color:"#F8F4EA", boxSizing:"border-box" };
+const input = { width:"100%", padding:"10px 12px", borderRadius:10, border:"1.5px solid rgba(255,255,255,0.15)", fontFamily:"Inter, sans-serif", fontSize:14.5, background:"var(--fc-input-bg, #151b30)", color:"var(--fc-text, #F8F4EA)", borderColor:"var(--fc-input-border, rgba(255,255,255,0.15))", boxSizing:"border-box" };
 const primaryBtn = { background:ACCENT_GRADIENT, color:"#FFFFFF", border:"none", padding:"13px 26px", borderRadius:12, fontFamily:"Inter, sans-serif", fontSize:15, fontWeight:600, cursor:"pointer", boxShadow:"0 8px 24px rgba(88,91,255,.3)" };
 const ctaBtn = {
   background:ACCENT_GRADIENT,
