@@ -327,8 +327,8 @@ function faithAvatarDataUrl(options) {
   return `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(makeFaithAvatarSvg(options))}`;
 }
 
-function AvatarPicker({ selected, onPick }) {
-  const [tab, setTab] = useState("All");
+function AvatarPicker({ selected, onPick, gender }) {
+  const [tab, setTab] = useState(gender === "Male" || gender === "Female" ? gender : "All");
   const [avatarPage, setAvatarPage] = useState(0);
   const [showCreator, setShowCreator] = useState(false);
   const [builder, setBuilder] = useState({ skin:"warm", hair:"short", eyes:"soft", mouth:"smile", shirt:"navy", accessory:"none" });
@@ -336,39 +336,42 @@ function AvatarPicker({ selected, onPick }) {
   const [avatarLoading, setAvatarLoading] = useState(true);
   const customUrl = faithAvatarDataUrl(builder);
 
-  // Preload every FaithConnect avatar. If a file is missing/corrupt, it is
-  // simply excluded instead of showing a broken-image icon.
+  useEffect(() => {
+    if (gender === "Male" || gender === "Female") {
+      setTab(gender);
+      setAvatarPage(0);
+    }
+  }, [gender]);
+
   useEffect(() => {
     let cancelled = false;
     setAvatarLoading(true);
     setLoadedAvatarIds([]);
-
     const results = AVATAR_PRESETS.map(a => new Promise(resolve => {
       const img = new Image();
       img.onload = () => resolve(a.id);
       img.onerror = () => resolve(null);
       img.src = a.url;
     }));
-
     Promise.all(results).then(ids => {
       if (cancelled) return;
       setLoadedAvatarIds(ids.filter(Boolean));
       setAvatarLoading(false);
     });
-
     return () => { cancelled = true; };
   }, []);
 
   const loadedSet = new Set(loadedAvatarIds);
   const validPresets = AVATAR_PRESETS.filter(a => loadedSet.has(a.id));
   const visible = tab === "All" ? validPresets : validPresets.filter(a => a.gender === tab);
-  const pageSize = 5;
+  const pageSize = 10;
   const pageCount = Math.max(1, Math.ceil(visible.length / pageSize));
   const safePage = Math.min(avatarPage, Math.max(0, pageCount - 1));
   const pageAvatars = visible.slice(safePage * pageSize, safePage * pageSize + pageSize);
 
   function changeTab(t) { setTab(t); setAvatarPage(0); }
   function nextAvatars() { setAvatarPage(p => (p + 1) % pageCount); }
+  function previousAvatars() { setAvatarPage(p => (p - 1 + pageCount) % pageCount); }
   function setPart(part, value) { setBuilder(prev => ({ ...prev, [part]: value })); }
   function randomizeBuilder() {
     const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
@@ -381,53 +384,83 @@ function AvatarPicker({ selected, onPick }) {
   const labels = { skin:"Skin", hair:"Hair", eyes:"Eyes", mouth:"Mouth", shirt:"Clothes", accessory:"Accessory" };
 
   return (
-    <div style={{ width:"100%", marginTop:10 }}>
-      <div style={{ textAlign:"center", color:"#B9C9BC", fontFamily:"Inter, sans-serif", fontSize:12, marginBottom:9 }}>
-        Choose a FaithConnect avatar that represents you.
-      </div>
-      <div style={{ display:"flex", gap:7, justifyContent:"center", flexWrap:"wrap", marginBottom:10 }}>
-        {["All","Male","Female"].map(t => <button key={t} type="button" onClick={() => changeTab(t)} style={{ padding:"7px 14px", borderRadius:999, cursor:"pointer", fontFamily:"Inter, sans-serif", fontSize:12, border:tab===t?"1.5px solid #D6AE6E":"1px solid rgba(248,244,234,.25)", background:tab===t?"rgba(184,147,95,.22)":"rgba(255,255,255,.03)", color:tab===t?"#F8F4EA":"#9FAAC1" }}>{t}</button>)}
-        <button type="button" onClick={() => setShowCreator(v => !v)} style={{ padding:"7px 14px", borderRadius:999, cursor:"pointer", fontFamily:"Inter, sans-serif", fontSize:12, border:"1.5px solid rgba(141,92,255,.7)", background:"rgba(141,92,255,.12)", color:"#E7DDFF" }}>{showCreator ? "Close" : "Create my avatar"}</button>
-      </div>
-      <div style={{ display:"grid", gridTemplateColumns:"repeat(5,minmax(0,1fr))", gap:8, width:"100%", maxWidth:430, margin:"0 auto", minHeight:74 }}>
-        {avatarLoading ? (
-          <div style={{ gridColumn:"1 / -1", textAlign:"center", color:"#69748D", fontFamily:"Inter,sans-serif", fontSize:11, padding:"25px 0" }}>
-            Loading avatars…
-          </div>
-        ) : pageAvatars.length ? (
-          pageAvatars.map(a => <button key={a.id} type="button" onClick={() => onPick(a.url)} aria-label={`Choose ${a.gender.toLowerCase()} avatar`} style={{ width:"100%", aspectRatio:"1", borderRadius:"50%", padding:2, cursor:"pointer", overflow:"hidden", border:selected===a.url?"3px solid #F8F4EA":"2px solid rgba(248,244,234,.22)", background:selected===a.url?"linear-gradient(135deg,#526CFF,#8D5CFF)":"rgba(255,255,255,.03)", boxShadow:selected===a.url?"0 0 18px rgba(82,108,255,.45)":"none" }}>
-            <img
-              src={a.url}
-              alt=""
-              onError={() => setLoadedAvatarIds(prev => prev.filter(id => id !== a.id))}
-              style={{width:"100%",height:"100%",objectFit:"cover",display:"block",borderRadius:"50%"}}
-            />
-          </button>)
-        ) : (
-          <div style={{ gridColumn:"1 / -1", textAlign:"center", color:"#9FAAC1", fontFamily:"Inter,sans-serif", fontSize:11, padding:"20px 0" }}>
-            No avatar files could be loaded. Check that the files are in <b>/public/avatars/</b>.
-          </div>
-        )}
-      </div>
-      {pageCount > 1 && <div style={{display:"flex",justifyContent:"center",marginTop:10}}><button type="button" onClick={nextAvatars} style={{padding:"8px 17px",borderRadius:999,cursor:"pointer",fontFamily:"Inter,sans-serif",fontSize:12,border:"1px solid rgba(141,92,255,.55)",background:"rgba(141,92,255,.10)",color:"#E7DDFF"}}>Next avatars →</button></div>}
-      {!avatarLoading && visible.length > 0 && (
-        <div style={{textAlign:"center",color:"#69748D",fontFamily:"Inter,sans-serif",fontSize:10.5,marginTop:6}}>
-          Showing {safePage*pageSize+1}–{Math.min((safePage+1)*pageSize,visible.length)} of {visible.length}
-        </div>
-      )}
+    <div className="fc-avatar-picker">
+      <style>{`
+        .fc-avatar-picker{width:100%;margin-top:18px;color:#F8F4EA;font-family:Inter,sans-serif}
+        .fc-avatar-shell{width:100%;max-width:760px;margin:0 auto;padding:22px 16px 20px;border:1px solid rgba(91,113,255,.42);border-radius:26px;background:linear-gradient(145deg,rgba(14,20,46,.96),rgba(22,12,42,.96));box-shadow:0 18px 45px rgba(0,0,0,.24),inset 0 1px rgba(255,255,255,.05)}
+        .fc-avatar-title{text-align:center;font-family:Lora,serif;font-size:27px;line-height:1.15;font-weight:600;margin:0;color:#F8F4EA;letter-spacing:-.3px}
+        .fc-avatar-title span{color:#8D72FF}
+        .fc-avatar-sub{text-align:center;color:#9FAAC1;font-size:12.5px;line-height:1.45;margin:8px auto 18px;max-width:500px}
+        .fc-avatar-tabs{display:flex;justify-content:center;max-width:390px;margin:0 auto 18px;border:1px solid rgba(89,111,255,.65);border-radius:999px;overflow:hidden;background:rgba(3,8,24,.48)}
+        .fc-avatar-tab{flex:1;padding:10px 12px;border:0;background:transparent;color:#9FAAC1;font-size:13px;font-weight:600;cursor:pointer}
+        .fc-avatar-tab.active{background:linear-gradient(135deg,#6378FF,#7354E8);color:#fff;box-shadow:0 0 22px rgba(94,111,255,.32)}
+        .fc-avatar-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px}
+        .fc-avatar-tile{position:relative;aspect-ratio:1;border-radius:17px;padding:3px;border:1px solid rgba(89,111,255,.62);background:linear-gradient(145deg,rgba(36,47,102,.8),rgba(24,19,58,.9));cursor:pointer;overflow:hidden;transition:transform .16s,box-shadow .16s,border-color .16s}
+        .fc-avatar-tile:hover{transform:translateY(-2px);border-color:#8D72FF;box-shadow:0 0 22px rgba(99,120,255,.28)}
+        .fc-avatar-tile.selected{border:2px solid #8FA0FF;box-shadow:0 0 25px rgba(99,120,255,.5)}
+        .fc-avatar-img{width:100%;height:100%;display:block;object-fit:cover;border-radius:13px}
+        .fc-avatar-check{position:absolute;right:7px;top:7px;width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#657BFF,#9A62FF);color:#fff;font-size:13px;font-weight:800;box-shadow:0 0 12px rgba(99,120,255,.6)}
+        .fc-avatar-create{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:7px;border:1px dashed rgba(141,114,255,.9);background:linear-gradient(145deg,rgba(44,31,91,.5),rgba(17,17,48,.75));color:#B9A8FF}
+        .fc-avatar-plus{font-size:31px;line-height:1;color:#9A6DFF;font-weight:300}
+        .fc-avatar-create strong{font-size:11.5px;color:#E7DDFF}
+        .fc-avatar-nav{display:flex;align-items:center;justify-content:center;gap:18px;margin-top:17px}
+        .fc-avatar-arrow{width:40px;height:40px;border-radius:50%;border:1px solid rgba(99,120,255,.8);background:rgba(9,13,34,.8);color:#D9D5FF;font-size:22px;cursor:pointer}
+        .fc-avatar-dots{display:flex;gap:7px;align-items:center}
+        .fc-avatar-dot{width:8px;height:8px;border-radius:50%;background:#28386F}.fc-avatar-dot.active{background:#8D72FF;box-shadow:0 0 9px rgba(141,114,255,.7)}
+        .fc-avatar-next{width:100%;margin-top:17px;padding:12px 18px;border-radius:999px;border:1px solid #8067FF;background:linear-gradient(135deg,rgba(76,91,205,.28),rgba(118,67,202,.2));color:#DCD8FF;font-weight:700;font-size:13px;cursor:pointer;box-shadow:0 0 20px rgba(97,83,220,.15)}
+        .fc-avatar-count{text-align:center;color:#69748D;font-size:10.5px;margin-top:8px}
+        .fc-avatar-creator{margin:16px auto 0;padding:15px;border-radius:19px;border:1px solid rgba(141,92,255,.4);background:rgba(8,12,30,.82)}
+        .fc-avatar-creator-head{display:flex;align-items:center;gap:13px}.fc-avatar-creator-img{width:84px;height:84px;border-radius:50%;border:2px solid #8D5CFF;box-shadow:0 0 22px rgba(141,92,255,.28)}
+        .fc-avatar-creator-title{font-weight:700;font-size:14px}.fc-avatar-creator-copy{color:#8F9BB8;font-size:11.5px;line-height:1.4;margin-top:4px}
+        .fc-avatar-parts{margin-top:12px}.fc-avatar-part{margin-top:10px}.fc-avatar-part-label{color:#9FAAC1;font-size:11px;margin-bottom:6px}.fc-avatar-options{display:flex;gap:6px;overflow-x:auto;padding-bottom:2px}
+        .fc-avatar-option{flex:0 0 auto;padding:7px 9px;border-radius:999px;border:1px solid rgba(248,244,234,.18);background:rgba(255,255,255,.03);color:#9FAAC1;cursor:pointer;font-size:10.5px;text-transform:capitalize}.fc-avatar-option.active{border-color:#D6AE6E;background:rgba(184,147,95,.22);color:#F8F4EA}
+        .fc-avatar-use{width:100%;margin-top:14px;padding:11px 14px;border:0;border-radius:999px;background:linear-gradient(135deg,#526CFF,#8D5CFF);color:#fff;font-weight:700;cursor:pointer}
+        @media(max-width:620px){.fc-avatar-shell{padding:19px 11px 18px;border-radius:22px}.fc-avatar-title{font-size:23px}.fc-avatar-sub{font-size:11.5px;margin-bottom:15px}.fc-avatar-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}.fc-avatar-tile{border-radius:14px}.fc-avatar-img{border-radius:10px}.fc-avatar-next{font-size:12.5px}.fc-avatar-tabs{margin-bottom:15px}.fc-avatar-tab{font-size:12px;padding:9px 8px}}
+      `}</style>
+      <div className="fc-avatar-shell">
+        <h3 className="fc-avatar-title">Choose Your <span>Avatar</span></h3>
+        <div className="fc-avatar-sub">Pick an avatar that represents you. You can always change it later.</div>
 
-      {showCreator && <div style={{margin:"14px auto 0",maxWidth:430,padding:14,borderRadius:18,border:"1px solid rgba(141,92,255,.35)",background:"rgba(12,16,32,.86)"}}>
-        <div style={{display:"flex",alignItems:"center",gap:14}}>
-          <img src={customUrl} alt="Your custom FaithConnect avatar" style={{width:100,height:100,borderRadius:"50%",border:"2px solid #8D5CFF",boxShadow:"0 0 24px rgba(141,92,255,.25)"}} />
-          <div style={{flex:1}}><div style={{color:"#F8F4EA",fontFamily:"Inter,sans-serif",fontWeight:700,fontSize:14}}>Build your own avatar</div><div style={{color:"#8F9BB8",fontFamily:"Inter,sans-serif",fontSize:11.5,marginTop:4,lineHeight:1.45}}>No AI and no external service. Mix the features to create your own FaithConnect character.</div><button type="button" onClick={randomizeBuilder} style={{marginTop:9,padding:"7px 12px",borderRadius:999,border:"1px solid rgba(248,244,234,.25)",background:"transparent",color:"#F8F4EA",cursor:"pointer",fontSize:12}}>Surprise me</button></div>
+        <div className="fc-avatar-tabs">
+          {["Male","Female","All"].map(t => <button key={t} type="button" className={`fc-avatar-tab ${tab===t ? "active" : ""}`} onClick={() => changeTab(t)}>{t}</button>)}
         </div>
-        <div style={{marginTop:13}}>{Object.keys(options).map(part => <div key={part} style={{marginTop:10}}><div style={{color:"#9FAAC1",fontFamily:"Inter,sans-serif",fontSize:11.5,marginBottom:6}}>{labels[part]}</div><div style={{display:"flex",gap:6,overflowX:"auto",paddingBottom:2}}>{options[part].map(value => <button key={value} type="button" onClick={() => setPart(part,value)} style={{flex:"0 0 auto",padding:"7px 9px",borderRadius:999,border:builder[part]===value?"1.5px solid #D6AE6E":"1px solid rgba(248,244,234,.18)",background:builder[part]===value?"rgba(184,147,95,.22)":"rgba(255,255,255,.03)",color:builder[part]===value?"#F8F4EA":"#9FAAC1",cursor:"pointer",fontSize:10.5,textTransform:"capitalize"}}>{value}</button>)}</div></div>)}</div>
-        <button type="button" onClick={() => onPick(customUrl)} style={{width:"100%",marginTop:15,padding:"11px 14px",border:0,borderRadius:999,background:"linear-gradient(135deg,#526CFF,#8D5CFF)",color:"white",fontWeight:700,cursor:"pointer"}}>Use my custom avatar</button>
-      </div>}
+
+        <div className="fc-avatar-grid">
+          {avatarLoading ? (
+            <div style={{gridColumn:"1 / -1",textAlign:"center",color:"#69748D",fontSize:12,padding:"30px 0"}}>Loading avatars…</div>
+          ) : pageAvatars.map(a => (
+            <button key={a.id} type="button" className={`fc-avatar-tile ${selected===a.url ? "selected" : ""}`} onClick={() => onPick(a.url)} aria-label={`Choose ${a.gender.toLowerCase()} avatar`}>
+              <img src={a.url} alt="" className="fc-avatar-img" onError={() => setLoadedAvatarIds(prev => prev.filter(id => id !== a.id))} />
+              {selected===a.url && <span className="fc-avatar-check">✓</span>}
+            </button>
+          ))}
+          {!avatarLoading && <button type="button" className="fc-avatar-tile fc-avatar-create" onClick={() => setShowCreator(v => !v)}>
+            <span className="fc-avatar-plus">＋</span><strong>{showCreator ? "Close Creator" : "Create Your Own"}</strong>
+          </button>}
+        </div>
+
+        {!avatarLoading && pageCount > 1 && <>
+          <div className="fc-avatar-nav">
+            <button type="button" className="fc-avatar-arrow" onClick={previousAvatars} aria-label="Previous avatars">‹</button>
+            <div className="fc-avatar-dots">{Array.from({length:Math.min(pageCount,5)},(_,i)=><span key={i} className={`fc-avatar-dot ${i===safePage ? "active" : ""}`} />)}</div>
+            <button type="button" className="fc-avatar-arrow" onClick={nextAvatars} aria-label="Next avatars">›</button>
+          </div>
+          <button type="button" className="fc-avatar-next" onClick={nextAvatars}>Next Avatars&nbsp;&nbsp;→</button>
+          <div className="fc-avatar-count">Showing {safePage*pageSize+1}–{Math.min((safePage+1)*pageSize,visible.length)} of {visible.length}</div>
+        </>}
+
+        {showCreator && <div className="fc-avatar-creator">
+          <div className="fc-avatar-creator-head">
+            <img src={customUrl} alt="Your custom FaithConnect avatar" className="fc-avatar-creator-img" />
+            <div style={{flex:1}}><div className="fc-avatar-creator-title">Build your own avatar</div><div className="fc-avatar-creator-copy">Mix the features to create a unique FaithConnect character. No AI or external service needed.</div><button type="button" onClick={randomizeBuilder} style={{marginTop:8,padding:"7px 12px",borderRadius:999,border:"1px solid rgba(248,244,234,.25)",background:"transparent",color:"#F8F4EA",cursor:"pointer",fontSize:11.5}}>Surprise me</button></div>
+          </div>
+          <div className="fc-avatar-parts">{Object.keys(options).map(part => <div key={part} className="fc-avatar-part"><div className="fc-avatar-part-label">{labels[part]}</div><div className="fc-avatar-options">{options[part].map(value => <button key={value} type="button" className={`fc-avatar-option ${builder[part]===value ? "active" : ""}`} onClick={() => setPart(part,value)}>{value}</button>)}</div></div>)}</div>
+          <button type="button" className="fc-avatar-use" onClick={() => onPick(customUrl)}>Use My Custom Avatar</button>
+        </div>}
+      </div>
     </div>
   );
 }
-
 function Chip({ label, active, onClick }) {
   return (
     <button type="button" onClick={onClick} style={{
@@ -822,7 +855,7 @@ export default function App() {
           <div style={{ display:"flex", flexDirection:"column", alignItems:"center", marginBottom:8 }}>
             <PhotoSlot label="Profile photo" preview={avatarPreview} existingUrl={form.avatarUrl} emoji={form.avatarEmoji} emojiColor={form.avatarColor} onPick={pickAvatar} big />
             <div style={{ fontFamily:"Inter, sans-serif", fontSize:12, color:"#B9C9BC", marginTop:8 }}>Or choose a FaithConnect avatar instead:</div>
-            <AvatarPicker selected={form.avatarUrl} baseSeed={form.username || form.name} onPick={url => { setAvatarFile(null); setAvatarPreview(null); setForm({ ...form, avatarUrl:url, avatarEmoji:null, avatarColor:null }); }} />
+            <AvatarPicker selected={form.avatarUrl} gender={form.gender} onPick={url => { setAvatarFile(null); setAvatarPreview(null); setForm({ ...form, avatarUrl:url, avatarEmoji:null, avatarColor:null }); }} />
           </div>
           <Field label="Add three pictures of yourself for others to view — optional">
             <div style={{ display:"flex", gap:14, flexWrap:"wrap" }}>
@@ -930,7 +963,7 @@ export default function App() {
           <div style={{ display:"flex", flexDirection:"column", alignItems:"center", marginBottom:8 }}>
             <PhotoSlot label="Profile photo" preview={avatarPreview} existingUrl={form.avatarUrl} emoji={form.avatarEmoji} emojiColor={form.avatarColor} onPick={pickAvatar} big />
             <div style={{ fontFamily:"Inter, sans-serif", fontSize:12, color:"#B9C9BC", marginTop:8 }}>Or choose a FaithConnect avatar instead:</div>
-            <AvatarPicker selected={form.avatarUrl} baseSeed={form.username || form.name} onPick={url => { setAvatarFile(null); setAvatarPreview(null); setForm({ ...form, avatarUrl:url, avatarEmoji:null, avatarColor:null }); }} />
+            <AvatarPicker selected={form.avatarUrl} gender={form.gender} onPick={url => { setAvatarFile(null); setAvatarPreview(null); setForm({ ...form, avatarUrl:url, avatarEmoji:null, avatarColor:null }); }} />
           </div>
           <Field label="Add three pictures of yourself for others to view — optional">
             <div style={{ display:"flex", gap:14, flexWrap:"wrap" }}>
