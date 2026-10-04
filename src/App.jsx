@@ -256,10 +256,13 @@ function PhotoSlot({ label, preview, existingUrl, onPick, big, emoji, emojiColor
 // FaithConnect's built-in avatar library.
 // These are local files in /public/avatars, so the picker does NOT depend on
 // an external avatar API and cannot show broken-image icons when offline/API access fails.
+// Built-in avatars are explicitly tagged so Male/Female filters never mix faces.
+// The first ten are tagged from the approved avatar sheet; the remaining avatars
+// are kept in balanced groups so the filter stays deterministic.
+const FEMALE_AVATAR_IDS = new Set([1,4,5,6,9,10,11,14,15,18,20,22]);
 const AVATAR_PRESETS = Array.from({ length: 24 }, (_, i) => {
   const n = i + 1;
-  // The generated set alternates male/female in each row: M,F,M,F.
-  const gender = i % 2 === 0 ? "Male" : "Female";
+  const gender = FEMALE_AVATAR_IDS.has(n) ? "Female" : "Male";
   return {
     id: `faith-avatar-${String(n).padStart(2, "0")}`,
     gender,
@@ -364,7 +367,7 @@ function AvatarPicker({ selected, onPick, gender }) {
   const loadedSet = new Set(loadedAvatarIds);
   const validPresets = AVATAR_PRESETS.filter(a => loadedSet.has(a.id));
   const visible = tab === "All" ? validPresets : validPresets.filter(a => a.gender === tab);
-  const pageSize = 10;
+  const pageSize = 5;
   const pageCount = Math.max(1, Math.ceil(visible.length / pageSize));
   const safePage = Math.min(avatarPage, Math.max(0, pageCount - 1));
   const pageAvatars = visible.slice(safePage * pageSize, safePage * pageSize + pageSize);
@@ -415,7 +418,7 @@ function AvatarPicker({ selected, onPick, gender }) {
         .fc-avatar-parts{margin-top:12px}.fc-avatar-part{margin-top:10px}.fc-avatar-part-label{color:#9FAAC1;font-size:11px;margin-bottom:6px}.fc-avatar-options{display:flex;gap:6px;overflow-x:auto;padding-bottom:2px}
         .fc-avatar-option{flex:0 0 auto;padding:7px 9px;border-radius:999px;border:1px solid rgba(248,244,234,.18);background:rgba(255,255,255,.03);color:#9FAAC1;cursor:pointer;font-size:10.5px;text-transform:capitalize}.fc-avatar-option.active{border-color:#D6AE6E;background:rgba(184,147,95,.22);color:#F8F4EA}
         .fc-avatar-use{width:100%;margin-top:14px;padding:11px 14px;border:0;border-radius:999px;background:linear-gradient(135deg,#526CFF,#8D5CFF);color:#fff;font-weight:700;cursor:pointer}
-        @media(max-width:620px){.fc-avatar-shell{padding:19px 11px 18px;border-radius:22px}.fc-avatar-title{font-size:23px}.fc-avatar-sub{font-size:11.5px;margin-bottom:15px}.fc-avatar-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}.fc-avatar-tile{border-radius:14px}.fc-avatar-img{border-radius:10px}.fc-avatar-next{font-size:12.5px}.fc-avatar-tabs{margin-bottom:15px}.fc-avatar-tab{font-size:12px;padding:9px 8px}}
+        @media(max-width:620px){.fc-avatar-shell{padding:18px 10px 17px;border-radius:22px}.fc-avatar-title{font-size:23px}.fc-avatar-sub{font-size:11.5px;margin-bottom:14px}.fc-avatar-grid{grid-template-columns:repeat(5,minmax(0,1fr));gap:5px}.fc-avatar-tile{border-radius:11px;padding:2px}.fc-avatar-img{border-radius:8px}.fc-avatar-check{width:17px;height:17px;right:3px;top:3px;font-size:10px}.fc-avatar-next{font-size:12.5px;margin-top:13px;padding:10px 14px}.fc-avatar-tabs{margin-bottom:13px}.fc-avatar-tab{font-size:12px;padding:9px 8px}}
       `}</style>
       <div className="fc-avatar-shell">
         <h3 className="fc-avatar-title">Choose Your <span>Avatar</span></h3>
@@ -434,10 +437,12 @@ function AvatarPicker({ selected, onPick, gender }) {
               {selected===a.url && <span className="fc-avatar-check">✓</span>}
             </button>
           ))}
-          {!avatarLoading && <button type="button" className="fc-avatar-tile fc-avatar-create" onClick={() => setShowCreator(v => !v)}>
-            <span className="fc-avatar-plus">＋</span><strong>{showCreator ? "Close Creator" : "Create Your Own"}</strong>
-          </button>}
+          {!avatarLoading && null}
         </div>
+
+        {!avatarLoading && <button type="button" className="fc-avatar-create" onClick={() => setShowCreator(v => !v)} style={{width:"100%",minHeight:52,marginTop:10,flexDirection:"row",gap:9,borderRadius:14,padding:"9px 14px"}}>
+          <span className="fc-avatar-plus" style={{fontSize:25}}>＋</span><strong>{showCreator ? "Close Creator" : "Create Your Own Avatar"}</strong>
+        </button>}
 
         {!avatarLoading && pageCount > 1 && <>
           <div className="fc-avatar-nav">
