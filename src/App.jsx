@@ -385,6 +385,8 @@ export default function App() {
   const [newPasswordErr, setNewPasswordErr] = useState("");
   const [newPasswordBusy, setNewPasswordBusy] = useState(false);
   const [loginBusy, setLoginBusy] = useState(false);
+  const [onlinePeople, setOnlinePeople] = useState([]);
+  const onlinePresenceChannelRef = useRef(null);
   const matchesScrollRef = useRef(null);
   useEffect(() => { if (screen === "matches" && matchesScrollRef.current) matchesScrollRef.current.scrollTop = 0; }, [screen]);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -398,7 +400,103 @@ export default function App() {
     document.documentElement.style.setProperty("--fc-input-border", lightMode ? "rgba(39,61,91,.22)" : "rgba(255,255,255,.15)");
   }, [lightMode]);
 
+  // Real online presence: only users with an active app connection are considered online.
+  // Switching to another app/tab marks this client offline until they return.
+  useEffect(() => {
+    if (!myId || !myProfile) {
+      setOnlinePeople([]);
+      return;
+    }
+    let cancelled = false;
+    let channel = null;
+
+    const publish = async () => {
+      if (!channel || cancelled) return;
+      try {
+        await channel.track({
+          id: myId,
+          name: myProfile?.name || "Believer",
+          gender: myProfile?.gender || null,
+          seeking: myProfile?.seeking || null,
+          avatarUrl: myProfile?.avatarUrl || null,
+          ts: Date.now()
+        });
+      } catch (e) { console.error("FaithConnect online presence track failed:", e); }
+    };
+
+    const refresh = () => {
+      if (!channel) return;
+      const state = channel.presenceState();
+      const people = [];
+      Object.values(state || {}).forEach(entries => {
+        (entries || []).forEach(entry => {
+          if (entry?.id && !people.some(p => p.id === entry.id)) people.push(entry);
+        });
+      });
+      setOnlinePeople(people.filter(p => p.id !== myId));
+    };
+
+    (async () => {
+      try {
+        const client = await getRealtimeClient();
+        if (cancelled) return;
+        channel = client.channel("faithconnect-online", {
+          config: { presence: { key: myId } }
+        });
+        onlinePresenceChannelRef.current = channel;
+        channel.on("presence", { event: "sync" }, refresh);
+        channel.on("presence", { event: "join" }, refresh);
+        channel.on("presence", { event: "leave" }, refresh);
+        await new Promise((resolve, reject) => {
+          let settled = false;
+          const finish = fn => { if (!settled) { settled = true; clearTimeout(timer); fn(); } };
+          const timer = setTimeout(() => finish(() => reject(new Error("Online presence timed out"))), 9000);
+          channel.subscribe(async status => {
+            if (status === "SUBSCRIBED") {
+              await publish();
+              refresh();
+              finish(resolve);
+            } else if (status === "CHANNEL_ERROR" || status === "TIMED_OUT") {
+              finish(() => reject(new Error(status)));
+            }
+          });
+        });
+
+        const handleVisibility = async () => {
+          if (document.visibilityState === "hidden") {
+            try { await channel.untrack(); } catch {}
+            setOnlinePeople(prev => prev.filter(p => p.id !== myId));
+          } else {
+            await publish();
+            refresh();
+          }
+        };
+        document.addEventListener("visibilitychange", handleVisibility);
+        channel.__faithconnectVisibilityHandler = handleVisibility;
+      } catch (e) {
+        console.error("FaithConnect online presence failed:", e);
+        setOnlinePeople([]);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+      const ch = onlinePresenceChannelRef.current || channel;
+      try {
+        if (ch?.__faithconnectVisibilityHandler) document.removeEventListener("visibilitychange", ch.__faithconnectVisibilityHandler);
+        ch?.untrack?.();
+        ch?.unsubscribe?.();
+      } catch {}
+      onlinePresenceChannelRef.current = null;
+      setOnlinePeople([]);
+    };
+  }, [myId, myProfile]);
+
   async function logOut() {
+    try { await onlinePresenceChannelRef.current?.untrack?.(); } catch {}
+    try { await onlinePresenceChannelRef.current?.unsubscribe?.(); } catch {}
+    onlinePresenceChannelRef.current = null;
+    setOnlinePeople([]);
     try { await sdel("supabase-session", false); } catch {}
     setMyId(null);
     setMyProfile(null);
@@ -808,11 +906,11 @@ export default function App() {
   }
 
   if (screen === "fellowship") {
-    return <RandomConnectScreen myId={myId} myProfile={myProfile} onBack={() => setScreen("matches")} variant="faith" />;
+    return <RandomConnectScreen myId={myId} myProfile={myProfile} onlinePeople={onlinePeople} onBack={() => setScreen("matches")} variant="faith" />;
   }
 
   if (screen === "meetSomeone") {
-    return <RandomConnectScreen myId={myId} myProfile={myProfile} onBack={() => setScreen("matches")} variant="love" />;
+    return <RandomConnectScreen myId={myId} myProfile={myProfile} onlinePeople={onlinePeople} onBack={() => setScreen("matches")} variant="love" />;
   }
 
   if (screen === "matchList") {
@@ -1745,7 +1843,7 @@ function ChatScreen({ myId, myProfile, other, onBack }) {
 }
 
 /* ---------------- FELLOWSHIP (random believer connect) ---------------- */
-function RandomConnectScreen({ myId, myProfile, onBack, variant = "faith" }) {
+function RandomConnectScreen({ myId, myProfile, onlinePeople = [], onBack, variant = "faith" }) {
   const isLove = variant === "love";
   const kp = isLove ? "m" : "f"; // key prefix keeps the two queues fully separate
   const [stage, setStage] = useState("setup"); // setup, searching, connected
@@ -1784,10 +1882,38 @@ function RandomConnectScreen({ myId, myProfile, onBack, variant = "faith" }) {
 
   useEffect(() => {
     loadPresence();
-    const t = setInterval(loadPresence, 3000);
-    return () => { clearInterval(t); clearAll(); };
     // eslint-disable-next-line
-  }, []);
+  }, [onlinePeople, myId, myProfile, isLove]);
+
+  useEffect(() => {
+    if (stage !== "searching") return;
+    const ch = queueChannelRef.current;
+    if (ch) tryPairFromQueue(ch);
+  }, [onlinePeople, stage]);
+
+  useEffect(() => () => { clearAll(); }, []);
+
+  useEffect(() => {
+    const handleQueueVisibility = async () => {
+      const ch = queueChannelRef.current;
+      if (!ch || stage !== "searching") return;
+      if (document.visibilityState === "hidden") {
+        try { await ch.untrack(); } catch {}
+      } else {
+        try {
+          await ch.track({
+            id: myId,
+            name: myProfile?.name || "Believer",
+            gender: myProfile?.gender || null,
+            ts: Date.now()
+          });
+          tryPairFromQueue(ch);
+        } catch {}
+      }
+    };
+    document.addEventListener("visibilitychange", handleQueueVisibility);
+    return () => document.removeEventListener("visibilitychange", handleQueueVisibility);
+  }, [stage, myId, myProfile]);
 
   useEffect(() => {
     const el = chatScrollRef.current;
@@ -1817,31 +1943,20 @@ function RandomConnectScreen({ myId, myProfile, onBack, variant = "faith" }) {
   }
 
   async function loadPresence() {
-    // The old version used window.storage/localStorage for presence. On Vercel,
-    // localStorage is private to each browser, so Chrome and Opera could never see
-    // each other. Matching now reads the shared Supabase profiles table instead.
+    // Online display comes from Realtime Presence, not from the profiles table.
+    // A profile existing in the database does NOT mean its owner is online.
     try {
-      const storedSession = await sget("supabase-session", false);
-      let token = storedSession?.access_token || null;
-      let rows;
-      try {
-        rows = await supaRest(`profiles?id=neq.${encodeURIComponent(myId)}&select=id,name,gender,seeking`, { token });
-      } catch (firstErr) {
-        // Refresh only when the stored access token is actually rejected.
-        const fresh = await restoreSupaSession();
-        if (!fresh?.access_token) throw firstErr;
-        rows = await supaRest(`profiles?id=neq.${encodeURIComponent(myId)}&select=id,name,gender,seeking`, { token:fresh.access_token });
-      }
       const wantedGender = isLove
         ? (myProfile?.gender === "Male" ? "Female" : myProfile?.gender === "Female" ? "Male" : null)
         : null;
-      const entries = (rows || [])
+      const entries = (onlinePeople || [])
+        .filter(p => p.id !== myId)
         .filter(p => !wantedGender || p.gender === wantedGender)
-        .map(p => ({ id:p.id, name:p.name, gender:p.gender, seeking:p.seeking }));
+        .map(p => ({ id:p.id, name:p.name, gender:p.gender, seeking:p.seeking, avatarUrl:p.avatarUrl }));
       setOnline(entries);
       return entries;
     } catch (e) {
-      console.error("FaithConnect matching lookup failed:", e);
+      console.error("FaithConnect online presence lookup failed:", e);
       setOnline([]);
       return [];
     }
