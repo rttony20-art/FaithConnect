@@ -119,7 +119,7 @@ function profileFromDb(row) {
   if (!row) return null;
   return {
     id: row.id, username: row.username, name: row.name, age: row.age, gender: row.gender, seeking: row.seeking,
-    city: row.city, denom: row.denom, faithLevel: row.faith_level, bio: row.bio,
+    city: row.city, denom: row.denom, faithLevel: row.faith_level, bio: row.bio, favoriteVerse: row.favorite_verse || "",
     values: row.core_values || [], hobbies: row.hobbies || [], goals: row.goals || [],
     appearance: row.appearance || [], lookPref: row.look_pref || [],
     avatarUrl: row.avatar_url || null, photoUrls: row.photo_urls || [],
@@ -129,7 +129,7 @@ function profileFromDb(row) {
 function profileToDb(p) {
   return {
     id: p.id, username: p.username, name: p.name, age: Number(p.age), gender: p.gender, seeking: p.seeking,
-    city: p.city, denom: p.denom, faith_level: p.faithLevel, bio: p.bio,
+    city: p.city, denom: p.denom, faith_level: p.faithLevel, bio: p.bio, favorite_verse: p.favoriteVerse || "",
     core_values: p.values || [], hobbies: p.hobbies || [], goals: p.goals || [],
     appearance: p.appearance || [], look_pref: p.lookPref || [],
     avatar_url: p.avatarUrl || null, photo_urls: p.photoUrls || [],
@@ -200,9 +200,10 @@ function scoreMatch(me, them) {
   const looksAB = jaccard(me.lookPref, them.appearance);
   const looksBA = jaccard(them.lookPref, me.appearance);
   const looks = Math.round((looksAB + looksBA) / 2);
-  const age = Math.max(0, 100 - Math.abs((Number(me.age)||0) - (Number(them.age)||0)) * 5);
-  const pct = Math.round(faith*0.25 + values*0.20 + goals*0.15 + hobbies*0.15 + looks*0.10 + age*0.15);
-  return { pct, faith, values, goals, hobbies, looks, age };
+  // Age is displayed on profiles, but it does not affect compatibility.
+  // The remaining factors now make up the full 100% match score.
+  const pct = Math.round(faith*0.30 + values*0.25 + goals*0.18 + hobbies*0.17 + looks*0.10);
+  return { pct, faith, values, goals, hobbies, looks };
 }
 
 function BibleIcon({ size = 24, color = "currentColor" }) {
@@ -365,7 +366,7 @@ export default function App() {
   const [screen, setScreen] = useState("loading"); // loading, welcome, profile, matches, chat, messages
   const [myId, setMyId] = useState(null);
   const [myProfile, setMyProfile] = useState(null);
-  const [form, setForm] = useState({ name:"", age:"", gender:"Female", seeking:"Male", city:"", denom: DENOMS[0], faithLevel:3, bio:"", values:[], hobbies:[], goals:[], appearance:[], lookPref:[], username:"", password:"", email:"", avatarUrl:null, photoUrls:[], avatarEmoji:null, avatarColor:null });
+  const [form, setForm] = useState({ name:"", age:"", gender:"Female", seeking:"Male", city:"", denom: DENOMS[0], faithLevel:3, bio:"", favoriteVerse:"", values:[], hobbies:[], goals:[], appearance:[], lookPref:[], username:"", password:"", email:"", avatarUrl:null, photoUrls:[], avatarEmoji:null, avatarColor:null });
   const [avatarFile, setAvatarFile] = useState(null);
   const [avatarPreview, setAvatarPreview] = useState(null);
   const [photoFiles, setPhotoFiles] = useState([null, null, null]);
@@ -500,7 +501,7 @@ export default function App() {
     try { await sdel("supabase-session", false); } catch {}
     setMyId(null);
     setMyProfile(null);
-    setForm({ name:"", age:"", gender:"Female", seeking:"Male", city:"", denom: DENOMS[0], faithLevel:3, bio:"", values:[], hobbies:[], goals:[], appearance:[], lookPref:[], username:"", password:"", email:"", avatarUrl:null, photoUrls:[], avatarEmoji:null, avatarColor:null });
+    setForm({ name:"", age:"", gender:"Female", seeking:"Male", city:"", denom: DENOMS[0], faithLevel:3, bio:"", favoriteVerse:"", values:[], hobbies:[], goals:[], appearance:[], lookPref:[], username:"", password:"", email:"", avatarUrl:null, photoUrls:[], avatarEmoji:null, avatarColor:null });
     setAvatarFile(null); setAvatarPreview(null); setPhotoFiles([null,null,null]); setPhotoPreviews([null,null,null]);
     setMenuOpen(false);
     setScreen("welcome");
@@ -887,6 +888,9 @@ export default function App() {
           <Field label="A bit about you">
             <textarea style={{...input, height: 80, resize:"none"}} value={form.bio} onChange={e=>setForm({...form,bio:e.target.value})} placeholder="Share your story, your walk with God, what you're hoping to find…" />
           </Field>
+          <Field label="Your favorite Bible verse or book">
+            <input style={input} value={form.favoriteVerse||""} onChange={e=>setForm({...form,favoriteVerse:e.target.value})} placeholder="e.g. Romans 8:28 or Psalms" />
+          </Field>
           <div style={{ marginTop:4 }}>
             <PreferenceSection number="1" title="What matters most to you" list={VALUES} sel={form.values} onToggle={v=>toggle("values",v)} limit={5} lightMode={lightMode} />
             <PreferenceSection number="2" title="Hobbies & interests" list={HOBBIES} sel={form.hobbies} onToggle={v=>toggle("hobbies",v)} limit={5} lightMode={lightMode} />
@@ -937,6 +941,10 @@ export default function App() {
             </div>
           )}
           <p style={{fontFamily:"Inter, sans-serif", fontSize:14.5, color: lightMode ? "#34445A" : "#E4E7E2", lineHeight:1.6, marginTop:18}}>{myProfile.bio}</p>
+          {myProfile.favoriteVerse && <div style={{ marginTop:14, padding:"14px 16px", borderRadius:14, border: lightMode ? "1px solid #D7DEE8" : "1px solid rgba(255,255,255,.12)", background: lightMode ? "#F5F7FA" : "rgba(255,255,255,.04)" }}>
+            <div style={{ fontFamily:"Inter, sans-serif", fontSize:10, letterSpacing:1.6, color: lightMode ? "#5369D9" : "#D6AE6E", marginBottom:5 }}>FAVORITE BIBLE VERSE / BOOK</div>
+            <div style={{ fontFamily:"Lora, serif", fontSize:16, color: lightMode ? "#16233F" : "#F8F4EA", lineHeight:1.45 }}>{myProfile.favoriteVerse}</div>
+          </div>}
           <div style={{marginTop:18}}><Tag list={myProfile.values} lightMode={lightMode} /></div>
           <div style={{marginTop:8}}><Tag list={myProfile.hobbies} lightMode={lightMode} /></div>
           <div style={{marginTop:8}}><Tag list={myProfile.goals} lightMode={lightMode} /></div>
@@ -969,6 +977,9 @@ export default function App() {
           </Field>
           <Field label="Name"><input style={input} value={form.name} onChange={e=>setForm({...form,name:e.target.value})} /></Field>
           <Field label="Bio"><textarea style={{...input, height:80, resize:"none"}} value={form.bio} onChange={e=>setForm({...form,bio:e.target.value})} /></Field>
+          <Field label="Your favorite Bible verse or book">
+            <input style={input} value={form.favoriteVerse||""} onChange={e=>setForm({...form,favoriteVerse:e.target.value})} placeholder="e.g. Romans 8:28 or Psalms" />
+          </Field>
           <div style={{ marginTop:4 }}>
             <PreferenceSection number="1" title="What matters most to you" list={VALUES} sel={form.values} onToggle={v=>toggle("values",v)} limit={5} lightMode={lightMode} />
             <PreferenceSection number="2" title="Hobbies & interests" list={HOBBIES} sel={form.hobbies} onToggle={v=>toggle("hobbies",v)} limit={5} lightMode={lightMode} />
