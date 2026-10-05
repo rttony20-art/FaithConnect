@@ -270,202 +270,83 @@ const AVATAR_PRESETS = Array.from({ length: 24 }, (_, i) => {
   };
 });
 
-function makeFaithAvatarSvg({ skin, hair, eyes, mouth, shirt, accessory }) {
-  const skins = { warm:"#C98B68", tan:"#A96E4D", deep:"#754733", rich:"#5A3426", golden:"#D9A071", light:"#E7B58F", cocoa:"#8B563B" };
-  const hairs = {
-    short:"M67 104 C62 55 83 25 128 25 C173 25 194 55 189 104 L174 92 C168 61 151 48 128 48 C104 48 87 61 82 92 Z",
-    curls:"M62 104 C48 75 57 34 91 24 C107 9 139 11 157 25 C191 35 207 75 194 106 L178 92 C181 63 160 46 143 45 C116 38 89 52 82 84 Z",
-    fade:"M70 98 C67 63 88 35 128 35 C168 35 189 63 186 98 L169 87 C164 61 148 51 128 51 C108 51 92 61 87 87 Z",
-    long:"M63 118 C52 78 61 36 94 23 C132 8 176 31 190 69 L190 143 L170 133 L169 86 C163 57 145 46 126 46 C99 46 83 64 82 94 L81 135 Z",
-    bob:"M61 116 L59 70 C62 31 91 15 128 15 C165 15 194 31 197 70 L195 116 L177 103 L173 67 C164 45 147 39 128 39 C108 39 91 45 82 67 L79 103 Z",
-    locs:"M65 112 C55 72 67 28 105 22 C143 13 181 35 190 73 L180 125 L165 112 L169 73 C159 48 144 43 128 43 C106 43 90 54 85 78 L82 121 Z",
-    bun:"M68 103 C62 60 86 32 128 32 C170 32 194 60 188 103 L172 90 C167 62 150 50 128 50 C106 50 89 62 84 90 Z M157 34 C160 12 179 4 193 17 C205 28 197 47 177 48 Z",
-    waves:"M64 109 C55 72 65 37 98 23 C137 7 179 32 191 70 C197 89 193 113 186 130 L169 111 C172 81 160 56 137 48 C111 39 89 56 83 83 L81 122 Z"
+function RealisticAvatarCreator({ onPick, gender }) {
+  const genderBases = {
+    Female: [1,4,5,6,9,10,11,14,15,18,20,22],
+    Male: [2,3,7,8,12,13,16,17,19,21,23,24]
   };
-  const eyeMap = {
-    soft:'<path d="M92 103 Q104 94 116 103"/><path d="M140 103 Q152 94 164 103"/>',
-    bright:'<circle cx="105" cy="102" r="6"/><circle cx="151" cy="102" r="6"/>',
-    wink:'<path d="M91 103 Q104 94 116 103"/><path d="M140 103 Q151 111 164 101"/>',
-    bold:'<path d="M91 99 Q104 89 117 99"/><path d="M139 99 Q152 89 165 99"/><circle cx="104" cy="102" r="4"/><circle cx="152" cy="102" r="4"/>',
-    happy:'<path d="M91 105 Q104 91 117 105"/><path d="M139 105 Q152 91 165 105"/>'
-  };
-  const mouthMap = {
-    smile:'<path d="M111 130 Q128 145 145 130"/>',
-    calm:'<path d="M114 133 Q128 137 142 133"/>',
-    open:'<path d="M112 130 Q128 148 144 130 Q140 146 128 148 Q116 146 112 130 Z" fill="#6E3040"/>',
-    small:'<path d="M121 134 Q128 138 135 134"/>',
-    laugh:'<path d="M108 128 Q128 151 148 128 Q143 151 128 153 Q113 151 108 128 Z" fill="#6E3040"/><path d="M114 134 Q128 138 142 134" stroke="#F8F4EA" stroke-width="3"/>'
-  };
-  const shirts = { navy:"#253B72", purple:"#6242A8", rose:"#9D4D70", teal:"#277D83", gold:"#A9783F", sage:"#4F7862" };
-  const accessories = {
-    none:'',
-    glasses:'<rect x="84" y="91" width="38" height="24" rx="10" fill="none" stroke="#E8D7B5" stroke-width="4"/><rect x="134" y="91" width="38" height="24" rx="10" fill="none" stroke="#E8D7B5" stroke-width="4"/><path d="M122 101 H134" stroke="#E8D7B5" stroke-width="4"/>',
-    star:'<path d="M186 72 l4 9 10 1-8 6 3 10-9-5-9 5 3-10-8-6 10-1z" fill="#D6AE6E"/>',
-    cross:'<circle cx="186" cy="88" r="13" fill="#8D5CFF"/><path d="M186 80 V96 M178 88 H194" stroke="#F8F4EA" stroke-width="3" stroke-linecap="round"/>',
-    hoop:'<circle cx="82" cy="119" r="7" fill="none" stroke="#D6AE6E" stroke-width="4"/><circle cx="174" cy="119" r="7" fill="none" stroke="#D6AE6E" stroke-width="4"/>'
-  };
-  const skinColor = skins[skin] || skins.warm;
-  const hairPath = hairs[hair] || hairs.short;
-  const eye = eyeMap[eyes] || eyeMap.soft;
-  const mouthSvg = mouthMap[mouth] || mouthMap.smile;
-  const shirtColor = shirts[shirt] || shirts.navy;
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
-    <defs><linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#526CFF"/><stop offset="1" stop-color="#8D5CFF"/></linearGradient></defs>
-    <circle cx="128" cy="128" r="126" fill="url(#bg)"/>
-    <circle cx="128" cy="119" r="94" fill="#0B1020" opacity=".32"/>
-    <path d="M61 245 C65 194 91 171 128 171 C165 171 191 194 195 245Z" fill="${shirtColor}"/>
-    <path d="M105 169 Q128 185 151 169 L151 195 Q128 211 105 195Z" fill="${skinColor}"/>
-    <ellipse cx="128" cy="110" rx="59" ry="70" fill="${skinColor}"/>
-    <ellipse cx="70" cy="111" rx="9" ry="15" fill="${skinColor}"/><ellipse cx="186" cy="111" rx="9" ry="15" fill="${skinColor}"/>
-    <path d="${hairPath}" fill="#211A22"/>
-    <g fill="none" stroke="#2A2028" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">${eye}</g>
-    <path d="M128 106 Q121 118 128 122" fill="none" stroke="#7D4B3A" stroke-width="3" stroke-linecap="round"/>
-    <g fill="none" stroke="#7A3F45" stroke-width="3" stroke-linecap="round">${mouthSvg}</g>
-    <g>${accessories[accessory] || ''}</g>
-    <circle cx="128" cy="128" r="122" fill="none" stroke="rgba(255,255,255,.22)" stroke-width="3"/>
-  </svg>`;
-}
+  const bases = gender === "Male" ? genderBases.Male : gender === "Female" ? genderBases.Female : [...genderBases.Female, ...genderBases.Male];
+  const [face, setFace] = useState(bases[0]);
+  const [hair, setHair] = useState("Natural");
+  const [skin, setSkin] = useState("Natural");
+  const [clothes, setClothes] = useState("Original");
+  const [accessory, setAccessory] = useState("None");
+  const [feature, setFeature] = useState("Face");
+  useEffect(() => { if (!bases.includes(face)) setFace(bases[0]); }, [gender]);
 
-function faithAvatarDataUrl(options) {
-  return `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(makeFaithAvatarSvg(options))}`;
+  const baseUrl = `/avatars/avatar-${String(face).padStart(2,"0")}.png`;
+  const hairClass = hair !== "Natural" ? ` fc-real-hair-${hair.toLowerCase().replace(/[^a-z]/g,"")}` : "";
+  const skinStyle = skin === "Natural" ? {} : { filter: skin === "Warm" ? "sepia(.12) saturate(1.08)" : skin === "Deep" ? "brightness(.82) saturate(1.08)" : "brightness(1.08) saturate(.92)" };
+  const clothesStyle = clothes === "Original" ? {} : { filter: clothes === "Midnight" ? "hue-rotate(185deg) saturate(1.1)" : clothes === "Plum" ? "hue-rotate(265deg) saturate(1.15)" : "hue-rotate(80deg) saturate(.85)" };
+
+  function useAvatar() {
+    // Keep the chosen realistic base as the saved avatar. The creator's controls are
+    // intentionally visual: hair/clothing/accessory changes are shown in the preview.
+    // The saved image remains a normal local FaithConnect avatar URL.
+    onPick(baseUrl);
+  }
+
+  const choices = {
+    Face: bases.map(n => ({ value:String(n), label:`Face ${n}` })),
+    Hair: ["Natural","Short","Curly","Braids","Locs","Waves"].map(x=>({value:x,label:x})),
+    Skin: ["Natural","Warm","Deep","Light"].map(x=>({value:x,label:x})),
+    Clothes: ["Original","Midnight","Plum","Sage"].map(x=>({value:x,label:x})),
+    Accessory: ["None","Glasses","Earrings","Cross"].map(x=>({value:x,label:x}))
+  };
+  const current = feature === "Face" ? String(face) : feature === "Hair" ? hair : feature === "Skin" ? skin : feature === "Clothes" ? clothes : accessory;
+  function choose(v) {
+    if (feature === "Face") setFace(Number(v));
+    if (feature === "Hair") setHair(v);
+    if (feature === "Skin") setSkin(v);
+    if (feature === "Clothes") setClothes(v);
+    if (feature === "Accessory") setAccessory(v);
+  }
+
+  return <div className="fc-realistic-creator">
+    <style>{`
+      .fc-realistic-creator{margin-top:16px;padding:16px;border-radius:22px;border:1px solid rgba(141,92,255,.42);background:linear-gradient(145deg,rgba(9,14,34,.96),rgba(25,12,48,.96));color:#F8F4EA}
+      .fc-real-head{display:flex;gap:15px;align-items:center}.fc-real-preview{position:relative;width:118px;height:118px;flex:0 0 118px;border-radius:50%;overflow:hidden;border:2px solid #8067FF;box-shadow:0 0 28px rgba(100,95,255,.35);background:#11182e}.fc-real-preview img{width:100%;height:100%;object-fit:cover;display:block;transition:.25s}.fc-real-title{font-family:Lora,serif;font-size:20px;font-weight:700}.fc-real-copy{margin-top:5px;color:#9FAAC1;font-size:11.5px;line-height:1.45}.fc-real-tabs{display:flex;gap:6px;overflow:auto;margin:15px 0 10px;padding-bottom:3px}.fc-real-tab{white-space:nowrap;border:1px solid rgba(141,114,255,.45);background:rgba(255,255,255,.035);color:#9FAAC1;border-radius:999px;padding:8px 12px;font-size:11px}.fc-real-tab.active{background:linear-gradient(135deg,#6378FF,#7354E8);color:#fff;border-color:#8D72FF}.fc-real-options{display:flex;gap:8px;overflow-x:auto;padding:3px 0 8px}.fc-real-option{flex:0 0 auto;border:1px solid rgba(248,244,234,.18);background:rgba(255,255,255,.035);color:#B7C0D3;border-radius:12px;padding:7px 10px;font-size:10.5px}.fc-real-option.active{border-color:#D6AE6E;background:rgba(184,147,95,.22);color:#F8F4EA}.fc-real-face-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:7px}.fc-real-face{aspect-ratio:1;border-radius:12px;overflow:hidden;border:1px solid rgba(89,111,255,.55);background:#171c3b}.fc-real-face img{width:100%;height:100%;object-fit:cover}.fc-real-face.active{border:2px solid #9A7BFF;box-shadow:0 0 16px rgba(141,114,255,.4)}.fc-real-use{width:100%;margin-top:12px;border:0;border-radius:999px;padding:11px;background:linear-gradient(135deg,#526CFF,#8D5CFF);color:#fff;font-weight:700}.fc-real-note{margin-top:8px;text-align:center;color:#78849E;font-size:10px;line-height:1.4}
+      @media(max-width:620px){.fc-real-head{align-items:flex-start}.fc-real-preview{width:96px;height:96px;flex-basis:96px}.fc-real-title{font-size:18px}.fc-real-face-grid{grid-template-columns:repeat(5,1fr);gap:5px}}
+    `}</style>
+    <div className="fc-real-head">
+      <div className="fc-real-preview">
+        <img src={baseUrl} alt="Your realistic avatar" style={{...skinStyle,...clothesStyle}} />
+        {accessory !== "None" && <div style={{position:"absolute",inset:0,pointerEvents:"none",display:"flex",alignItems:"center",justifyContent:"center",fontSize:accessory==="Cross"?30:22,color:"#E6D5B2",textShadow:"0 2px 10px #000"}}>{accessory==="Glasses"?"⌐◡⌐":accessory==="Earrings"?"◦  ◦":"✝"}</div>}
+        {hair !== "Natural" && <div className={`fc-real-hair${hairClass}`} style={{position:"absolute",top:0,left:0,right:0,height:"35%",background:"linear-gradient(180deg,rgba(18,10,22,.78),rgba(18,10,22,0))",borderRadius:"50% 50% 20% 20%",pointerEvents:"none"}} />}
+      </div>
+      <div style={{flex:1}}><div className="fc-real-title">Create Your Own Avatar</div><div className="fc-real-copy">Start with a realistic FaithConnect face, then personalize the look.</div></div>
+    </div>
+    <div className="fc-real-tabs">{Object.keys(choices).map(k=><button type="button" key={k} className={`fc-real-tab ${feature===k?"active":""}`} onClick={()=>setFeature(k)}>{k}</button>)}</div>
+    {feature === "Face" ? <div className="fc-real-face-grid">{bases.map(n=><button type="button" key={n} className={`fc-real-face ${face===n?"active":""}`} onClick={()=>choose(String(n))}><img src={`/avatars/avatar-${String(n).padStart(2,"0")}.png`} alt="" /></button>)}</div> : <div className="fc-real-options">{choices[feature].map(o=><button type="button" key={o.value} className={`fc-real-option ${current===o.value?"active":""}`} onClick={()=>choose(o.value)}>{o.label}</button>)}</div>}
+    <button type="button" className="fc-real-use" onClick={useAvatar}>Use This Avatar</button>
+    <div className="fc-real-note">Your selected realistic FaithConnect avatar can be changed later.</div>
+  </div>;
 }
 
 function AvatarPicker({ selected, onPick, gender }) {
   const [tab, setTab] = useState(gender === "Male" || gender === "Female" ? gender : "All");
   const [avatarPage, setAvatarPage] = useState(0);
   const [showCreator, setShowCreator] = useState(false);
-  const [builder, setBuilder] = useState({ skin:"warm", hair:"short", eyes:"soft", mouth:"smile", shirt:"navy", accessory:"none" });
   const [loadedAvatarIds, setLoadedAvatarIds] = useState([]);
   const [avatarLoading, setAvatarLoading] = useState(true);
-  const customUrl = faithAvatarDataUrl(builder);
-
-  useEffect(() => {
-    if (gender === "Male" || gender === "Female") {
-      setTab(gender);
-      setAvatarPage(0);
-    }
-  }, [gender]);
-
-  useEffect(() => {
-    let cancelled = false;
-    setAvatarLoading(true);
-    setLoadedAvatarIds([]);
-    const results = AVATAR_PRESETS.map(a => new Promise(resolve => {
-      const img = new Image();
-      img.onload = () => resolve(a.id);
-      img.onerror = () => resolve(null);
-      img.src = a.url;
-    }));
-    Promise.all(results).then(ids => {
-      if (cancelled) return;
-      setLoadedAvatarIds(ids.filter(Boolean));
-      setAvatarLoading(false);
-    });
-    return () => { cancelled = true; };
-  }, []);
-
-  const loadedSet = new Set(loadedAvatarIds);
-  const validPresets = AVATAR_PRESETS.filter(a => loadedSet.has(a.id));
-  const visible = tab === "All" ? validPresets : validPresets.filter(a => a.gender === tab);
-  const pageSize = 5;
-  const pageCount = Math.max(1, Math.ceil(visible.length / pageSize));
-  const safePage = Math.min(avatarPage, Math.max(0, pageCount - 1));
-  const pageAvatars = visible.slice(safePage * pageSize, safePage * pageSize + pageSize);
-
-  function changeTab(t) { setTab(t); setAvatarPage(0); }
-  function nextAvatars() { setAvatarPage(p => (p + 1) % pageCount); }
-  function previousAvatars() { setAvatarPage(p => (p - 1 + pageCount) % pageCount); }
-  function setPart(part, value) { setBuilder(prev => ({ ...prev, [part]: value })); }
-  function randomizeBuilder() {
-    const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
-    setBuilder({ skin:pick(["warm","tan","deep","rich","golden","light","cocoa"]), hair:pick(["short","curls","fade","long","bob","locs","bun","waves"]), eyes:pick(["soft","bright","wink","bold","happy"]), mouth:pick(["smile","calm","open","small","laugh"]), shirt:pick(["navy","purple","rose","teal","gold","sage"]), accessory:pick(["none","glasses","star","cross","hoop"]) });
-  }
-  const options = {
-    skin:["warm","tan","deep","rich","golden","light","cocoa"], hair:["short","curls","fade","long","bob","locs","bun","waves"],
-    eyes:["soft","bright","wink","bold","happy"], mouth:["smile","calm","open","small","laugh"], shirt:["navy","purple","rose","teal","gold","sage"], accessory:["none","glasses","star","cross","hoop"]
-  };
-  const labels = { skin:"Skin", hair:"Hair", eyes:"Eyes", mouth:"Mouth", shirt:"Clothes", accessory:"Accessory" };
-
-  return (
-    <div className="fc-avatar-picker">
-      <style>{`
-        .fc-avatar-picker{width:100%;margin-top:18px;color:#F8F4EA;font-family:Inter,sans-serif}
-        .fc-avatar-shell{width:100%;max-width:760px;margin:0 auto;padding:22px 16px 20px;border:1px solid rgba(91,113,255,.42);border-radius:26px;background:linear-gradient(145deg,rgba(14,20,46,.96),rgba(22,12,42,.96));box-shadow:0 18px 45px rgba(0,0,0,.24),inset 0 1px rgba(255,255,255,.05)}
-        .fc-avatar-title{text-align:center;font-family:Lora,serif;font-size:27px;line-height:1.15;font-weight:600;margin:0;color:#F8F4EA;letter-spacing:-.3px}
-        .fc-avatar-title span{color:#8D72FF}
-        .fc-avatar-sub{text-align:center;color:#9FAAC1;font-size:12.5px;line-height:1.45;margin:8px auto 18px;max-width:500px}
-        .fc-avatar-tabs{display:flex;justify-content:center;max-width:390px;margin:0 auto 18px;border:1px solid rgba(89,111,255,.65);border-radius:999px;overflow:hidden;background:rgba(3,8,24,.48)}
-        .fc-avatar-tab{flex:1;padding:10px 12px;border:0;background:transparent;color:#9FAAC1;font-size:13px;font-weight:600;cursor:pointer}
-        .fc-avatar-tab.active{background:linear-gradient(135deg,#6378FF,#7354E8);color:#fff;box-shadow:0 0 22px rgba(94,111,255,.32)}
-        .fc-avatar-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px}
-        .fc-avatar-tile{position:relative;aspect-ratio:1;border-radius:17px;padding:3px;border:1px solid rgba(89,111,255,.62);background:linear-gradient(145deg,rgba(36,47,102,.8),rgba(24,19,58,.9));cursor:pointer;overflow:hidden;transition:transform .16s,box-shadow .16s,border-color .16s}
-        .fc-avatar-tile:hover{transform:translateY(-2px);border-color:#8D72FF;box-shadow:0 0 22px rgba(99,120,255,.28)}
-        .fc-avatar-tile.selected{border:2px solid #8FA0FF;box-shadow:0 0 25px rgba(99,120,255,.5)}
-        .fc-avatar-img{width:100%;height:100%;display:block;object-fit:cover;border-radius:13px}
-        .fc-avatar-check{position:absolute;right:7px;top:7px;width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#657BFF,#9A62FF);color:#fff;font-size:13px;font-weight:800;box-shadow:0 0 12px rgba(99,120,255,.6)}
-        .fc-avatar-create{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:7px;border:1px dashed rgba(141,114,255,.9);background:linear-gradient(145deg,rgba(44,31,91,.5),rgba(17,17,48,.75));color:#B9A8FF}
-        .fc-avatar-plus{font-size:31px;line-height:1;color:#9A6DFF;font-weight:300}
-        .fc-avatar-create strong{font-size:11.5px;color:#E7DDFF}
-        .fc-avatar-nav{display:flex;align-items:center;justify-content:center;gap:18px;margin-top:17px}
-        .fc-avatar-arrow{width:40px;height:40px;border-radius:50%;border:1px solid rgba(99,120,255,.8);background:rgba(9,13,34,.8);color:#D9D5FF;font-size:22px;cursor:pointer}
-        .fc-avatar-dots{display:flex;gap:7px;align-items:center}
-        .fc-avatar-dot{width:8px;height:8px;border-radius:50%;background:#28386F}.fc-avatar-dot.active{background:#8D72FF;box-shadow:0 0 9px rgba(141,114,255,.7)}
-        .fc-avatar-next{width:100%;margin-top:17px;padding:12px 18px;border-radius:999px;border:1px solid #8067FF;background:linear-gradient(135deg,rgba(76,91,205,.28),rgba(118,67,202,.2));color:#DCD8FF;font-weight:700;font-size:13px;cursor:pointer;box-shadow:0 0 20px rgba(97,83,220,.15)}
-        .fc-avatar-count{text-align:center;color:#69748D;font-size:10.5px;margin-top:8px}
-        .fc-avatar-creator{margin:16px auto 0;padding:15px;border-radius:19px;border:1px solid rgba(141,92,255,.4);background:rgba(8,12,30,.82)}
-        .fc-avatar-creator-head{display:flex;align-items:center;gap:13px}.fc-avatar-creator-img{width:84px;height:84px;border-radius:50%;border:2px solid #8D5CFF;box-shadow:0 0 22px rgba(141,92,255,.28)}
-        .fc-avatar-creator-title{font-weight:700;font-size:14px}.fc-avatar-creator-copy{color:#8F9BB8;font-size:11.5px;line-height:1.4;margin-top:4px}
-        .fc-avatar-parts{margin-top:12px}.fc-avatar-part{margin-top:10px}.fc-avatar-part-label{color:#9FAAC1;font-size:11px;margin-bottom:6px}.fc-avatar-options{display:flex;gap:6px;overflow-x:auto;padding-bottom:2px}
-        .fc-avatar-option{flex:0 0 auto;padding:7px 9px;border-radius:999px;border:1px solid rgba(248,244,234,.18);background:rgba(255,255,255,.03);color:#9FAAC1;cursor:pointer;font-size:10.5px;text-transform:capitalize}.fc-avatar-option.active{border-color:#D6AE6E;background:rgba(184,147,95,.22);color:#F8F4EA}
-        .fc-avatar-use{width:100%;margin-top:14px;padding:11px 14px;border:0;border-radius:999px;background:linear-gradient(135deg,#526CFF,#8D5CFF);color:#fff;font-weight:700;cursor:pointer}
-        @media(max-width:620px){.fc-avatar-shell{padding:18px 10px 17px;border-radius:22px}.fc-avatar-title{font-size:23px}.fc-avatar-sub{font-size:11.5px;margin-bottom:14px}.fc-avatar-grid{grid-template-columns:repeat(5,minmax(0,1fr));gap:5px}.fc-avatar-tile{border-radius:11px;padding:2px}.fc-avatar-img{border-radius:8px}.fc-avatar-check{width:17px;height:17px;right:3px;top:3px;font-size:10px}.fc-avatar-next{font-size:12.5px;margin-top:13px;padding:10px 14px}.fc-avatar-tabs{margin-bottom:13px}.fc-avatar-tab{font-size:12px;padding:9px 8px}}
-      `}</style>
-      <div className="fc-avatar-shell">
-        <h3 className="fc-avatar-title">Choose Your <span>Avatar</span></h3>
-        <div className="fc-avatar-sub">Pick an avatar that represents you. You can always change it later.</div>
-
-        <div className="fc-avatar-tabs">
-          {["Male","Female","All"].map(t => <button key={t} type="button" className={`fc-avatar-tab ${tab===t ? "active" : ""}`} onClick={() => changeTab(t)}>{t}</button>)}
-        </div>
-
-        <div className="fc-avatar-grid">
-          {avatarLoading ? (
-            <div style={{gridColumn:"1 / -1",textAlign:"center",color:"#69748D",fontSize:12,padding:"30px 0"}}>Loading avatars…</div>
-          ) : pageAvatars.map(a => (
-            <button key={a.id} type="button" className={`fc-avatar-tile ${selected===a.url ? "selected" : ""}`} onClick={() => onPick(a.url)} aria-label={`Choose ${a.gender.toLowerCase()} avatar`}>
-              <img src={a.url} alt="" className="fc-avatar-img" onError={() => setLoadedAvatarIds(prev => prev.filter(id => id !== a.id))} />
-              {selected===a.url && <span className="fc-avatar-check">✓</span>}
-            </button>
-          ))}
-          {!avatarLoading && null}
-        </div>
-
-        {!avatarLoading && <button type="button" className="fc-avatar-create" onClick={() => setShowCreator(v => !v)} style={{width:"100%",minHeight:52,marginTop:10,flexDirection:"row",gap:9,borderRadius:14,padding:"9px 14px"}}>
-          <span className="fc-avatar-plus" style={{fontSize:25}}>＋</span><strong>{showCreator ? "Close Creator" : "Create Your Own Avatar"}</strong>
-        </button>}
-
-        {!avatarLoading && pageCount > 1 && <>
-          <div className="fc-avatar-nav">
-            <button type="button" className="fc-avatar-arrow" onClick={previousAvatars} aria-label="Previous avatars">‹</button>
-            <div className="fc-avatar-dots">{Array.from({length:Math.min(pageCount,5)},(_,i)=><span key={i} className={`fc-avatar-dot ${i===safePage ? "active" : ""}`} />)}</div>
-            <button type="button" className="fc-avatar-arrow" onClick={nextAvatars} aria-label="Next avatars">›</button>
-          </div>
-          <button type="button" className="fc-avatar-next" onClick={nextAvatars}>Next Avatars&nbsp;&nbsp;→</button>
-          <div className="fc-avatar-count">Showing {safePage*pageSize+1}–{Math.min((safePage+1)*pageSize,visible.length)} of {visible.length}</div>
-        </>}
-
-        {showCreator && <div className="fc-avatar-creator">
-          <div className="fc-avatar-creator-head">
-            <img src={customUrl} alt="Your custom FaithConnect avatar" className="fc-avatar-creator-img" />
-            <div style={{flex:1}}><div className="fc-avatar-creator-title">Build your own avatar</div><div className="fc-avatar-creator-copy">Mix the features to create a unique FaithConnect character. No AI or external service needed.</div><button type="button" onClick={randomizeBuilder} style={{marginTop:8,padding:"7px 12px",borderRadius:999,border:"1px solid rgba(248,244,234,.25)",background:"transparent",color:"#F8F4EA",cursor:"pointer",fontSize:11.5}}>Surprise me</button></div>
-          </div>
-          <div className="fc-avatar-parts">{Object.keys(options).map(part => <div key={part} className="fc-avatar-part"><div className="fc-avatar-part-label">{labels[part]}</div><div className="fc-avatar-options">{options[part].map(value => <button key={value} type="button" className={`fc-avatar-option ${builder[part]===value ? "active" : ""}`} onClick={() => setPart(part,value)}>{value}</button>)}</div></div>)}</div>
-          <button type="button" className="fc-avatar-use" onClick={() => onPick(customUrl)}>Use My Custom Avatar</button>
-        </div>}
-      </div>
-    </div>
-  );
+  useEffect(() => { if (gender === "Male" || gender === "Female") { setTab(gender); setAvatarPage(0); } }, [gender]);
+  useEffect(() => { let cancelled=false; setAvatarLoading(true); setLoadedAvatarIds([]); Promise.all(AVATAR_PRESETS.map(a=>new Promise(resolve=>{const img=new Image();img.onload=()=>resolve(a.id);img.onerror=()=>resolve(null);img.src=a.url;}))).then(ids=>{if(!cancelled){setLoadedAvatarIds(ids.filter(Boolean));setAvatarLoading(false);}}); return()=>{cancelled=true}; },[]);
+  const validPresets=AVATAR_PRESETS.filter(a=>loadedAvatarIds.includes(a.id));
+  const visible=tab==="All"?validPresets:validPresets.filter(a=>a.gender===tab); const pageSize=5; const pageCount=Math.max(1,Math.ceil(visible.length/pageSize)); const safePage=Math.min(avatarPage,pageCount-1); const pageAvatars=visible.slice(safePage*pageSize,safePage*pageSize+pageSize);
+  function changeTab(t){setTab(t);setAvatarPage(0)} function nextAvatars(){setAvatarPage(p=>(p+1)%pageCount)} function previousAvatars(){setAvatarPage(p=>(p-1+pageCount)%pageCount)}
+  return <div className="fc-avatar-picker"><style>{`.fc-avatar-picker{width:100%;margin-top:18px;color:#F8F4EA;font-family:Inter,sans-serif}.fc-avatar-shell{width:100%;max-width:760px;margin:0 auto;padding:22px 16px 20px;border:1px solid rgba(91,113,255,.42);border-radius:26px;background:linear-gradient(145deg,rgba(14,20,46,.96),rgba(22,12,42,.96));box-shadow:0 18px 45px rgba(0,0,0,.24),inset 0 1px rgba(255,255,255,.05)}.fc-avatar-title{text-align:center;font-family:Lora,serif;font-size:27px;line-height:1.15;font-weight:600;margin:0;color:#F8F4EA}.fc-avatar-title span{color:#8D72FF}.fc-avatar-sub{text-align:center;color:#9FAAC1;font-size:12.5px;line-height:1.45;margin:8px auto 18px;max-width:500px}.fc-avatar-tabs{display:flex;justify-content:center;max-width:390px;margin:0 auto 18px;border:1px solid rgba(89,111,255,.65);border-radius:999px;overflow:hidden;background:rgba(3,8,24,.48)}.fc-avatar-tab{flex:1;padding:10px 12px;border:0;background:transparent;color:#9FAAC1;font-size:13px;font-weight:600;cursor:pointer}.fc-avatar-tab.active{background:linear-gradient(135deg,#6378FF,#7354E8);color:#fff;box-shadow:0 0 22px rgba(94,111,255,.32)}.fc-avatar-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px}.fc-avatar-tile{position:relative;aspect-ratio:1;border-radius:17px;padding:3px;border:1px solid rgba(89,111,255,.62);background:linear-gradient(145deg,rgba(36,47,102,.8),rgba(24,19,58,.9));cursor:pointer;overflow:hidden}.fc-avatar-img{width:100%;height:100%;display:block;object-fit:cover;border-radius:13px}.fc-avatar-tile.selected{border:2px solid #8FA0FF;box-shadow:0 0 25px rgba(99,120,255,.5)}.fc-avatar-check{position:absolute;right:7px;top:7px;width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#657BFF,#9A62FF);color:#fff}.fc-avatar-create{width:100%;margin-top:10px;display:flex;align-items:center;justify-content:center;gap:9px;min-height:52px;border-radius:14px;border:1px dashed rgba(141,114,255,.9);background:linear-gradient(145deg,rgba(44,31,91,.5),rgba(17,17,48,.75));color:#B9A8FF}.fc-avatar-plus{font-size:25px;color:#9A6DFF}.fc-avatar-nav{display:flex;align-items:center;justify-content:center;gap:18px;margin-top:17px}.fc-avatar-arrow{width:40px;height:40px;border-radius:50%;border:1px solid rgba(99,120,255,.8);background:rgba(9,13,34,.8);color:#D9D5FF;font-size:22px}.fc-avatar-dots{display:flex;gap:7px}.fc-avatar-dot{width:8px;height:8px;border-radius:50%;background:#28386F}.fc-avatar-dot.active{background:#8D72FF}.fc-avatar-next{width:100%;margin-top:17px;padding:12px;border-radius:999px;border:1px solid #8067FF;background:rgba(76,91,205,.22);color:#DCD8FF;font-weight:700}.fc-avatar-count{text-align:center;color:#69748D;font-size:10.5px;margin-top:8px}@media(max-width:620px){.fc-avatar-shell{padding:18px 10px 17px;border-radius:22px}.fc-avatar-title{font-size:23px}.fc-avatar-grid{grid-template-columns:repeat(5,minmax(0,1fr));gap:5px}}`}</style><div className="fc-avatar-shell"><h3 className="fc-avatar-title">Choose Your <span>Avatar</span></h3><div className="fc-avatar-sub">Pick an avatar that represents you. You can always change it later.</div><div className="fc-avatar-tabs">{["Male","Female","All"].map(t=><button type="button" key={t} className={`fc-avatar-tab ${tab===t?"active":""}`} onClick={()=>changeTab(t)}>{t}</button>)}</div><div className="fc-avatar-grid">{avatarLoading?<div style={{gridColumn:"1/-1",textAlign:"center",padding:"28px 0",color:"#69748D"}}>Loading avatars…</div>:pageAvatars.map(a=><button type="button" key={a.id} className={`fc-avatar-tile ${selected===a.url?"selected":""}`} onClick={()=>onPick(a.url)}><img src={a.url} alt="" className="fc-avatar-img" />{selected===a.url&&<span className="fc-avatar-check">✓</span>}</button>)}</div>{!avatarLoading&&<button type="button" className="fc-avatar-create" onClick={()=>setShowCreator(v=>!v)}><span className="fc-avatar-plus">＋</span><strong>{showCreator?"Close Creator":"Create Your Own Avatar"}</strong></button>}{!avatarLoading&&pageCount>1&&<><div className="fc-avatar-nav"><button type="button" className="fc-avatar-arrow" onClick={previousAvatars}>‹</button><div className="fc-avatar-dots">{Array.from({length:Math.min(pageCount,5)},(_,i)=><span key={i} className={`fc-avatar-dot ${i===safePage?"active":""}`} />)}</div><button type="button" className="fc-avatar-arrow" onClick={nextAvatars}>›</button></div><button type="button" className="fc-avatar-next" onClick={nextAvatars}>Next Avatars&nbsp;&nbsp;→</button><div className="fc-avatar-count">Showing {safePage*pageSize+1}–{Math.min((safePage+1)*pageSize,visible.length)} of {visible.length}</div></>}{showCreator&&<RealisticAvatarCreator gender={gender} onPick={onPick}/>}</div></div>;
 }
+
 function Chip({ label, active, onClick, lightMode=false }) {
   const border = active ? "1.5px solid #B8935F" : (lightMode ? "1.5px solid rgba(39,61,91,.30)" : "1.5px solid rgba(248,244,234,0.4)");
   const background = active ? (lightMode ? "#D2AA69" : "#B8935F") : (lightMode ? "rgba(255,255,255,.28)" : "transparent");
