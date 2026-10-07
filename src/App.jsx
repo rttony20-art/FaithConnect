@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
-import { Heart, MessageCircle, Phone, Video, Mic, MicOff, PhoneOff, Send, User, ChevronLeft, Check, X, Camera, VideoOff, Square, SkipForward, Menu, LogOut, Info, Shield, HelpCircle, Eye, EyeOff, Home, UserPlus, Sun, Moon, Percent, ArrowRight } from "lucide-react";
+import { createMessagesApi, rowToMsg } from "./messagesApi.js";
+import { Heart, MessageCircle, Phone, Video, Mic, MicOff, PhoneOff, Send, User, ChevronLeft, Check, X, Camera, VideoOff, Square, SkipForward, Menu, LogOut, Info, Shield, HelpCircle, Eye, EyeOff, Home, UserPlus, Sun, Moon, Percent, Trash2, ArrowRight } from "lucide-react";
 
 /* ---------- design tokens ----------
 Ink Navy #16233F (dark surfaces), Ivory #F8F4EA (light surfaces),
@@ -189,6 +190,13 @@ async function storageList(prefix, shared) {
     return { keys: Object.keys(localStorage).filter(k => k.startsWith(prefix)) };
   } catch { return null; }
 }
+
+// Private messages are stored on the server (see supabase/private_messages.sql).
+const msgApi = createMessagesApi({
+  rest: supaRest,
+  getToken: async () => (await sget("supabase-session", false))?.access_token,
+  refresh: restoreSupaSession,
+});
 
 function scoreMatch(me, them) {
   const faithCloseness = Math.max(0, 100 - Math.abs((me.faithLevel||3) - (them.faithLevel||3)) * 20);
@@ -705,31 +713,60 @@ export default function App() {
 
   const loadConversations = useCallback(async () => {
     if (!myId) return;
-    const list = await storageList("chat:", false);
-    if (!list) return;
-    const session = await sget("supabase-session", false);
-    const mine = [];
-    for (const k of list.keys) {
-      const idpart = k.replace("chat:", "");
-      const otherId = idpart.startsWith(`${myId}-`) ? idpart.slice(myId.length + 1) : idpart.endsWith(`-${myId}`) ? idpart.slice(0, -(myId.length + 1)) : null;
-      if (!otherId) continue;
-      const thread = await sget(k, false);
-      if (!thread || !thread.length) continue;
-      let otherProfile = await sget(`profiles:${otherId}`, false);
-      if (!otherProfile) {
-        try {
-          const rows = await supaRest(`profiles?id=eq.${encodeURIComponent(otherId)}&select=*`, { token: session?.access_token });
-          otherProfile = rows?.[0] ? profileFromDb(rows[0]) : null;
-          if (otherProfile) await sset(`profiles:${otherId}`, otherProfile, false);
-        } catch {}
+    try {
+      const list = await msgApi.inbox(myId);
+      const session = await sget("supabase-session", false);
+      const mine = [];
+      for (const c of list) {
+        let otherProfile = await sget(`profiles:${c.otherId}`, false);
+        if (!otherProfile) {
+          try {
+            const rows = await supaRest(`profiles?id=eq.${encodeURIComponent(c.otherId)}&select=*`, { token: session?.access_token });
+            otherProfile = rows?.[0] ? profileFromDb(rows[0]) : null;
+            if (otherProfile) await sset(`profiles:${c.otherId}`, otherProfile, false);
+          } catch {}
+        }
+        mine.push({ otherId: c.otherId, otherProfile, last: c.last, unread: c.unread });
       }
-      mine.push({ otherId, otherProfile, last: thread[thread.length - 1] });
-    }
-    mine.sort((x, y) => (y.last?.ts||0) - (x.last?.ts||0));
-    setConversations(mine);
+      setConversations(mine);
+    } catch (e) { console.error("FaithConnect load conversations failed", e); }
   }, [myId]);
 
   useEffect(() => { if (screen === "messages") loadConversations(); }, [screen, loadConversations]);
+
+  // Keep unread counts fresh on every screen: instant via Realtime when it is available,
+  // with a slow poll as a safety net.
+  useEffect(() => {
+    if (!myId) { setConversations([]); return; }
+    let stopped = false, ch = null;
+    const tick = () => { if (!stopped && !document.hidden) loadConversations(); };
+    loadConversations();
+    const timer = setInterval(tick, 20000);
+    document.addEventListener("visibilitychange", tick);
+    (async () => {
+      try {
+        const client = await getRealtimeClient();
+        if (stopped) return;
+        ch = client.channel(`faithconnect-inbox-${myId}`)
+          .on("postgres_changes", { event:"INSERT", schema:"public", table:"private_messages", filter:`recipient_id=eq.${myId}` }, () => { if (!stopped) loadConversations(); })
+          .subscribe();
+      } catch (e) { console.error("FaithConnect inbox realtime failed", e); }
+    })();
+    return () => {
+      stopped = true;
+      clearInterval(timer);
+      document.removeEventListener("visibilitychange", tick);
+      if (ch) { try { ch.unsubscribe(); } catch {} }
+    };
+  }, [myId, loadConversations]);
+
+  // Delete a conversation for me only; the other person keeps their copy.
+  async function deleteConversation(c) {
+    if (!window.confirm(`Delete your conversation with ${c.otherProfile?.name || "this person"}? This only removes it for you.`)) return;
+    setConversations(prev => prev.filter(x => x.otherId !== c.otherId));
+    try { await msgApi.clear(myId, convoId(myId, c.otherId)); } catch (e) { console.error("Delete conversation failed", e); }
+    loadConversations();
+  }
 
   function toggle(field, val) {
     setForm(f => {
@@ -738,11 +775,13 @@ export default function App() {
     });
   }
 
+  const unreadTotal = conversations.reduce((n, c) => n + (c.unread || 0), 0);
   const nav = (
     <div style={navBar(lightMode)}>
       {[["matches","Matches",Heart],["messages","Messages",MessageCircle],["matchList","Discover",Percent],["profile","Profile",User]].map(([key,label,Icon]) => (
-        <button key={key} onClick={() => setScreen(key)} style={navBtn(screen===key, lightMode)}>
+        <button key={key} onClick={() => setScreen(key)} style={{ ...navBtn(screen===key, lightMode), position:"relative" }}>
           <Icon size={19} strokeWidth={screen===key?2.4:1.8} />
+          {key === "messages" && unreadTotal > 0 && <span style={unreadBadge({ position:"absolute", top:4, left:"calc(50% + 6px)" })}>{unreadTotal > 99 ? "99+" : unreadTotal}</span>}
           <span style={{ fontSize: 10, marginTop: 2, fontFamily:"Inter, sans-serif" }}>{label}</span>
         </button>
       ))}
@@ -906,7 +945,7 @@ export default function App() {
   }
 
   if (screen === "chat" && activeConvo) {
-    return <ChatScreen myId={myId} myProfile={myProfile} other={activeConvo} onBack={() => setScreen("messages")} />;
+    return <ChatScreen myId={myId} myProfile={myProfile} other={activeConvo} onBack={() => setScreen("messages")} onRead={loadConversations} />;
   }
 
   if (screen === "fellowship") {
@@ -1006,15 +1045,19 @@ export default function App() {
         <div style={{ flex:1, overflowY:"auto", padding:"0 16px 100px", background:"var(--fc-bg)" }}>
           {conversations.length === 0 && <div style={{...emptyState, color:"#B9C9BC"}}>No conversations yet. Start one from your matches.</div>}
           {conversations.map(c => (
-            <button key={c.otherId} onClick={() => { setActiveConvo({ otherId: c.otherId, otherProfile: c.otherProfile }); setScreen("chat"); }} style={convoRow}>
-              <div style={{ marginRight:10 }}><AvatarCircle profile={c.otherProfile} size={38} fontSize={15} /></div>
-              <div style={{flex:1, textAlign:"left"}}>
-                <div style={{fontFamily:"Lora, serif", fontSize:15.5, color:"#22252B"}}>{c.otherProfile?.name || "Someone"}</div>
-                <div style={{fontFamily:"Inter, sans-serif", fontSize:13, color:"#8A8578", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis", maxWidth:220}}>
-                  {c.last.type === "voice" ? "🎙️ Voice note" : c.last.text}
+            <div key={c.otherId} style={{ ...convoRow, cursor:"default" }}>
+              <button onClick={() => { setActiveConvo({ otherId: c.otherId, otherProfile: c.otherProfile }); setScreen("chat"); }} style={{ display:"flex", alignItems:"center", flex:1, minWidth:0, background:"none", border:"none", padding:0, cursor:"pointer", textAlign:"left" }}>
+                <div style={{ marginRight:10 }}><AvatarCircle profile={c.otherProfile} size={38} fontSize={15} /></div>
+                <div style={{flex:1, minWidth:0}}>
+                  <div style={{fontFamily:"Lora, serif", fontSize:15.5, color:"#22252B", fontWeight:c.unread ? 700 : 400}}>{c.otherProfile?.name || "Someone"}</div>
+                  <div style={{fontFamily:"Inter, sans-serif", fontSize:13, color:c.unread ? "#22252B" : "#8A8578", fontWeight:c.unread ? 600 : 400, whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis", maxWidth:220}}>
+                    {c.last.sender === myId ? "You: " : ""}{c.last.type === "voice" ? "🎙️ Voice note" : c.last.text}
+                  </div>
                 </div>
-              </div>
-            </button>
+                {c.unread > 0 && <span style={unreadBadge({ marginLeft:8, flexShrink:0 })}>{c.unread > 99 ? "99+" : c.unread}</span>}
+              </button>
+              <button onClick={() => deleteConversation(c)} aria-label="Delete conversation" style={{ background:"none", border:"none", cursor:"pointer", padding:8, marginLeft:4, flexShrink:0 }}><Trash2 size={17} color="#B5616B" /></button>
+            </div>
           ))}
         </div>
         {nav}
@@ -1519,7 +1562,7 @@ function IronSharpensIronCard({ onOpen, lightMode }) {
   );
 }
 /* ---------------- CHAT + CALL SCREEN ---------------- */
-function ChatScreen({ myId, myProfile, other, onBack }) {
+function ChatScreen({ myId, myProfile, other, onBack, onRead }) {
   const [messages, setMessages] = useState([]);
   const [text, setText] = useState("");
   const [recording, setRecording] = useState(false);
@@ -1530,7 +1573,9 @@ function ChatScreen({ myId, myProfile, other, onBack }) {
   const [callErr, setCallErr] = useState("");
 
   const cid = convoId(myId, other.otherId);
-  const chatKey = `chat:${cid}`;
+  const [selectedId, setSelectedId] = useState(null); // tapped own message -> shows Delete
+  const refreshSeq = useRef(0);
+  const deletingRef = useRef(new Set());
   const mediaRecorder = useRef(null);
   const chunks = useRef([]);
   const chatScrollRef = useRef(null);
@@ -1545,16 +1590,23 @@ function ChatScreen({ myId, myProfile, other, onBack }) {
   const pendingOfferRef = useRef(null);
   const myIceRef = useRef([]);
 
-  async function saveThread(thread) {
-    const clean = (thread || []).slice(-100);
-    await sset(chatKey, clean, false);
-    return clean;
-  }
-
-  function mergeMessages(existing, incoming) {
-    const map = new Map();
-    [...(existing || []), ...(incoming || [])].forEach(m => { if (m?.id) map.set(m.id, m); });
-    return [...map.values()].sort((a,b) => (a.ts||0) - (b.ts||0)).slice(-100);
+  // Messages live on the server, so they reach the other person even when they are
+  // not looking at this chat. If refreshes overlap, only the newest one is applied.
+  async function refreshThread() {
+    const seq = ++refreshSeq.current;
+    try {
+      const rows = await msgApi.thread(myId, cid);
+      if (seq !== refreshSeq.current) return;
+      const server = rows.filter(r => !deletingRef.current.has(r.id)).map(rowToMsg);
+      setMessages(prev => {
+        const ids = new Set(server.map(m => m.id));
+        const pending = prev.filter(m => m.pending && !ids.has(m.id));
+        return [...server, ...pending].sort((x, y) => x.ts - y.ts);
+      });
+      if (!document.hidden && rows.some(r => r.recipient_id === myId && !r.read_at)) {
+        msgApi.markRead(myId, cid).then(() => onRead && onRead()).catch(() => {});
+      }
+    } catch (e) { console.error("FaithConnect load messages failed", e); }
   }
 
   async function ensureChannel() {
@@ -1564,32 +1616,8 @@ function ChatScreen({ myId, myProfile, other, onBack }) {
       config: { broadcast: { self: false, ack: true } }
     });
 
-    channel.on("broadcast", { event: "message" }, async ({ payload }) => {
-      const msg = payload?.message;
-      if (!msg || msg.sender === myId) return;
-      setMessages(prev => {
-        const merged = mergeMessages(prev, [msg]);
-        saveThread(merged);
-        return merged;
-      });
-    });
-
-    channel.on("broadcast", { event: "history_request" }, async () => {
-      const local = (await sget(chatKey, false)) || [];
-      if (local.length) {
-        try { await channel.send({ type:"broadcast", event:"history_response", payload:{ messages:local } }); } catch {}
-      }
-    });
-
-    channel.on("broadcast", { event: "history_response" }, async ({ payload }) => {
-      const incoming = Array.isArray(payload?.messages) ? payload.messages : [];
-      if (!incoming.length) return;
-      setMessages(prev => {
-        const merged = mergeMessages(prev, incoming);
-        saveThread(merged);
-        return merged;
-      });
-    });
+    // A "message" broadcast is only a nudge: the message itself is already saved on the server.
+    channel.on("broadcast", { event: "message" }, () => { refreshThread(); });
 
     channel.on("broadcast", { event: "call" }, async ({ payload }) => {
       await handleCallSignal(payload?.signal);
@@ -1605,9 +1633,6 @@ function ChatScreen({ myId, myProfile, other, onBack }) {
       });
     });
     chatChannelRef.current = channel;
-    // Ask the other browser for any messages it already has. This also recovers
-    // messages sent before this browser finished subscribing.
-    try { await channel.send({ type:"broadcast", event:"history_request", payload:{ from:myId } }); } catch {}
     return channel;
   }
 
@@ -1620,16 +1645,20 @@ function ChatScreen({ myId, myProfile, other, onBack }) {
     let cancelled = false;
     (async () => {
       try {
-        const local = (await sget(chatKey, false)) || [];
-        if (!cancelled) setMessages(local);
+        await refreshThread();
         await ensureChannel();
       } catch (e) {
+        // Messages still work without the live channel (it only carries calls and instant nudges).
         console.error("FaithConnect realtime chat failed", e);
-        if (!cancelled) setCallErr("Chat connection failed. Please refresh and try again.");
       }
     })();
+    const poll = setInterval(() => { if (!document.hidden) refreshThread(); }, 4000);
+    const onVisible = () => { if (!document.hidden) refreshThread(); };
+    document.addEventListener("visibilitychange", onVisible);
     return () => {
       cancelled = true;
+      clearInterval(poll);
+      document.removeEventListener("visibilitychange", onVisible);
       const ch = chatChannelRef.current;
       chatChannelRef.current = null;
       if (ch) { try { ch.unsubscribe(); } catch {} }
@@ -1645,6 +1674,10 @@ function ChatScreen({ myId, myProfile, other, onBack }) {
     if (nearBottom) el.scrollTo({ top: el.scrollHeight, behavior:"smooth" });
   }, [messages]);
 
+  function nudgeOther() {
+    ensureChannel().then(ch => ch.send({ type:"broadcast", event:"message", payload:{ ping:true } })).catch(() => {});
+  }
+
   async function sendMessage(type, content) {
     const msg = {
       id:`${myId}-${Date.now()}-${Math.random().toString(36).slice(2,8)}`,
@@ -1652,20 +1685,38 @@ function ChatScreen({ myId, myProfile, other, onBack }) {
       type,
       text:type === "text" ? content : undefined,
       content:type === "voice" ? content : undefined,
-      ts:Date.now()
+      ts:Date.now(),
+      pending:true
     };
-    const merged = mergeMessages(messages, [msg]);
-    setMessages(merged);
-    await saveThread(merged);
-    setText("");
+    setMessages(prev => [...prev, msg]);
+    setText(""); setCallErr("");
     try {
-      const ch = await ensureChannel();
-      const result = await ch.send({ type:"broadcast", event:"message", payload:{ message:msg } });
-      if (result !== "ok" && result?.status && result.status !== "ok") throw new Error(String(result));
+      await msgApi.send({ id:msg.id, cid, from:myId, to:other.otherId, type, text:msg.text, audio:msg.content });
+      setMessages(prev => prev.map(m => m.id === msg.id ? { ...m, pending:false } : m));
+      refreshThread();
+      nudgeOther();
     } catch (e) {
       console.error("Chat send failed", e);
-      setCallErr("Message could not be delivered. Please keep both people connected and try again.");
+      setMessages(prev => prev.filter(m => m.id !== msg.id));
+      if (type === "text") setText(content);
+      setCallErr("Message could not be sent. Please check your connection and try again.");
     }
+  }
+
+  // Unsend: removes my own message for both people.
+  async function deleteMessage(id) {
+    setSelectedId(null);
+    deletingRef.current.add(id);
+    setMessages(prev => prev.filter(m => m.id !== id));
+    try {
+      await msgApi.remove(id);
+    } catch (e) {
+      console.error("Delete failed", e);
+      setCallErr("Message could not be deleted. Please try again.");
+    }
+    deletingRef.current.delete(id);
+    refreshThread();
+    nudgeOther();
   }
 
   async function startRecording() {
@@ -1824,6 +1875,7 @@ function ChatScreen({ myId, myProfile, other, onBack }) {
     );
   }
 
+  const lastMineId = [...messages].reverse().find(x => x.sender === myId)?.id;
   return (
     <div style={{ ...page, height:"100dvh", minHeight:0, overflow:"hidden" }}>
       <FontLoader />
@@ -1836,13 +1888,22 @@ function ChatScreen({ myId, myProfile, other, onBack }) {
       </div>
       <div ref={chatScrollRef} style={{ flex:1, minHeight:0, overflowY:"auto", WebkitOverflowScrolling:"touch", overscrollBehavior:"contain", padding:"16px 14px", background:"var(--fc-bg)", display:"flex", flexDirection:"column" }}>
         {messages.length === 0 && <div style={emptyState}>Say hello — your conversation starts here.</div>}
-        {messages.map(m => (
-          <div key={m.id || `${m.sender}-${m.ts}`} style={{ alignSelf:m.sender === myId ? "flex-end" : "flex-start", maxWidth:"75%", marginBottom:10 }}>
-            <div style={{ background:m.sender === myId ? "#B8935F" : "#EFE9DC", color:m.sender === myId ? "#FAF7F0" : "#22252B", padding:"9px 13px", borderRadius:16, fontFamily:"Inter, sans-serif", fontSize:14.5 }}>
-              {m.type === "voice" ? <audio controls src={m.content} style={{height:34, maxWidth:200}} /> : m.text}
+        {messages.map(m => {
+          const mine = m.sender === myId;
+          return (
+            <div key={m.id || `${m.sender}-${m.ts}`} style={{ alignSelf:mine ? "flex-end" : "flex-start", maxWidth:"75%", marginBottom:10, display:"flex", flexDirection:"column", alignItems:mine ? "flex-end" : "flex-start" }}>
+              <div onClick={() => mine && !m.pending && setSelectedId(selectedId === m.id ? null : m.id)} style={{ background:mine ? "#B8935F" : "#EFE9DC", color:mine ? "#FAF7F0" : "#22252B", padding:"9px 13px", borderRadius:16, fontFamily:"Inter, sans-serif", fontSize:14.5, opacity:m.pending ? 0.6 : 1, cursor:mine ? "pointer" : "default" }}>
+                {m.type === "voice" ? <audio controls src={m.content} style={{height:34, maxWidth:200}} /> : m.text}
+              </div>
+              {mine && selectedId === m.id && (
+                <button onClick={() => deleteMessage(m.id)} style={{ marginTop:4, display:"flex", alignItems:"center", gap:5, background:"none", border:"none", color:"#E3A6A6", fontFamily:"Inter, sans-serif", fontSize:12.5, cursor:"pointer", padding:"2px 4px" }}><Trash2 size={14} /> Delete message</button>
+              )}
+              {mine && m.id === lastMineId && m.readAt && selectedId !== m.id && (
+                <div style={{ fontFamily:"Inter, sans-serif", fontSize:11, color:"#858ca1", marginTop:3 }}>Seen</div>
+              )}
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
       {callErr && <div style={{fontSize:12, color:"#B5616B", fontFamily:"Inter, sans-serif", padding:"4px 14px", background:"var(--fc-bg)"}}>{callErr}</div>}
       <div style={{ ...composer, flexShrink:0, paddingBottom:"calc(10px + env(safe-area-inset-bottom))" }}>
@@ -2494,6 +2555,7 @@ const matchCard = { background:"linear-gradient(145deg, rgba(14,20,42,.96), rgba
 const avatarMd = { width:52, height:52, borderRadius:"50%", background:"#EFE9DC", color:"#B8935F", display:"flex", alignItems:"center", justifyContent:"center", fontFamily:"Lora, serif", fontSize:20, flexShrink:0 };
 const avatarSm = { width:38, height:38, borderRadius:"50%", background:"#EFE9DC", color:"#B8935F", display:"flex", alignItems:"center", justifyContent:"center", fontFamily:"Lora, serif", fontSize:15, flexShrink:0, marginRight:10 };
 const emptyState = { textAlign:"center", color:"#9B9585", fontFamily:"Inter, sans-serif", fontSize:14, padding:"60px 20px" };
+const unreadBadge = extra => ({ minWidth:18, height:18, padding:"0 5px", borderRadius:9, background:"#ff3b5c", color:"#fff", fontFamily:"Inter, sans-serif", fontSize:11, fontWeight:700, display:"inline-flex", alignItems:"center", justifyContent:"center", boxSizing:"border-box", ...extra });
 const convoRow = { display:"flex", alignItems:"center", width:"100%", background:"#fff", border:"none", borderRadius:14, padding:12, marginBottom:10, cursor:"pointer", boxShadow:"0 1px 2px rgba(20,20,15,.05)" };
 const chatHeader = { display:"flex", alignItems:"center", padding:"14px 12px", background:"var(--fc-bg)" };
 const iconBtn = { background:"rgba(255,255,255,.1)", border:"none", borderRadius:10, width:36, height:36, display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", marginLeft:6 };
