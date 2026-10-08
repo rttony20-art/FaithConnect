@@ -2182,7 +2182,7 @@ function RandomConnectScreen({ myId, myProfile, onlinePeople = [], onBack, varia
 
   // Temporary match chat: it is deliberately NOT saved to localStorage/Supabase.
   // Every new match gets a fresh session id, so meeting the same person later starts empty.
-  async function ensureMatchChannel(p) {
+  async function ensureMatchChannel(p, m = mode) {
     if (matchChannelRef.current) return matchChannelRef.current;
     const client = await getRealtimeClient();
     const pair = convoId(myId, p.id);
@@ -2233,8 +2233,8 @@ function RandomConnectScreen({ myId, myProfile, onlinePeople = [], onBack, varia
     return channel;
   }
 
-  async function waitForMatchSession(p) {
-    await ensureMatchChannel(p);
+  async function waitForMatchSession(p, m = mode) {
+    await ensureMatchChannel(p, m);
     if (matchSessionRef.current) return matchSessionRef.current;
     for (let i=0;i<20;i++) {
       if (matchSessionRef.current) return matchSessionRef.current;
@@ -2250,7 +2250,7 @@ function RandomConnectScreen({ myId, myProfile, onlinePeople = [], onBack, varia
     clearInterval(chatPollRef.current);
     setMessages([]);
     setText("");
-    try { await waitForMatchSession(p); }
+    try { await waitForMatchSession(p, "chat"); }
     catch (e) { setCallErr("Could not connect the temporary chat. Please press Next and try again."); }
   }
 
@@ -2270,7 +2270,7 @@ function RandomConnectScreen({ myId, myProfile, onlinePeople = [], onBack, varia
     setCallErr(""); setCallStatus("connecting");
     const iAmCaller = myId < p.id;
     try {
-      await waitForMatchSession(p);
+      await waitForMatchSession(p, m);
       const stream = await navigator.mediaDevices.getUserMedia({ audio:true, video:m === "video" });
       localStreamRef.current = stream;
       if (m === "video" && localVideoRef.current) localVideoRef.current.srcObject = stream;
