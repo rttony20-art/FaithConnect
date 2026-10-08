@@ -1563,6 +1563,7 @@ function ChatScreen({ myId, myProfile, other, onBack, onRead }) {
 
   const cid = convoId(myId, other.otherId);
   const [menuOpen, setMenuOpen] = useState(false); // 3-dot menu in the chat header
+  const [confirmClear, setConfirmClear] = useState(false); // "Delete for me" sheet
   const refreshSeq = useRef(0);
   const mediaRecorder = useRef(null);
   const chunks = useRef([]);
@@ -1696,11 +1697,14 @@ function ChatScreen({ myId, myProfile, other, onBack, onRead }) {
 
   // Clear chat (like WhatsApp): hides the messages I have seen, for me only.
   // The other person keeps their copy. Uses server timestamps so phone clocks cannot cause trouble.
-  async function clearChat() {
+  function askClearChat() {
     setMenuOpen(false);
+    if (messages.some(m => !m.pending)) setConfirmClear(true);
+  }
+  async function clearChat() {
+    setConfirmClear(false);
     const seen = messages.filter(m => !m.pending);
     if (!seen.length) return;
-    if (!window.confirm("Clear this chat? The messages will be removed for you only. The other person keeps their copy.")) return;
     const upTo = new Date(Math.max(...seen.map(m => m.ts))).toISOString();
     try {
       await msgApi.clear(myId, cid, upTo);
@@ -1884,7 +1888,7 @@ function ChatScreen({ myId, myProfile, other, onBack, onRead }) {
           <>
             <div onClick={() => setMenuOpen(false)} style={{ position:"fixed", inset:0, zIndex:19 }} />
             <div style={{ position:"absolute", top:"calc(100% - 6px)", right:12, zIndex:20, background:"#1B2140", border:"1px solid rgba(255,255,255,.14)", borderRadius:12, boxShadow:"0 10px 30px rgba(0,0,0,.45)", minWidth:170, overflow:"hidden" }}>
-              <button onClick={clearChat} style={{ display:"block", width:"100%", textAlign:"left", background:"none", border:"none", color:"#F8F4EA", fontFamily:"Inter, sans-serif", fontSize:14.5, padding:"13px 16px", cursor:"pointer" }}>Clear chat</button>
+              <button onClick={askClearChat} style={{ display:"block", width:"100%", textAlign:"left", background:"none", border:"none", color:"#F8F4EA", fontFamily:"Inter, sans-serif", fontSize:14.5, padding:"13px 16px", cursor:"pointer" }}>Clear chat</button>
             </div>
           </>
         )}
@@ -1911,6 +1915,14 @@ function ChatScreen({ myId, myProfile, other, onBack, onRead }) {
         <input value={text} onChange={e=>setText(e.target.value)} onKeyDown={e=>{ if(e.key==="Enter" && text.trim()) sendMessage("text", text.trim()); }} placeholder="Type a message…" style={{ flex:1, border:"none", outline:"none", fontFamily:"Inter, sans-serif", fontSize:14.5, background:"transparent", padding:"10px 4px", minWidth:0 }} />
         <button onClick={() => text.trim() && sendMessage("text", text.trim())} style={iconBtnLight}><Send size={18} color="#B8935F" /></button>
       </div>
+      {confirmClear && (
+        <div onClick={() => setConfirmClear(false)} style={{ position:"fixed", inset:0, zIndex:40, background:"rgba(0,0,0,.55)", display:"flex", alignItems:"flex-end", justifyContent:"center", padding:"16px 16px calc(16px + env(safe-area-inset-bottom))" }}>
+          <div onClick={e => e.stopPropagation()} style={{ width:"100%", maxWidth:420, background:"#1B2140", border:"1px solid rgba(255,255,255,.14)", borderRadius:16, overflow:"hidden" }}>
+            <button onClick={clearChat} style={{ display:"block", width:"100%", background:"none", border:"none", borderBottom:"1px solid rgba(255,255,255,.1)", color:"#E3A6A6", fontFamily:"Inter, sans-serif", fontSize:16, fontWeight:600, padding:16, cursor:"pointer" }}>Delete for me</button>
+            <button onClick={() => setConfirmClear(false)} style={{ display:"block", width:"100%", background:"none", border:"none", color:"#F8F4EA", fontFamily:"Inter, sans-serif", fontSize:16, padding:16, cursor:"pointer" }}>Cancel</button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
