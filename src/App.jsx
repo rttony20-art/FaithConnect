@@ -1563,7 +1563,7 @@ function ChatScreen({ myId, myProfile, other, onBack, onRead }) {
 
   const cid = convoId(myId, other.otherId);
   const [menuOpen, setMenuOpen] = useState(false); // 3-dot menu in the chat header
-  const [confirmClear, setConfirmClear] = useState(false); // "Delete for me" sheet
+  const [confirmClear, setConfirmClear] = useState(false); // confirmation sheet for Clear chat
   const refreshSeq = useRef(0);
   const mediaRecorder = useRef(null);
   const chunks = useRef([]);
@@ -1918,7 +1918,7 @@ function ChatScreen({ myId, myProfile, other, onBack, onRead }) {
       {confirmClear && (
         <div onClick={() => setConfirmClear(false)} style={{ position:"fixed", inset:0, zIndex:40, background:"rgba(0,0,0,.55)", display:"flex", alignItems:"flex-end", justifyContent:"center", padding:"16px 16px calc(16px + env(safe-area-inset-bottom))" }}>
           <div onClick={e => e.stopPropagation()} style={{ width:"100%", maxWidth:420, background:"#1B2140", border:"1px solid rgba(255,255,255,.14)", borderRadius:16, overflow:"hidden" }}>
-            <button onClick={clearChat} style={{ display:"block", width:"100%", background:"none", border:"none", borderBottom:"1px solid rgba(255,255,255,.1)", color:"#E3A6A6", fontFamily:"Inter, sans-serif", fontSize:16, fontWeight:600, padding:16, cursor:"pointer" }}>Delete for me</button>
+            <button onClick={clearChat} style={{ display:"block", width:"100%", background:"none", border:"none", borderBottom:"1px solid rgba(255,255,255,.1)", color:"#E3A6A6", fontFamily:"Inter, sans-serif", fontSize:16, fontWeight:600, padding:16, cursor:"pointer" }}>Clear chat</button>
             <button onClick={() => setConfirmClear(false)} style={{ display:"block", width:"100%", background:"none", border:"none", color:"#F8F4EA", fontFamily:"Inter, sans-serif", fontSize:16, padding:16, cursor:"pointer" }}>Cancel</button>
           </div>
         </div>
