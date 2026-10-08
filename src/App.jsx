@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { createMessagesApi, rowToMsg } from "./messagesApi.js";
-import { Heart, MessageCircle, Phone, Video, Mic, MicOff, PhoneOff, Send, User, ChevronLeft, Check, X, Camera, VideoOff, Square, SkipForward, Menu, LogOut, Info, Shield, HelpCircle, Eye, EyeOff, Home, UserPlus, Sun, Moon, Percent, Trash2, ArrowRight } from "lucide-react";
+import { Heart, MessageCircle, Phone, Video, Mic, MicOff, PhoneOff, Send, User, ChevronLeft, Check, X, Camera, VideoOff, Square, SkipForward, Menu, LogOut, Info, Shield, HelpCircle, Eye, EyeOff, Home, UserPlus, Sun, Moon, Percent, MoreVertical, ArrowRight } from "lucide-react";
 
 /* ---------- design tokens ----------
 Ink Navy #16233F (dark surfaces), Ivory #F8F4EA (light surfaces),
@@ -760,14 +760,6 @@ export default function App() {
     };
   }, [myId, loadConversations]);
 
-  // Delete a conversation for me only; the other person keeps their copy.
-  async function deleteConversation(c) {
-    if (!window.confirm(`Delete your conversation with ${c.otherProfile?.name || "this person"}? This only removes it for you.`)) return;
-    setConversations(prev => prev.filter(x => x.otherId !== c.otherId));
-    try { await msgApi.clear(myId, convoId(myId, c.otherId)); } catch (e) { console.error("Delete conversation failed", e); }
-    loadConversations();
-  }
-
   function toggle(field, val) {
     setForm(f => {
       const cur = f[field] || [];
@@ -1045,19 +1037,16 @@ export default function App() {
         <div style={{ flex:1, overflowY:"auto", padding:"0 16px 100px", background:"var(--fc-bg)" }}>
           {conversations.length === 0 && <div style={{...emptyState, color:"#B9C9BC"}}>No conversations yet. Start one from your matches.</div>}
           {conversations.map(c => (
-            <div key={c.otherId} style={{ ...convoRow, cursor:"default" }}>
-              <button onClick={() => { setActiveConvo({ otherId: c.otherId, otherProfile: c.otherProfile }); setScreen("chat"); }} style={{ display:"flex", alignItems:"center", flex:1, minWidth:0, background:"none", border:"none", padding:0, cursor:"pointer", textAlign:"left" }}>
-                <div style={{ marginRight:10 }}><AvatarCircle profile={c.otherProfile} size={38} fontSize={15} /></div>
-                <div style={{flex:1, minWidth:0}}>
-                  <div style={{fontFamily:"Lora, serif", fontSize:15.5, color:"#22252B", fontWeight:c.unread ? 700 : 400}}>{c.otherProfile?.name || "Someone"}</div>
-                  <div style={{fontFamily:"Inter, sans-serif", fontSize:13, color:c.unread ? "#22252B" : "#8A8578", fontWeight:c.unread ? 600 : 400, whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis", maxWidth:220}}>
-                    {c.last.sender === myId ? "You: " : ""}{c.last.type === "voice" ? "🎙️ Voice note" : c.last.text}
-                  </div>
+            <button key={c.otherId} onClick={() => { setActiveConvo({ otherId: c.otherId, otherProfile: c.otherProfile }); setScreen("chat"); }} style={convoRow}>
+              <div style={{ marginRight:10 }}><AvatarCircle profile={c.otherProfile} size={38} fontSize={15} /></div>
+              <div style={{flex:1, minWidth:0, textAlign:"left"}}>
+                <div style={{fontFamily:"Lora, serif", fontSize:15.5, color:"#22252B", fontWeight:c.unread ? 700 : 400}}>{c.otherProfile?.name || "Someone"}</div>
+                <div style={{fontFamily:"Inter, sans-serif", fontSize:13, color:c.unread ? "#22252B" : "#8A8578", fontWeight:c.unread ? 600 : 400, whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis", maxWidth:220}}>
+                  {c.last ? `${c.last.sender === myId ? "You: " : ""}${c.last.type === "voice" ? "🎙️ Voice note" : c.last.text}` : "No messages"}
                 </div>
-                {c.unread > 0 && <span style={unreadBadge({ marginLeft:8, flexShrink:0 })}>{c.unread > 99 ? "99+" : c.unread}</span>}
-              </button>
-              <button onClick={() => deleteConversation(c)} aria-label="Delete conversation" style={{ background:"none", border:"none", cursor:"pointer", padding:8, marginLeft:4, flexShrink:0 }}><Trash2 size={17} color="#B5616B" /></button>
-            </div>
+              </div>
+              {c.unread > 0 && <span style={unreadBadge({ marginLeft:8, flexShrink:0 })}>{c.unread > 99 ? "99+" : c.unread}</span>}
+            </button>
           ))}
         </div>
         {nav}
@@ -1573,9 +1562,8 @@ function ChatScreen({ myId, myProfile, other, onBack, onRead }) {
   const [callErr, setCallErr] = useState("");
 
   const cid = convoId(myId, other.otherId);
-  const [selectedId, setSelectedId] = useState(null); // tapped own message -> shows Delete
+  const [menuOpen, setMenuOpen] = useState(false); // 3-dot menu in the chat header
   const refreshSeq = useRef(0);
-  const deletingRef = useRef(new Set());
   const mediaRecorder = useRef(null);
   const chunks = useRef([]);
   const chatScrollRef = useRef(null);
@@ -1589,6 +1577,9 @@ function ChatScreen({ myId, myProfile, other, onBack, onRead }) {
   const callStateRef = useRef(null);
   const pendingOfferRef = useRef(null);
   const myIceRef = useRef([]);
+  // teardown() (runs when leaving the chat or ending a call) needs these two.
+  const remoteStreamRef = useRef(null);
+  const pendingCallSignalsRef = useRef([]);
 
   // Messages live on the server, so they reach the other person even when they are
   // not looking at this chat. If refreshes overlap, only the newest one is applied.
@@ -1597,7 +1588,7 @@ function ChatScreen({ myId, myProfile, other, onBack, onRead }) {
     try {
       const rows = await msgApi.thread(myId, cid);
       if (seq !== refreshSeq.current) return;
-      const server = rows.filter(r => !deletingRef.current.has(r.id)).map(rowToMsg);
+      const server = rows.map(rowToMsg);
       setMessages(prev => {
         const ids = new Set(server.map(m => m.id));
         const pending = prev.filter(m => m.pending && !ids.has(m.id));
@@ -1703,20 +1694,23 @@ function ChatScreen({ myId, myProfile, other, onBack, onRead }) {
     }
   }
 
-  // Unsend: removes my own message for both people.
-  async function deleteMessage(id) {
-    setSelectedId(null);
-    deletingRef.current.add(id);
-    setMessages(prev => prev.filter(m => m.id !== id));
+  // Clear chat (like WhatsApp): hides the messages I have seen, for me only.
+  // The other person keeps their copy. Uses server timestamps so phone clocks cannot cause trouble.
+  async function clearChat() {
+    setMenuOpen(false);
+    const seen = messages.filter(m => !m.pending);
+    if (!seen.length) return;
+    if (!window.confirm("Clear this chat? The messages will be removed for you only. The other person keeps their copy.")) return;
+    const upTo = new Date(Math.max(...seen.map(m => m.ts))).toISOString();
     try {
-      await msgApi.remove(id);
+      await msgApi.clear(myId, cid, upTo);
+      setMessages(prev => prev.filter(m => m.pending));
+      refreshThread();
+      onRead && onRead();
     } catch (e) {
-      console.error("Delete failed", e);
-      setCallErr("Message could not be deleted. Please try again.");
+      console.error("Clear chat failed", e);
+      setCallErr("Chat could not be cleared. Please try again.");
     }
-    deletingRef.current.delete(id);
-    refreshThread();
-    nudgeOther();
   }
 
   async function startRecording() {
@@ -1879,12 +1873,21 @@ function ChatScreen({ myId, myProfile, other, onBack, onRead }) {
   return (
     <div style={{ ...page, height:"100dvh", minHeight:0, overflow:"hidden" }}>
       <FontLoader />
-      <div style={chatHeader}>
+      <div style={{ ...chatHeader, position:"relative" }}>
         <button onClick={onBack} style={{ background:"none", border:"none", cursor:"pointer", padding:6, marginRight:4 }}><ChevronLeft size={22} color="#F8F4EA" /></button>
         <div style={{ ...avatarSm, background:"#B8935F" }}>{other.otherProfile?.name?.[0]?.toUpperCase() || "?"}</div>
         <div style={{ flex:1, fontFamily:"Lora, serif", fontSize:16.5, color:"#F8F4EA" }}>{other.otherProfile?.name || "Someone"}</div>
         <button onClick={() => startCall("audio")} style={iconBtn}><Phone size={19} color="#F8F4EA" /></button>
         <button onClick={() => startCall("video")} style={iconBtn}><Video size={19} color="#F8F4EA" /></button>
+        <button onClick={() => setMenuOpen(v => !v)} style={iconBtn} aria-label="More options"><MoreVertical size={19} color="#F8F4EA" /></button>
+        {menuOpen && (
+          <>
+            <div onClick={() => setMenuOpen(false)} style={{ position:"fixed", inset:0, zIndex:19 }} />
+            <div style={{ position:"absolute", top:"calc(100% - 6px)", right:12, zIndex:20, background:"#1B2140", border:"1px solid rgba(255,255,255,.14)", borderRadius:12, boxShadow:"0 10px 30px rgba(0,0,0,.45)", minWidth:170, overflow:"hidden" }}>
+              <button onClick={clearChat} style={{ display:"block", width:"100%", textAlign:"left", background:"none", border:"none", color:"#F8F4EA", fontFamily:"Inter, sans-serif", fontSize:14.5, padding:"13px 16px", cursor:"pointer" }}>Clear chat</button>
+            </div>
+          </>
+        )}
       </div>
       <div ref={chatScrollRef} style={{ flex:1, minHeight:0, overflowY:"auto", WebkitOverflowScrolling:"touch", overscrollBehavior:"contain", padding:"16px 14px", background:"var(--fc-bg)", display:"flex", flexDirection:"column" }}>
         {messages.length === 0 && <div style={emptyState}>Say hello — your conversation starts here.</div>}
@@ -1892,13 +1895,10 @@ function ChatScreen({ myId, myProfile, other, onBack, onRead }) {
           const mine = m.sender === myId;
           return (
             <div key={m.id || `${m.sender}-${m.ts}`} style={{ alignSelf:mine ? "flex-end" : "flex-start", maxWidth:"75%", marginBottom:10, display:"flex", flexDirection:"column", alignItems:mine ? "flex-end" : "flex-start" }}>
-              <div onClick={() => mine && !m.pending && setSelectedId(selectedId === m.id ? null : m.id)} style={{ background:mine ? "#B8935F" : "#EFE9DC", color:mine ? "#FAF7F0" : "#22252B", padding:"9px 13px", borderRadius:16, fontFamily:"Inter, sans-serif", fontSize:14.5, opacity:m.pending ? 0.6 : 1, cursor:mine ? "pointer" : "default" }}>
+              <div style={{ background:mine ? "#B8935F" : "#EFE9DC", color:mine ? "#FAF7F0" : "#22252B", padding:"9px 13px", borderRadius:16, fontFamily:"Inter, sans-serif", fontSize:14.5, opacity:m.pending ? 0.6 : 1 }}>
                 {m.type === "voice" ? <audio controls src={m.content} style={{height:34, maxWidth:200}} /> : m.text}
               </div>
-              {mine && selectedId === m.id && (
-                <button onClick={() => deleteMessage(m.id)} style={{ marginTop:4, display:"flex", alignItems:"center", gap:5, background:"none", border:"none", color:"#E3A6A6", fontFamily:"Inter, sans-serif", fontSize:12.5, cursor:"pointer", padding:"2px 4px" }}><Trash2 size={14} /> Delete message</button>
-              )}
-              {mine && m.id === lastMineId && m.readAt && selectedId !== m.id && (
+              {mine && m.id === lastMineId && m.readAt && (
                 <div style={{ fontFamily:"Inter, sans-serif", fontSize:11, color:"#858ca1", marginTop:3 }}>Seen</div>
               )}
             </div>

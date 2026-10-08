@@ -60,11 +60,6 @@ export function createMessagesApi({ rest, getToken, refresh }) {
       });
     },
 
-    // Unsend: removes my own message for both people.
-    remove(id) {
-      return call(`private_messages?id=eq.${encodeURIComponent(id)}`, { method: "DELETE", ...MIN });
-    },
-
     markRead(myId, cid) {
       return call(
         `private_messages?convo_id=eq.${encodeURIComponent(cid)}&recipient_id=eq.${myId}&read_at=is.null`,
@@ -72,16 +67,17 @@ export function createMessagesApi({ rest, getToken, refresh }) {
       );
     },
 
-    // Hide a conversation's current messages for me only.
-    clear(myId, cid) {
+    // "Clear chat": hide every message up to `upTo` (ISO time of the newest message I have
+    // seen, taken from the server) for me only. The other person keeps everything.
+    clear(myId, cid, upTo) {
       return call("conversation_clears?on_conflict=user_id,convo_id", {
         method: "POST",
-        body: { user_id: myId, convo_id: cid, cleared_at: new Date().toISOString() },
+        body: { user_id: myId, convo_id: cid, cleared_at: upTo },
         extraHeaders: { Prefer: "resolution=merge-duplicates,return=minimal" },
       });
     },
 
-    // One entry per conversation: { cid, otherId, last, unread }, newest first.
+    // One entry per conversation: { cid, otherId, last (null if cleared), unread }, newest first.
     async inbox(myId) {
       const [latest, unreadRows, clears] = await Promise.all([
         call(`private_messages?or=(sender_id.eq.${myId},recipient_id.eq.${myId})&order=created_at.desc&limit=300&select=id,convo_id,sender_id,recipient_id,type,body,created_at`),
@@ -99,17 +95,19 @@ export function buildInbox(myId, latest, unreadRows, clears) {
   const visible = r => Date.parse(r.created_at) > (clearedAt.get(r.convo_id) || 0);
 
   const convos = new Map();
-  for (const r of latest) { // newest first, so the first row seen is the last message
-    if (!visible(r) || convos.has(r.convo_id)) continue;
+  for (const r of latest) { // newest first, so the first row seen is the newest message
+    if (convos.has(r.convo_id)) continue;
     convos.set(r.convo_id, {
       cid: r.convo_id,
       otherId: r.sender_id === myId ? r.recipient_id : r.sender_id,
-      last: rowToMsg(r),
+      // A cleared chat stays in the list (like WhatsApp) but shows no messages.
+      last: visible(r) ? rowToMsg(r) : null,
+      ts: Date.parse(r.created_at) || 0,
       unread: 0,
     });
   }
   for (const r of unreadRows) {
     if (visible(r) && convos.has(r.convo_id)) convos.get(r.convo_id).unread += 1;
   }
-  return [...convos.values()].sort((a, b) => b.last.ts - a.last.ts);
+  return [...convos.values()].sort((a, b) => b.ts - a.ts);
 }
