@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { createMessagesApi, rowToMsg } from "./messagesApi.js";
+import { getIceServers } from "./iceServers.js";
 import { Heart, MessageCircle, Phone, Video, Mic, MicOff, PhoneOff, Send, User, ChevronLeft, Check, X, Camera, VideoOff, Square, SkipForward, Menu, LogOut, Info, Shield, HelpCircle, Eye, EyeOff, Home, UserPlus, Sun, Moon, Percent, MoreVertical, ArrowRight } from "lucide-react";
 
 /* ---------- design tokens ----------
@@ -197,6 +198,12 @@ const msgApi = createMessagesApi({
   getToken: async () => (await sget("supabase-session", false))?.access_token,
   refresh: restoreSupaSession,
 });
+
+// Lets the call code ask /api/turn for relay (TURN) credentials as the signed-in user.
+const iceAuth = {
+  getToken: async () => (await sget("supabase-session", false))?.access_token,
+  refresh: restoreSupaSession,
+};
 
 function scoreMatch(me, them) {
   const faithCloseness = Math.max(0, 100 - Math.abs((me.faithLevel||3) - (them.faithLevel||3)) * 20);
@@ -1637,6 +1644,7 @@ function ChatScreen({ myId, myProfile, other, onBack, onRead }) {
     let cancelled = false;
     (async () => {
       try {
+        getIceServers(iceAuth); // warm up call relay credentials
         await refreshThread();
         await ensureChannel();
       } catch (e) {
@@ -1735,10 +1743,8 @@ function ChatScreen({ myId, myProfile, other, onBack, onRead }) {
   }
   function stopRecording() { mediaRecorder.current?.stop(); setRecording(false); }
 
-  const iceCfg = { iceServers:[{ urls:"stun:stun.l.google.com:19302" }] };
-
-  function setupPeer(mode) {
-    const pc = new RTCPeerConnection(iceCfg);
+  async function setupPeer(mode) {
+    const pc = new RTCPeerConnection({ iceServers: await getIceServers(iceAuth) });
     pcRef.current = pc;
     const remoteStream = new MediaStream();
     pc.ontrack = e => {
@@ -1760,7 +1766,7 @@ function ChatScreen({ myId, myProfile, other, onBack, onRead }) {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio:true, video:mode === "video" });
       localStreamRef.current = stream;
-      const pc = setupPeer(mode);
+      const pc = await setupPeer(mode);
       stream.getTracks().forEach(t => pc.addTrack(t, stream));
       if (mode === "video" && localVideoRef.current) localVideoRef.current.srcObject = stream;
       const offer = await pc.createOffer();
@@ -1799,7 +1805,7 @@ function ChatScreen({ myId, myProfile, other, onBack, onRead }) {
       if (!state?.offer) throw new Error("No incoming call offer");
       const stream = await navigator.mediaDevices.getUserMedia({ audio:true, video:state.mode === "video" });
       localStreamRef.current = stream;
-      const pc = setupPeer(state.mode);
+      const pc = await setupPeer(state.mode);
       stream.getTracks().forEach(t => pc.addTrack(t, stream));
       if (state.mode === "video" && localVideoRef.current) localVideoRef.current.srcObject = stream;
       await pc.setRemoteDescription(state.offer);
@@ -2265,16 +2271,16 @@ function RandomConnectScreen({ myId, myProfile, onlinePeople = [], onBack, varia
   }
 
   /* --- call mode (audio/video) --- */
-  const iceCfg = { iceServers: [{ urls: "stun:stun.l.google.com:19302" }] };
   async function startRandomCall(sid, p, m) {
     setCallErr(""); setCallStatus("connecting");
     const iAmCaller = myId < p.id;
+    const icePromise = getIceServers(iceAuth); // fetched while the match session is being set up
     try {
       await waitForMatchSession(p, m);
       const stream = await navigator.mediaDevices.getUserMedia({ audio:true, video:m === "video" });
       localStreamRef.current = stream;
       if (m === "video" && localVideoRef.current) localVideoRef.current.srcObject = stream;
-      const pc = new RTCPeerConnection({ iceServers:[{ urls:"stun:stun.l.google.com:19302" }] });
+      const pc = new RTCPeerConnection({ iceServers: await icePromise });
       pcRef.current = pc;
       stream.getTracks().forEach(t=>pc.addTrack(t,stream));
       const remoteStream = new MediaStream();
