@@ -1,6 +1,9 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { createMessagesApi, rowToMsg } from "./messagesApi.js";
 import { getIceServers } from "./iceServers.js";
+import AvatarFace from "./avatar/AvatarFace.jsx";
+import AvatarCreator from "./avatar/AvatarCreator.jsx";
+import { isAvatarCode } from "./avatar/code.js";
 import { Heart, MessageCircle, Phone, Video, Mic, MicOff, PhoneOff, Send, User, ChevronLeft, Check, X, Camera, VideoOff, Square, SkipForward, Menu, LogOut, Info, Shield, HelpCircle, Eye, EyeOff, Home, UserPlus, Sun, Moon, Percent, MoreVertical, ArrowRight } from "lucide-react";
 
 /* ---------- design tokens ----------
@@ -141,6 +144,7 @@ function profileToDb(p) {
 
 function AvatarCircle({ profile, size = 74, fontSize = 28 }) {
   const style = { width:size, height:size, borderRadius:"50%", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 };
+  if (isAvatarCode(profile?.avatarUrl)) return <AvatarFace code={profile.avatarUrl} size={size} />;
   if (profile?.avatarUrl) {
     return <div style={{ ...style, background:`center/cover url(${profile.avatarUrl})` }} />;
   }
@@ -252,7 +256,8 @@ function PasswordInput({ value, onChange, onKeyDown, placeholder, style }) {
 }
 
 function PhotoSlot({ label, preview, existingUrl, onPick, big, emoji, emojiColor }) {
-  const img = preview || existingUrl;
+  const made = !preview && isAvatarCode(existingUrl); // a built avatar, not a photo
+  const img = preview || (made ? null : existingUrl);
   const size = big ? 96 : 76;
   return (
     <label style={{ display:"flex", flexDirection:"column", alignItems:"center", gap:6, cursor:"pointer" }}>
@@ -261,7 +266,7 @@ function PhotoSlot({ label, preview, existingUrl, onPick, big, emoji, emojiColor
         background: img ? `center/cover url(${img})` : (emoji ? emojiColor : "#EFE9DC"),
         border:"1.5px dashed #C9A227", display:"flex", alignItems:"center", justifyContent:"center", overflow:"hidden", fontSize: size * 0.45
       }}>
-        {!img && (emoji || <Camera size={big ? 26 : 20} color="#B8935F" />)}
+        {made ? <AvatarFace code={existingUrl} size={size} round={false} /> : !img && (emoji || <Camera size={big ? 26 : 20} color="#B8935F" />)}
       </div>
       <span style={{ fontFamily:"Inter, sans-serif", fontSize:11.5, color:"#8A8578" }}>{label}</span>
       <input type="file" accept="image/*" onChange={onPick} style={{ display:"none" }} />
@@ -269,98 +274,19 @@ function PhotoSlot({ label, preview, existingUrl, onPick, big, emoji, emojiColor
   );
 }
 
-// FaithConnect's built-in avatar library.
-// These are local files in /public/avatars, so the picker does NOT depend on
-// an external avatar API and cannot show broken-image icons when offline/API access fails.
-// Built-in avatars are explicitly tagged so Male/Female filters never mix faces.
-// The first ten are tagged from the approved avatar sheet; the remaining avatars
-// are kept in balanced groups so the filter stays deterministic.
-const FEMALE_AVATAR_IDS = new Set([1,4,5,6,9,10,11,14,15,18,20,22]);
-const AVATAR_PRESETS = Array.from({ length: 24 }, (_, i) => {
-  const n = i + 1;
-  const gender = FEMALE_AVATAR_IDS.has(n) ? "Female" : "Male";
-  return {
-    id: `faith-avatar-${String(n).padStart(2, "0")}`,
-    gender,
-    url: `/avatars/avatar-${String(n).padStart(2, "0")}.png`
-  };
-});
-
-function RealisticAvatarCreator({ onPick, gender }) {
-  const genderBases = {
-    Female: [1,4,5,6,9,10,11,14,15,18,20,22],
-    Male: [2,3,7,8,12,13,16,17,19,21,23,24]
-  };
-  const bases = gender === "Male" ? genderBases.Male : gender === "Female" ? genderBases.Female : [...genderBases.Female, ...genderBases.Male];
-  const [face, setFace] = useState(bases[0]);
-  const [hair, setHair] = useState("Natural");
-  const [skin, setSkin] = useState("Natural");
-  const [clothes, setClothes] = useState("Original");
-  const [accessory, setAccessory] = useState("None");
-  const [feature, setFeature] = useState("Face");
-  useEffect(() => { if (!bases.includes(face)) setFace(bases[0]); }, [gender]);
-
-  const baseUrl = `/avatars/avatar-${String(face).padStart(2,"0")}.png`;
-  const hairClass = hair !== "Natural" ? ` fc-real-hair-${hair.toLowerCase().replace(/[^a-z]/g,"")}` : "";
-  const skinStyle = skin === "Natural" ? {} : { filter: skin === "Warm" ? "sepia(.12) saturate(1.08)" : skin === "Deep" ? "brightness(.82) saturate(1.08)" : "brightness(1.08) saturate(.92)" };
-  const clothesStyle = clothes === "Original" ? {} : { filter: clothes === "Midnight" ? "hue-rotate(185deg) saturate(1.1)" : clothes === "Plum" ? "hue-rotate(265deg) saturate(1.15)" : "hue-rotate(80deg) saturate(.85)" };
-
-  function useAvatar() {
-    // Keep the chosen realistic base as the saved avatar. The creator's controls are
-    // intentionally visual: hair/clothing/accessory changes are shown in the preview.
-    // The saved image remains a normal local FaithConnect avatar URL.
-    onPick(baseUrl);
-  }
-
-  const choices = {
-    Face: bases.map(n => ({ value:String(n), label:`Face ${n}` })),
-    Hair: ["Natural","Short","Curly","Braids","Locs","Waves"].map(x=>({value:x,label:x})),
-    Skin: ["Natural","Warm","Deep","Light"].map(x=>({value:x,label:x})),
-    Clothes: ["Original","Midnight","Plum","Sage"].map(x=>({value:x,label:x})),
-    Accessory: ["None","Glasses","Earrings","Cross"].map(x=>({value:x,label:x}))
-  };
-  const current = feature === "Face" ? String(face) : feature === "Hair" ? hair : feature === "Skin" ? skin : feature === "Clothes" ? clothes : accessory;
-  function choose(v) {
-    if (feature === "Face") setFace(Number(v));
-    if (feature === "Hair") setHair(v);
-    if (feature === "Skin") setSkin(v);
-    if (feature === "Clothes") setClothes(v);
-    if (feature === "Accessory") setAccessory(v);
-  }
-
-  return <div className="fc-realistic-creator">
-    <style>{`
-      .fc-realistic-creator{margin-top:16px;padding:16px;border-radius:22px;border:1px solid rgba(141,92,255,.42);background:linear-gradient(145deg,rgba(9,14,34,.96),rgba(25,12,48,.96));color:#F8F4EA}
-      .fc-real-head{display:flex;gap:15px;align-items:center}.fc-real-preview{position:relative;width:118px;height:118px;flex:0 0 118px;border-radius:50%;overflow:hidden;border:2px solid #8067FF;box-shadow:0 0 28px rgba(100,95,255,.35);background:#11182e}.fc-real-preview img{width:100%;height:100%;object-fit:cover;display:block;transition:.25s}.fc-real-title{font-family:Lora,serif;font-size:20px;font-weight:700}.fc-real-copy{margin-top:5px;color:#9FAAC1;font-size:11.5px;line-height:1.45}.fc-real-tabs{display:flex;gap:6px;overflow:auto;margin:15px 0 10px;padding-bottom:3px}.fc-real-tab{white-space:nowrap;border:1px solid rgba(141,114,255,.45);background:rgba(255,255,255,.035);color:#9FAAC1;border-radius:999px;padding:8px 12px;font-size:11px}.fc-real-tab.active{background:linear-gradient(135deg,#6378FF,#7354E8);color:#fff;border-color:#8D72FF}.fc-real-options{display:flex;gap:8px;overflow-x:auto;padding:3px 0 8px}.fc-real-option{flex:0 0 auto;border:1px solid rgba(248,244,234,.18);background:rgba(255,255,255,.035);color:#B7C0D3;border-radius:12px;padding:7px 10px;font-size:10.5px}.fc-real-option.active{border-color:#D6AE6E;background:rgba(184,147,95,.22);color:#F8F4EA}.fc-real-face-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:7px}.fc-real-face{aspect-ratio:1;border-radius:12px;overflow:hidden;border:1px solid rgba(89,111,255,.55);background:#171c3b}.fc-real-face img{width:100%;height:100%;object-fit:cover}.fc-real-face.active{border:2px solid #9A7BFF;box-shadow:0 0 16px rgba(141,114,255,.4)}.fc-real-use{width:100%;margin-top:12px;border:0;border-radius:999px;padding:11px;background:linear-gradient(135deg,#526CFF,#8D5CFF);color:#fff;font-weight:700}.fc-real-note{margin-top:8px;text-align:center;color:#78849E;font-size:10px;line-height:1.4}
-      @media(max-width:620px){.fc-real-head{align-items:flex-start}.fc-real-preview{width:96px;height:96px;flex-basis:96px}.fc-real-title{font-size:18px}.fc-real-face-grid{grid-template-columns:repeat(5,1fr);gap:5px}}
-    `}</style>
-    <div className="fc-real-head">
-      <div className="fc-real-preview">
-        <img src={baseUrl} alt="Your realistic avatar" style={{...skinStyle,...clothesStyle}} />
-        {accessory !== "None" && <div style={{position:"absolute",inset:0,pointerEvents:"none",display:"flex",alignItems:"center",justifyContent:"center",fontSize:accessory==="Cross"?30:22,color:"#E6D5B2",textShadow:"0 2px 10px #000"}}>{accessory==="Glasses"?"⌐◡⌐":accessory==="Earrings"?"◦  ◦":"✝"}</div>}
-        {hair !== "Natural" && <div className={`fc-real-hair${hairClass}`} style={{position:"absolute",top:0,left:0,right:0,height:"35%",background:"linear-gradient(180deg,rgba(18,10,22,.78),rgba(18,10,22,0))",borderRadius:"50% 50% 20% 20%",pointerEvents:"none"}} />}
-      </div>
-      <div style={{flex:1}}><div className="fc-real-title">Create Your Own Avatar</div><div className="fc-real-copy">Start with a realistic FaithConnect face, then personalize the look.</div></div>
-    </div>
-    <div className="fc-real-tabs">{Object.keys(choices).map(k=><button type="button" key={k} className={`fc-real-tab ${feature===k?"active":""}`} onClick={()=>setFeature(k)}>{k}</button>)}</div>
-    {feature === "Face" ? <div className="fc-real-face-grid">{bases.map(n=><button type="button" key={n} className={`fc-real-face ${face===n?"active":""}`} onClick={()=>choose(String(n))}><img src={`/avatars/avatar-${String(n).padStart(2,"0")}.png`} alt="" /></button>)}</div> : <div className="fc-real-options">{choices[feature].map(o=><button type="button" key={o.value} className={`fc-real-option ${current===o.value?"active":""}`} onClick={()=>choose(o.value)}>{o.label}</button>)}</div>}
-    <button type="button" className="fc-real-use" onClick={useAvatar}>Use This Avatar</button>
-    <div className="fc-real-note">Your selected realistic FaithConnect avatar can be changed later.</div>
-  </div>;
-}
-
-function AvatarPicker({ selected, onPick, gender }) {
-  const [tab, setTab] = useState(gender === "Male" || gender === "Female" ? gender : "All");
-  const [avatarPage, setAvatarPage] = useState(0);
-  const [showCreator, setShowCreator] = useState(false);
-  const [loadedAvatarIds, setLoadedAvatarIds] = useState([]);
-  const [avatarLoading, setAvatarLoading] = useState(true);
-  useEffect(() => { if (gender === "Male" || gender === "Female") { setTab(gender); setAvatarPage(0); } }, [gender]);
-  useEffect(() => { let cancelled=false; setAvatarLoading(true); setLoadedAvatarIds([]); Promise.all(AVATAR_PRESETS.map(a=>new Promise(resolve=>{const img=new Image();img.onload=()=>resolve(a.id);img.onerror=()=>resolve(null);img.src=a.url;}))).then(ids=>{if(!cancelled){setLoadedAvatarIds(ids.filter(Boolean));setAvatarLoading(false);}}); return()=>{cancelled=true}; },[]);
-  const validPresets=AVATAR_PRESETS.filter(a=>loadedAvatarIds.includes(a.id));
-  const visible=tab==="All"?validPresets:validPresets.filter(a=>a.gender===tab); const pageSize=5; const pageCount=Math.max(1,Math.ceil(visible.length/pageSize)); const safePage=Math.min(avatarPage,pageCount-1); const pageAvatars=visible.slice(safePage*pageSize,safePage*pageSize+pageSize);
-  function changeTab(t){setTab(t);setAvatarPage(0)} function nextAvatars(){setAvatarPage(p=>(p+1)%pageCount)} function previousAvatars(){setAvatarPage(p=>(p-1+pageCount)%pageCount)}
-  return <div className="fc-avatar-picker"><style>{`.fc-avatar-picker{width:100%;margin-top:18px;color:#F8F4EA;font-family:Inter,sans-serif}.fc-avatar-shell{width:100%;max-width:760px;margin:0 auto;padding:22px 16px 20px;border:1px solid rgba(91,113,255,.42);border-radius:26px;background:linear-gradient(145deg,rgba(14,20,46,.96),rgba(22,12,42,.96));box-shadow:0 18px 45px rgba(0,0,0,.24),inset 0 1px rgba(255,255,255,.05)}.fc-avatar-title{text-align:center;font-family:Lora,serif;font-size:27px;line-height:1.15;font-weight:600;margin:0;color:#F8F4EA}.fc-avatar-title span{color:#8D72FF}.fc-avatar-sub{text-align:center;color:#9FAAC1;font-size:12.5px;line-height:1.45;margin:8px auto 18px;max-width:500px}.fc-avatar-tabs{display:flex;justify-content:center;max-width:390px;margin:0 auto 18px;border:1px solid rgba(89,111,255,.65);border-radius:999px;overflow:hidden;background:rgba(3,8,24,.48)}.fc-avatar-tab{flex:1;padding:10px 12px;border:0;background:transparent;color:#9FAAC1;font-size:13px;font-weight:600;cursor:pointer}.fc-avatar-tab.active{background:linear-gradient(135deg,#6378FF,#7354E8);color:#fff;box-shadow:0 0 22px rgba(94,111,255,.32)}.fc-avatar-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px}.fc-avatar-tile{position:relative;aspect-ratio:1;border-radius:17px;padding:3px;border:1px solid rgba(89,111,255,.62);background:linear-gradient(145deg,rgba(36,47,102,.8),rgba(24,19,58,.9));cursor:pointer;overflow:hidden}.fc-avatar-img{width:100%;height:100%;display:block;object-fit:cover;border-radius:13px}.fc-avatar-tile.selected{border:2px solid #8FA0FF;box-shadow:0 0 25px rgba(99,120,255,.5)}.fc-avatar-check{position:absolute;right:7px;top:7px;width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#657BFF,#9A62FF);color:#fff}.fc-avatar-create{width:100%;margin-top:10px;display:flex;align-items:center;justify-content:center;gap:9px;min-height:52px;border-radius:14px;border:1px dashed rgba(141,114,255,.9);background:linear-gradient(145deg,rgba(44,31,91,.5),rgba(17,17,48,.75));color:#B9A8FF}.fc-avatar-plus{font-size:25px;color:#9A6DFF}.fc-avatar-nav{display:flex;align-items:center;justify-content:center;gap:18px;margin-top:17px}.fc-avatar-arrow{width:40px;height:40px;border-radius:50%;border:1px solid rgba(99,120,255,.8);background:rgba(9,13,34,.8);color:#D9D5FF;font-size:22px}.fc-avatar-dots{display:flex;gap:7px}.fc-avatar-dot{width:8px;height:8px;border-radius:50%;background:#28386F}.fc-avatar-dot.active{background:#8D72FF}.fc-avatar-next{width:100%;margin-top:17px;padding:12px;border-radius:999px;border:1px solid #8067FF;background:rgba(76,91,205,.22);color:#DCD8FF;font-weight:700}.fc-avatar-count{text-align:center;color:#69748D;font-size:10.5px;margin-top:8px}@media(max-width:620px){.fc-avatar-shell{padding:18px 10px 17px;border-radius:22px}.fc-avatar-title{font-size:23px}.fc-avatar-grid{grid-template-columns:repeat(5,minmax(0,1fr));gap:5px}}`}</style><div className="fc-avatar-shell"><h3 className="fc-avatar-title">Choose Your <span>Avatar</span></h3><div className="fc-avatar-sub">Pick an avatar that represents you. You can always change it later.</div><div className="fc-avatar-tabs">{["Male","Female","All"].map(t=><button type="button" key={t} className={`fc-avatar-tab ${tab===t?"active":""}`} onClick={()=>changeTab(t)}>{t}</button>)}</div><div className="fc-avatar-grid">{avatarLoading?<div style={{gridColumn:"1/-1",textAlign:"center",padding:"28px 0",color:"#69748D"}}>Loading avatars…</div>:pageAvatars.map(a=><button type="button" key={a.id} className={`fc-avatar-tile ${selected===a.url?"selected":""}`} onClick={()=>onPick(a.url)}><img src={a.url} alt="" className="fc-avatar-img" />{selected===a.url&&<span className="fc-avatar-check">✓</span>}</button>)}</div>{!avatarLoading&&<button type="button" className="fc-avatar-create" onClick={()=>setShowCreator(v=>!v)}><span className="fc-avatar-plus">＋</span><strong>{showCreator?"Close Creator":"Create Your Own Avatar"}</strong></button>}{!avatarLoading&&pageCount>1&&<><div className="fc-avatar-nav"><button type="button" className="fc-avatar-arrow" onClick={previousAvatars}>‹</button><div className="fc-avatar-dots">{Array.from({length:Math.min(pageCount,5)},(_,i)=><span key={i} className={`fc-avatar-dot ${i===safePage?"active":""}`} />)}</div><button type="button" className="fc-avatar-arrow" onClick={nextAvatars}>›</button></div><button type="button" className="fc-avatar-next" onClick={nextAvatars}>Next Avatars&nbsp;&nbsp;→</button><div className="fc-avatar-count">Showing {safePage*pageSize+1}–{Math.min((safePage+1)*pageSize,visible.length)} of {visible.length}</div></>}{showCreator&&<RealisticAvatarCreator gender={gender} onPick={onPick}/>}</div></div>;
+// "Create your own avatar" button + the builder sheet. Saves a short code into avatarUrl.
+function AvatarMaker({ value, onPick }) {
+  const [open, setOpen] = useState(false);
+  const has = isAvatarCode(value);
+  return (
+    <>
+      <button type="button" onClick={() => setOpen(true)} style={{
+        marginTop:10, padding:"10px 18px", borderRadius:999, border:"1.5px solid #B8935F", background:"transparent",
+        color:"var(--fc-text, #B8935F)", fontFamily:"Inter, sans-serif", fontSize:14, fontWeight:600, cursor:"pointer"
+      }}>{has ? "Edit my avatar" : "Create your own avatar"}</button>
+      {open && <AvatarCreator value={has ? value : null} onClose={() => setOpen(false)} onSave={code => { setOpen(false); onPick(code); }} />}
+    </>
+  );
 }
 
 function Chip({ label, active, onClick, lightMode=false }) {
@@ -886,8 +812,8 @@ export default function App() {
           </p>
           <div style={{ display:"flex", flexDirection:"column", alignItems:"center", marginBottom:8 }}>
             <PhotoSlot label="Profile photo" preview={avatarPreview} existingUrl={form.avatarUrl} emoji={form.avatarEmoji} emojiColor={form.avatarColor} onPick={pickAvatar} big />
-            <div style={{ fontFamily:"Inter, sans-serif", fontSize:12, color:"var(--fc-muted)", marginTop:8 }}>Or choose a FaithConnect avatar instead:</div>
-            <AvatarPicker selected={form.avatarUrl} gender={form.gender} onPick={url => { setAvatarFile(null); setAvatarPreview(null); setForm({ ...form, avatarUrl:url, avatarEmoji:null, avatarColor:null }); }} />
+            <div style={{ fontFamily:"Inter, sans-serif", fontSize:12, color:"var(--fc-muted)", marginTop:8 }}>No photo? Make an avatar instead:</div>
+            <AvatarMaker value={form.avatarUrl} onPick={url => { setAvatarFile(null); setAvatarPreview(null); setForm({ ...form, avatarUrl:url, avatarEmoji:null, avatarColor:null }); }} />
           </div>
           <Field label="Add three pictures of yourself for others to view — optional">
             <div style={{ display:"flex", gap:14, flexWrap:"wrap" }}>
@@ -1003,8 +929,8 @@ export default function App() {
           <h2 style={{...heading, color:"var(--fc-text)"}}>Edit your profile</h2>
           <div style={{ display:"flex", flexDirection:"column", alignItems:"center", marginBottom:8 }}>
             <PhotoSlot label="Profile photo" preview={avatarPreview} existingUrl={form.avatarUrl} emoji={form.avatarEmoji} emojiColor={form.avatarColor} onPick={pickAvatar} big />
-            <div style={{ fontFamily:"Inter, sans-serif", fontSize:12, color:"var(--fc-muted)", marginTop:8 }}>Or choose a FaithConnect avatar instead:</div>
-            <AvatarPicker selected={form.avatarUrl} gender={form.gender} onPick={url => { setAvatarFile(null); setAvatarPreview(null); setForm({ ...form, avatarUrl:url, avatarEmoji:null, avatarColor:null }); }} />
+            <div style={{ fontFamily:"Inter, sans-serif", fontSize:12, color:"var(--fc-muted)", marginTop:8 }}>No photo? Make an avatar instead:</div>
+            <AvatarMaker value={form.avatarUrl} onPick={url => { setAvatarFile(null); setAvatarPreview(null); setForm({ ...form, avatarUrl:url, avatarEmoji:null, avatarColor:null }); }} />
           </div>
           <Field label="Add three pictures of yourself for others to view — optional">
             <div style={{ display:"flex", gap:14, flexWrap:"wrap" }}>
