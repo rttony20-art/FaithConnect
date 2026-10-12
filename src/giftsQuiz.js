@@ -1,4 +1,4 @@
-// "What are you gifted for?" - the questions, the gifts, and the scoring (no screen code here).
+// "Discover your God-given gifts" - the questions, the gifts, and the scoring (no screen code here).
 //
 // Fairness rules this file keeps (scripts/check-gifts-quiz.mjs tests them):
 //  * every answer is tied to exactly ONE gift, so no gift gets bonus points;

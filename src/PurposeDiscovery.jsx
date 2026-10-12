@@ -5,7 +5,7 @@ import { INDICATORS, buildQuiz, scoreAnswers } from "./giftsQuiz.js";
 // One icon per indicator, in the same order as INDICATORS.
 const ICONS = [Heart, Sparkles, Compass, Users, BookOpen];
 
-// "What are you gifted for?" - 15 shuffled questions; questions and answers are in
+// "Discover your God-given gifts" - 15 shuffled questions; questions and answers are in
 // src/giftsQuiz.js.
 export default function PurposeDiscovery({ onBack, onComplete }) {
   const [quiz, setQuiz] = useState(() => buildQuiz());
@@ -85,7 +85,7 @@ export default function PurposeDiscovery({ onBack, onComplete }) {
       <button onClick={onBack} style={{ background: "none", border: 0, color: "#B7C0FF", display: "flex", alignItems: "center", gap: 7, padding: "8px 0", cursor: "pointer" }}><ArrowLeft size={18}/> Back</button>
       <div style={{ ...panel, marginTop: 12 }}>
         <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "center", color: "#D6AE6E", fontSize: 11, fontWeight: 700, letterSpacing: 1.1 }}>
-          <span>WHAT ARE YOU GIFTED FOR?</span><span>{step + 1} OF {total}</span>
+          <span>DISCOVER YOUR GOD-GIVEN GIFTS</span><span>{step + 1} OF {total}</span>
         </div>
         <div style={{ height: 5, borderRadius: 99, background: "rgba(255,255,255,.1)", margin: "12px 0 18px", overflow: "hidden" }}>
           <div style={{ width: `${progress}%`, height: "100%", background: "linear-gradient(90deg,#526cff,#D6AE6E)", borderRadius: 99, transition: "width .2s" }} />
