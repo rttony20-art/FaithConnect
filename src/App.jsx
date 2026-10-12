@@ -1146,7 +1146,7 @@ function MenuDrawer({ open, onClose, onLogOut, onNavigate, lightMode }) {
     { icon: Home, label: "Home", action: () => onNavigate("matches") },
     { icon: Heart, label: "Connect", action: () => onNavigate("meetSomeone") },
     { icon: Percent, label: "See who you match with", action: () => onNavigate("people") },
-    { icon: Compass, label: "Discover your purpose", action: () => onNavigate("matchList") },
+    { icon: Compass, label: "What are you gifted for?", action: () => onNavigate("matchList") },
     { icon: BibleIcon, label: "Share", action: () => onNavigate("fellowship") },
     { icon: MessageCircle, label: "Messages", action: () => onNavigate("messages") },
     { icon: User, label: "Profile", action: () => onNavigate("profile") },
