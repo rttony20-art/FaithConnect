@@ -643,7 +643,7 @@ export default function App() {
     } catch (e) { console.error(e); }
   }, [myProfile, myId]);
 
-  useEffect(() => { if (screen === "matches") loadMatches(); }, [screen, loadMatches]);
+  useEffect(() => { if (screen === "matches" || screen === "people") loadMatches(); }, [screen, loadMatches]);
 
   const loadConversations = useCallback(async () => {
     if (!myId) return;
@@ -704,9 +704,9 @@ export default function App() {
   const unreadTotal = conversations.reduce((n, c) => n + (c.unread || 0), 0);
   const nav = (
     <div style={navBar(lightMode)}>
-      {[["matches","Matches",Heart],["messages","Messages",MessageCircle],["matchList","Discover",Compass],["profile","Profile",User]].map(([key,label,Icon]) => (
-        <button key={key} onClick={() => setScreen(key)} style={{ ...navBtn(screen===key, lightMode), position:"relative" }}>
-          <Icon size={19} strokeWidth={screen===key?2.4:1.8} />
+      {[["people","Matches",Heart],["messages","Messages",MessageCircle],["matchList","Discover",Compass],["profile","Profile",User]].map(([key,label,Icon]) => (
+        <button key={key} onClick={() => setScreen(key)} style={{ ...navBtn(screen===key || (key==="people" && screen==="matches"), lightMode), position:"relative" }}>
+          <Icon size={19} strokeWidth={screen===key || (key==="people" && screen==="matches")?2.4:1.8} />
           {key === "messages" && unreadTotal > 0 && <span style={unreadBadge({ position:"absolute", top:4, left:"calc(50% + 6px)" })}>{unreadTotal > 99 ? "99+" : unreadTotal}</span>}
           <span style={{ fontSize: 10, marginTop: 2, fontFamily:"Inter, sans-serif" }}>{label}</span>
         </button>
@@ -882,6 +882,10 @@ export default function App() {
     return <RandomConnectScreen myId={myId} myProfile={myProfile} onlinePeople={onlinePeople} onBack={() => setScreen("matches")} variant="love" />;
   }
 
+  if (screen === "people") {
+    return <PeopleScreen onHome={() => setScreen("matches")} matches={matches} onOpenChat={(id, profile) => { setActiveConvo({ otherId: id, otherProfile: profile }); setScreen("chat"); }} nav={nav} />;
+  }
+
   if (screen === "matchList") {
     return <DiscoverScreen onBack={() => setScreen("matches")} nav={nav} />;
   }
@@ -1031,7 +1035,6 @@ export default function App() {
             </div>
           </div>
 
-          <MatchPeopleList matches={matches} onOpenChat={(id, profile) => { setActiveConvo({ otherId: id, otherProfile: profile }); setScreen("chat"); }} />
 
           <div style={{ padding:"20px 16px 0" }}>
             <TodaysWordCard />
@@ -1142,7 +1145,7 @@ function MenuDrawer({ open, onClose, onLogOut, onNavigate, lightMode }) {
   const items = [
     { icon: Home, label: "Home", action: () => onNavigate("matches") },
     { icon: Heart, label: "Connect", action: () => onNavigate("meetSomeone") },
-    { icon: Percent, label: "See who you match with", action: () => onNavigate("matches") },
+    { icon: Percent, label: "See who you match with", action: () => onNavigate("people") },
     { icon: Compass, label: "Discover your purpose", action: () => onNavigate("matchList") },
     { icon: BibleIcon, label: "Share", action: () => onNavigate("fellowship") },
     { icon: MessageCircle, label: "Messages", action: () => onNavigate("messages") },
@@ -1327,6 +1330,20 @@ function MatchPeopleList({ matches, onOpenChat }) {
             <button onClick={() => onOpenChat(profile.id, profile)} style={{...secondaryBtn, width:"100%", marginTop:12}}>Say hello</button>
           </div>
         ))}
+    </div>
+  );
+}
+
+// Matches tab (heart): the people who match you.
+function PeopleScreen({ matches, onOpenChat, onHome, nav }) {
+  return (
+    <div style={{ ...page, background:"var(--fc-bg, #080b17)" }}>
+      <FontLoader />
+      <div style={{ flex:1, overflowY:"auto", paddingBottom:110 }}>
+        <div style={{ padding:"18px 16px 0" }}><button onClick={onHome} style={{ ...backBtn, color:"#B8935F" }}><ChevronLeft size={18}/> Home</button></div>
+        <MatchPeopleList matches={matches} onOpenChat={onOpenChat} />
+      </div>
+      {nav}
     </div>
   );
 }
