@@ -5,7 +5,7 @@ import PurposeDiscovery from "./PurposeDiscovery.jsx";
 import AvatarFace from "./avatar/AvatarFace.jsx";
 import AvatarCreator from "./avatar/AvatarCreator.jsx";
 import { isAvatarCode } from "./avatar/code.js";
-import { Heart, MessageCircle, Phone, Video, Mic, MicOff, PhoneOff, Send, User, ChevronLeft, Check, X, Camera, VideoOff, Square, SkipForward, Menu, LogOut, Info, Shield, HelpCircle, Eye, EyeOff, Home, UserPlus, Sun, Moon, Percent, MoreVertical, ArrowRight } from "lucide-react";
+import { Heart, MessageCircle, Phone, Video, Mic, MicOff, PhoneOff, Send, User, ChevronLeft, Check, X, Camera, VideoOff, Square, SkipForward, Menu, LogOut, Info, Shield, HelpCircle, Eye, EyeOff, Home, UserPlus, Sun, Moon, Percent, MoreVertical, ArrowRight, Compass } from "lucide-react";
 
 /* ---------- design tokens ----------
 Ink Navy #16233F (dark surfaces), Ivory #F8F4EA (light surfaces),
@@ -704,7 +704,7 @@ export default function App() {
   const unreadTotal = conversations.reduce((n, c) => n + (c.unread || 0), 0);
   const nav = (
     <div style={navBar(lightMode)}>
-      {[["matches","Matches",Heart],["messages","Messages",MessageCircle],["matchList","Discover",Percent],["profile","Profile",User]].map(([key,label,Icon]) => (
+      {[["matches","Matches",Heart],["messages","Messages",MessageCircle],["matchList","Discover",Compass],["profile","Profile",User]].map(([key,label,Icon]) => (
         <button key={key} onClick={() => setScreen(key)} style={{ ...navBtn(screen===key, lightMode), position:"relative" }}>
           <Icon size={19} strokeWidth={screen===key?2.4:1.8} />
           {key === "messages" && unreadTotal > 0 && <span style={unreadBadge({ position:"absolute", top:4, left:"calc(50% + 6px)" })}>{unreadTotal > 99 ? "99+" : unreadTotal}</span>}
@@ -882,16 +882,8 @@ export default function App() {
     return <RandomConnectScreen myId={myId} myProfile={myProfile} onlinePeople={onlinePeople} onBack={() => setScreen("matches")} variant="love" />;
   }
 
-  if (screen === "purpose") {
-    return (
-      <div style={{ ...page, background:"var(--fc-bg, #080b17)" }}>
-        <div style={{ flex:1, overflowY:"auto" }}><PurposeDiscovery onBack={() => setScreen("matchList")} /></div>
-      </div>
-    );
-  }
-
   if (screen === "matchList") {
-    return <MatchListScreen onPurpose={() => setScreen("purpose")} matches={matches} myProfile={myProfile} onOpenChat={(id, profile) => { setActiveConvo({ otherId: id, otherProfile: profile }); setScreen("chat"); }} onBack={() => setScreen("matches")} nav={nav} />;
+    return <DiscoverScreen onBack={() => setScreen("matches")} nav={nav} />;
   }
 
   if (screen === "security") {
@@ -1039,6 +1031,8 @@ export default function App() {
             </div>
           </div>
 
+          <MatchPeopleList matches={matches} onOpenChat={(id, profile) => { setActiveConvo({ otherId: id, otherProfile: profile }); setScreen("chat"); }} />
+
           <div style={{ padding:"20px 16px 0" }}>
             <TodaysWordCard />
           </div>
@@ -1148,7 +1142,8 @@ function MenuDrawer({ open, onClose, onLogOut, onNavigate, lightMode }) {
   const items = [
     { icon: Home, label: "Home", action: () => onNavigate("matches") },
     { icon: Heart, label: "Connect", action: () => onNavigate("meetSomeone") },
-    { icon: Percent, label: "See who you match with", action: () => onNavigate("matchList") },
+    { icon: Percent, label: "See who you match with", action: () => onNavigate("matches") },
+    { icon: Compass, label: "Discover your purpose", action: () => onNavigate("matchList") },
     { icon: BibleIcon, label: "Share", action: () => onNavigate("fellowship") },
     { icon: MessageCircle, label: "Messages", action: () => onNavigate("messages") },
     { icon: User, label: "Profile", action: () => onNavigate("profile") },
@@ -1307,22 +1302,13 @@ function SecurityScreen({ myId, myProfile, onBack, onUsernameChanged }) {
   );
 }
 
-function MatchListScreen({ matches, myProfile, onOpenChat, onBack, onPurpose, nav }) {
+// People who match you, with their match percentage (shown on the Matches tab).
+function MatchPeopleList({ matches, onOpenChat }) {
   return (
-    <div style={page}>
-      <FontLoader />
-      <div style={{ padding:"18px 16px 4px", background:"var(--fc-bg)" }}>
-        <button onClick={onBack} style={{ ...backBtn, color:"#B8935F", marginBottom:10 }}><ChevronLeft size={18}/> Back</button>
-        <h2 style={{ fontFamily:"Lora, serif", fontSize:24, color:"#F8F4EA", margin:"0 0 4px" }}>Discover</h2>
-        <p style={{ fontFamily:"Inter, sans-serif", fontSize:13.5, color:"#B9C9BC", margin:"0 0 12px" }}>People who match your faith, values, and interests.</p>
-      </div>
-      <div style={{ flex:1, overflowY:"auto", padding:"8px 16px 110px", background:"var(--fc-bg)" }}>
-        <button type="button" onClick={onPurpose} style={{ width:"100%", textAlign:"left", marginBottom:12, padding:"14px 16px", borderRadius:16, border:"1px solid rgba(214,174,110,.35)", background:"linear-gradient(145deg, rgba(22,27,48,.96), rgba(11,15,29,.96))", color:"#F8F4EA", cursor:"pointer", fontFamily:"Inter, sans-serif" }}>
-          <div style={{ color:"#D6AE6E", fontSize:11, letterSpacing:1.3, fontWeight:700 }}>NEW</div>
-          <div style={{ fontFamily:"Lora, serif", fontSize:18, margin:"4px 0" }}>Discover your purpose</div>
-          <div style={{ fontSize:13, color:"#C4C9D8", lineHeight:1.5 }}>A short reflection quiz to explore the gifts God may have given you.</div>
-        </button>
-        {matches.length === 0 && <div style={emptyState}>No matches yet — check back once more people join.</div>}
+    <div style={{ padding:"22px 16px 0" }}>
+      <h2 style={{ fontFamily:"Lora, serif", fontSize:22, color:"var(--fc-text, #F8F4EA)", margin:"0 0 4px" }}>People who match you</h2>
+      <p style={{ fontFamily:"Inter, sans-serif", fontSize:13.5, color:"#B9C9BC", margin:"0 0 12px" }}>Their faith, values, and interests line up with yours.</p>
+      {matches.length === 0 && <div style={emptyState}>No matches yet — check back once more people join.</div>}
         {matches.map(({ profile, score }) => (
           <div key={profile.id} style={matchCard}>
             <div style={{display:"flex", gap:14}}>
@@ -1341,7 +1327,16 @@ function MatchListScreen({ matches, myProfile, onOpenChat, onBack, onPurpose, na
             <button onClick={() => onOpenChat(profile.id, profile)} style={{...secondaryBtn, width:"100%", marginTop:12}}>Say hello</button>
           </div>
         ))}
-      </div>
+    </div>
+  );
+}
+
+// Discover tab: just the purpose reflection.
+function DiscoverScreen({ onBack, nav }) {
+  return (
+    <div style={{ ...page, background:"var(--fc-bg, #080b17)" }}>
+      <FontLoader />
+      <div style={{ flex:1, overflowY:"auto", paddingBottom:110 }}><PurposeDiscovery onBack={onBack} /></div>
       {nav}
     </div>
   );

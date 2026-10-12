@@ -244,7 +244,7 @@ export default function PurposeDiscovery({ onBack, onComplete }) {
   if (showResults) {
     return (
       <div style={{ minHeight: "100%", padding: 18, color: "#F8F4EA", fontFamily: "Inter, sans-serif", overflowY: "auto" }}>
-        <button onClick={onBack} style={{ background: "none", border: 0, color: "#B7C0FF", display: "flex", alignItems: "center", gap: 7, padding: "8px 0", cursor: "pointer" }}><ArrowLeft size={18}/> Back to Discover</button>
+        <button onClick={onBack} style={{ background: "none", border: 0, color: "#B7C0FF", display: "flex", alignItems: "center", gap: 7, padding: "8px 0", cursor: "pointer" }}><ArrowLeft size={18}/> Back</button>
         <div style={{ ...panel, marginTop: 12 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 8, color: "#D6AE6E", fontSize: 12, letterSpacing: 1.5, fontWeight: 700 }}><Sparkles size={17}/> YOUR PURPOSE REFLECTION</div>
           <h1 style={{ fontFamily: "Lora, serif", fontSize: 28, margin: "12px 0 8px" }}>Possible gifts to explore</h1>
@@ -276,7 +276,7 @@ export default function PurposeDiscovery({ onBack, onComplete }) {
 
   return (
     <div style={{ minHeight: "100%", padding: 18, color: "#F8F4EA", fontFamily: "Inter, sans-serif", overflowY: "auto" }}>
-      <button onClick={onBack} style={{ background: "none", border: 0, color: "#B7C0FF", display: "flex", alignItems: "center", gap: 7, padding: "8px 0", cursor: "pointer" }}><ArrowLeft size={18}/> Back to Discover</button>
+      <button onClick={onBack} style={{ background: "none", border: 0, color: "#B7C0FF", display: "flex", alignItems: "center", gap: 7, padding: "8px 0", cursor: "pointer" }}><ArrowLeft size={18}/> Back</button>
       <div style={{ ...panel, marginTop: 12 }}>
         <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "center", color: "#D6AE6E", fontSize: 11, fontWeight: 700, letterSpacing: 1.1 }}>
           <span>DISCOVER YOUR PURPOSE</span><span>{step + 1} OF {total}</span>
