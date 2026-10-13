@@ -4,6 +4,7 @@ import { getIceServers } from "./iceServers.js";
 import PurposeDiscovery from "./PurposeDiscovery.jsx";
 import { createSessionRestorer } from "./sessionRestore.js";
 import { shrinkImage, snapshotImage } from "./shrinkImage.js";
+import ProfileView from "./ProfileView.jsx";
 import { ImageViewer, ZoomableImage } from "./ImageViewer.jsx";
 import AvatarFace from "./avatar/AvatarFace.jsx";
 import AvatarCreator from "./avatar/AvatarCreator.jsx";
@@ -932,23 +933,7 @@ export default function App() {
         <TopBar onMenu={() => setMenuOpen(true)} dark={!lightMode} overlay={false} onLogo={() => setScreen("matches")} lightMode={lightMode} onToggleTheme={() => setLightMode(v => !v)} />
         <MenuDrawer open={menuOpen} onClose={() => setMenuOpen(false)} onLogOut={logOut} onNavigate={setScreen} lightMode={lightMode} />
         <div style={{ flex:1, overflowY:"auto", padding:"8px 22px 100px", background:"var(--fc-bg)" }}>
-          <div style={{ margin:"0 auto 14px", display:"flex", justifyContent:"center" }}><AvatarCircle profile={myProfile} size={74} fontSize={28} zoom /></div>
-          <h2 style={{...heading, textAlign:"center", color: lightMode ? "#16233F" : "#F8F4EA"}}>{myProfile.name}, {myProfile.age}</h2>
-          <p style={{textAlign:"center", color: lightMode ? "#5C6D82" : "#B9C9BC", fontFamily:"Inter, sans-serif", fontSize:14, marginTop:-8}}>{myProfile.city} · {myProfile.denom}</p>
-          {myProfile.photoUrls && myProfile.photoUrls.length > 0 && (
-            <div style={{ display:"flex", gap:8, marginTop:16, overflowX:"auto" }}>
-              {myProfile.photoUrls.map((u,i) => <ZoomableImage key={i} src={u} caption={myProfile.name} style={{ width:100, height:130, objectFit:"cover", borderRadius:12, flexShrink:0 }} />)}
-            </div>
-          )}
-          <p style={{fontFamily:"Inter, sans-serif", fontSize:14.5, color: lightMode ? "#34445A" : "#E4E7E2", lineHeight:1.6, marginTop:18}}>{myProfile.bio}</p>
-          {myProfile.favoriteBible && <div style={{ marginTop:14, padding:"14px 16px", borderRadius:14, border: lightMode ? "1px solid #D7DEE8" : "1px solid rgba(255,255,255,.12)", background: lightMode ? "#F5F7FA" : "rgba(255,255,255,.04)" }}>
-            <div style={{ fontFamily:"Inter, sans-serif", fontSize:10, letterSpacing:1.6, color: lightMode ? "#5369D9" : "#D6AE6E", marginBottom:5 }}>FAVORITE BIBLE VERSE / BOOK</div>
-            <div style={{ fontFamily:"Lora, serif", fontSize:16, color: lightMode ? "#16233F" : "#F8F4EA", lineHeight:1.45 }}>{myProfile.favoriteBible}</div>
-          </div>}
-          <div style={{marginTop:18}}><Tag list={myProfile.values} lightMode={lightMode} /></div>
-          <div style={{marginTop:8}}><Tag list={myProfile.hobbies} lightMode={lightMode} /></div>
-          <div style={{marginTop:8}}><Tag list={myProfile.goals} lightMode={lightMode} /></div>
-          <button onClick={() => setScreen("profile-edit")} style={{...secondaryBtn, width:"100%", marginTop:24, background: lightMode ? "rgba(61,115,255,.10)" : secondaryBtn.background, color: lightMode ? "#356AE8" : secondaryBtn.color, borderColor: lightMode ? "rgba(61,115,255,.28)" : "rgba(108,124,255,.3)"}}>Edit profile</button>
+          <ProfileView profile={myProfile} lightMode={lightMode} avatar={<AvatarCircle profile={myProfile} size={104} fontSize={40} zoom />} onEdit={() => setScreen("profile-edit")} />
         </div>
         {nav}
       </div>
