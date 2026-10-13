@@ -1217,7 +1217,7 @@ function MatchHero({ count, onMeetSomeone, lightMode }) {
   return (
     <div style={{
       position:"relative", minHeight: 0, height: "auto", aspectRatio: lightMode ? "406 / 525" : undefined, overflow:"hidden", display:"flex", alignItems:"flex-start",
-      padding: lightMode ? "112px 22px 24px" : "478px 22px 34px", boxSizing:"border-box",
+      padding: lightMode ? "112px 22px 24px" : "392px 22px 34px", boxSizing:"border-box",
       background: lightMode ? "#dceeff" : "#050819"
     }}>
       <img
@@ -1231,7 +1231,7 @@ function MatchHero({ count, onMeetSomeone, lightMode }) {
       />
       {lightMode && null}
       {!lightMode && <div style={{ position:"absolute", top:0, left:0, right:0, height:500, pointerEvents:"none", background:
-        "linear-gradient(180deg, rgba(3,6,18,.35) 0%, rgba(3,6,18,0) 22%, rgba(3,6,18,0) 62%, #050819 100%)" }} />}
+        "linear-gradient(180deg, rgba(3,6,18,.35) 0%, rgba(3,6,18,0) 22%, rgba(3,6,18,0) 70%, #050819 100%)" }} />}
 
       <div style={{ position:"relative", zIndex:2, width:"100%", maxWidth:360 }}>
         <div style={{ display:"flex", alignItems:"center", gap:9, marginBottom:15 }}>
