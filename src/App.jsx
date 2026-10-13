@@ -4,6 +4,7 @@ import { getIceServers } from "./iceServers.js";
 import PurposeDiscovery from "./PurposeDiscovery.jsx";
 import { createSessionRestorer } from "./sessionRestore.js";
 import { shrinkImage, snapshotImage } from "./shrinkImage.js";
+import { ImageViewer, ZoomableImage } from "./ImageViewer.jsx";
 import AvatarFace from "./avatar/AvatarFace.jsx";
 import AvatarCreator from "./avatar/AvatarCreator.jsx";
 import { isAvatarCode } from "./avatar/code.js";
@@ -152,16 +153,23 @@ function profileToDb(p) {
   };
 }
 
-function AvatarCircle({ profile, size = 74, fontSize = 28 }) {
+function AvatarCircle({ profile, size = 74, fontSize = 28, zoom = false }) {
+  const [viewing, setViewing] = useState(false);
   const style = { width:size, height:size, borderRadius:"50%", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 };
-  if (isAvatarCode(profile?.avatarUrl)) return <AvatarFace code={profile.avatarUrl} size={size} />;
-  if (profile?.avatarUrl) {
-    return <div style={{ ...style, background:`center/cover url(${profile.avatarUrl})` }} />;
-  }
-  if (profile?.avatarEmoji) {
-    return <div style={{ ...style, background: profile.avatarColor || "#B8935F", fontSize: fontSize * 0.8 }}>{profile.avatarEmoji}</div>;
-  }
-  return <div style={{ ...style, background:"#B8935F", color:"#FAF7F0", fontFamily:"Lora, serif", fontSize }}>{profile?.name?.[0]?.toUpperCase() || "?"}</div>;
+  const canZoom = zoom && !!profile?.avatarUrl; // tap to enlarge, like WhatsApp profile photos
+  const open = canZoom ? { onClick: e => { e.stopPropagation(); setViewing(true); }, style: { cursor: "zoom-in", borderRadius: "50%", flexShrink: 0 } } : null;
+  let face;
+  if (isAvatarCode(profile?.avatarUrl)) face = <AvatarFace code={profile.avatarUrl} size={size} />;
+  else if (profile?.avatarUrl) face = <div style={{ ...style, background:`center/cover url(${profile.avatarUrl})` }} />;
+  else if (profile?.avatarEmoji) face = <div style={{ ...style, background: profile.avatarColor || "#B8935F", fontSize: fontSize * 0.8 }}>{profile.avatarEmoji}</div>;
+  else face = <div style={{ ...style, background:"#B8935F", color:"#FAF7F0", fontFamily:"Lora, serif", fontSize }}>{profile?.name?.[0]?.toUpperCase() || "?"}</div>;
+  if (!open) return face;
+  return (
+    <>
+      <div {...open}>{face}</div>
+      {viewing && <ImageViewer src={profile.avatarUrl} caption={profile.name} onClose={() => setViewing(false)} />}
+    </>
+  );
 }
 
 function jaccard(a = [], b = []) {
@@ -924,12 +932,12 @@ export default function App() {
         <TopBar onMenu={() => setMenuOpen(true)} dark={!lightMode} overlay={false} onLogo={() => setScreen("matches")} lightMode={lightMode} onToggleTheme={() => setLightMode(v => !v)} />
         <MenuDrawer open={menuOpen} onClose={() => setMenuOpen(false)} onLogOut={logOut} onNavigate={setScreen} lightMode={lightMode} />
         <div style={{ flex:1, overflowY:"auto", padding:"8px 22px 100px", background:"var(--fc-bg)" }}>
-          <div style={{ margin:"0 auto 14px", display:"flex", justifyContent:"center" }}><AvatarCircle profile={myProfile} size={74} fontSize={28} /></div>
+          <div style={{ margin:"0 auto 14px", display:"flex", justifyContent:"center" }}><AvatarCircle profile={myProfile} size={74} fontSize={28} zoom /></div>
           <h2 style={{...heading, textAlign:"center", color: lightMode ? "#16233F" : "#F8F4EA"}}>{myProfile.name}, {myProfile.age}</h2>
           <p style={{textAlign:"center", color: lightMode ? "#5C6D82" : "#B9C9BC", fontFamily:"Inter, sans-serif", fontSize:14, marginTop:-8}}>{myProfile.city} · {myProfile.denom}</p>
           {myProfile.photoUrls && myProfile.photoUrls.length > 0 && (
             <div style={{ display:"flex", gap:8, marginTop:16, overflowX:"auto" }}>
-              {myProfile.photoUrls.map((u,i) => <img key={i} src={u} alt="" style={{ width:100, height:130, objectFit:"cover", borderRadius:12, flexShrink:0 }} />)}
+              {myProfile.photoUrls.map((u,i) => <ZoomableImage key={i} src={u} caption={myProfile.name} style={{ width:100, height:130, objectFit:"cover", borderRadius:12, flexShrink:0 }} />)}
             </div>
           )}
           <p style={{fontFamily:"Inter, sans-serif", fontSize:14.5, color: lightMode ? "#34445A" : "#E4E7E2", lineHeight:1.6, marginTop:18}}>{myProfile.bio}</p>
@@ -1339,7 +1347,7 @@ function MatchPeopleList({ matches, onOpenChat }) {
         {matches.map(({ profile, score }) => (
           <div key={profile.id} style={matchCard}>
             <div style={{display:"flex", gap:14}}>
-              <AvatarCircle profile={profile} size={52} fontSize={20} />
+              <AvatarCircle profile={profile} size={52} fontSize={20} zoom />
               <div style={{flex:1}}>
                 <div style={{display:"flex", justifyContent:"space-between", alignItems:"baseline"}}>
                   <div style={{fontFamily:"Lora, serif", fontSize:17, color:"#F8F4EA"}}>{profile.name}, {profile.age}</div>
@@ -1861,7 +1869,7 @@ function ChatScreen({ myId, myProfile, other, onBack, onRead }) {
       <FontLoader />
       <div style={{ ...chatHeader, position:"relative" }}>
         <button onClick={onBack} style={{ background:"none", border:"none", cursor:"pointer", padding:6, marginRight:4 }}><ChevronLeft size={22} color="#F8F4EA" /></button>
-        <div style={{ ...avatarSm, background:"#B8935F" }}>{other.otherProfile?.name?.[0]?.toUpperCase() || "?"}</div>
+        <div style={{ marginRight:10 }}><AvatarCircle profile={other.otherProfile} size={38} fontSize={16} zoom /></div>
         <div style={{ flex:1, fontFamily:"Lora, serif", fontSize:16.5, color:"#F8F4EA" }}>{other.otherProfile?.name || "Someone"}</div>
         <button onClick={() => startCall("audio")} style={iconBtn}><Phone size={19} color="#F8F4EA" /></button>
         <button onClick={() => startCall("video")} style={iconBtn}><Video size={19} color="#F8F4EA" /></button>
