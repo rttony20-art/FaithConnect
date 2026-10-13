@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from "react";
 import { createMessagesApi, rowToMsg } from "./messagesApi.js";
 import { getIceServers } from "./iceServers.js";
 import PurposeDiscovery from "./PurposeDiscovery.jsx";
+import { createSessionRestorer } from "./sessionRestore.js";
 import { shrinkImage } from "./shrinkImage.js";
 import AvatarFace from "./avatar/AvatarFace.jsx";
 import AvatarCreator from "./avatar/AvatarCreator.jsx";
@@ -114,15 +115,11 @@ async function supaUpload(bucket, path, file, token) {
   if (!res.ok) { const t = await res.text().catch(() => ""); throw new Error(t || `Photo upload failed (${res.status})`); }
   return `${SUPABASE_URL}/storage/v1/object/public/${bucket}/${path}`;
 }
-async function restoreSupaSession() {
-  const sess = await sget("supabase-session", false);
-  if (!sess || !sess.refresh_token) return null;
-  try {
-    const data = await supaAuth("token?grant_type=refresh_token", { refresh_token: sess.refresh_token });
-    await saveSupaSession(data);
-    return data;
-  } catch { return null; }
-}
+const restoreSupaSession = createSessionRestorer({
+  load: () => sget("supabase-session", false),
+  save: data => saveSupaSession(data),
+  refresh: refresh_token => supaAuth("token?grant_type=refresh_token", { refresh_token }),
+});
 async function saveSupaSession(session) {
   if (!session || !session.access_token) return;
   await sset("supabase-session", { access_token: session.access_token, refresh_token: session.refresh_token }, false);
