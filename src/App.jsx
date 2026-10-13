@@ -1331,19 +1331,26 @@ function MatchPeopleList({ matches, onOpenChat }) {
       {matches.length === 0 && <div style={emptyState}>No matches yet — check back once more people join.</div>}
         {matches.map(({ profile, score }) => (
           <div key={profile.id} style={matchCard}>
-            <div style={{display:"flex", gap:14}}>
-              <AvatarCircle profile={profile} size={52} fontSize={20} zoom />
-              <div style={{flex:1}}>
-                <div style={{display:"flex", justifyContent:"space-between", alignItems:"baseline"}}>
-                  <div style={{fontFamily:"Lora, serif", fontSize:17, color:"#F8F4EA"}}>{profile.name}, {profile.age}</div>
-                  <div style={{fontFamily:"Lora, serif", fontSize:17, color:"#a0aaff", fontWeight:600}}>{score.pct}%</div>
-                </div>
-                <div style={{fontFamily:"Inter, sans-serif", fontSize:13, color:"#858ca1"}}>{profile.city} · {profile.denom}</div>
-              </div>
+            <div style={{display:"flex", flexDirection:"column", alignItems:"center", position:"relative"}}>
+              <div style={{position:"absolute", top:0, right:0, fontFamily:"Lora, serif", fontSize:17, color:"#a0aaff", fontWeight:600}}>{score.pct}%</div>
+              <AvatarCircle profile={profile} size={84} fontSize={32} zoom />
+              <div style={{fontFamily:"Lora, serif", fontSize:20, color:"#F8F4EA", margin:"10px 0 2px", textAlign:"center"}}>{profile.name}{profile.age ? `, ${profile.age}` : ""}</div>
+              {profile.city && <div style={{fontFamily:"Inter, sans-serif", fontSize:13, color:"#B9C9BC"}}>📍 {profile.city}</div>}
             </div>
-            <p style={{fontFamily:"Inter, sans-serif", fontSize:13.5, color:"#a4aabd", lineHeight:1.5, margin:"10px 0"}}>{profile.bio}</p>
-            {profile.favoriteBible && <div style={{fontFamily:"Lora, serif", fontSize:13.5, color:"#D6AE6E", margin:"0 0 10px"}}>📖 {profile.favoriteBible}</div>}
-            <Tag list={[...(profile.values||[]).slice(0,2), ...(profile.hobbies||[]).slice(0,2)]} />
+            {profile.bio && <p style={{fontFamily:"Inter, sans-serif", fontSize:14, color:"#c4c9d8", lineHeight:1.55, margin:"12px 4px", textAlign:"center", whiteSpace:"pre-wrap"}}>{profile.bio}</p>}
+            {(profile.denom || profile.favoriteBible) && (
+              <div style={{padding:"10px 12px", borderRadius:12, border:"1px solid rgba(255,255,255,.12)", background:"rgba(255,255,255,.04)", marginBottom:10}}>
+                <div style={{fontFamily:"Inter, sans-serif", fontSize:10.5, letterSpacing:1.6, color:"#D6AE6E", fontWeight:600, marginBottom:6}}>FAITH</div>
+                {profile.denom && <div style={{display:"flex", justifyContent:"space-between", gap:10, fontFamily:"Inter, sans-serif", fontSize:13.5}}><span style={{color:"#B9C9BC"}}>Denomination</span><span style={{color:"#F8F4EA", fontWeight:600, textAlign:"right"}}>{profile.denom}</span></div>}
+                {profile.favoriteBible && <div style={{fontFamily:"Lora, serif", fontSize:14, color:"#F8F4EA", marginTop:profile.denom?8:0}}>📖 {profile.favoriteBible}</div>}
+              </div>
+            )}
+            {((profile.values||[]).length>0 || (profile.hobbies||[]).length>0) && (
+              <div style={{padding:"10px 12px", borderRadius:12, border:"1px solid rgba(255,255,255,.12)", background:"rgba(255,255,255,.04)"}}>
+                <div style={{fontFamily:"Inter, sans-serif", fontSize:10.5, letterSpacing:1.6, color:"#D6AE6E", fontWeight:600, marginBottom:6}}>VALUES & INTERESTS</div>
+                <Tag list={[...(profile.values||[]).slice(0,3), ...(profile.hobbies||[]).slice(0,3)]} />
+              </div>
+            )}
             <button onClick={() => onOpenChat(profile.id, profile)} style={{...secondaryBtn, width:"100%", marginTop:12}}>Say hello</button>
           </div>
         ))}
