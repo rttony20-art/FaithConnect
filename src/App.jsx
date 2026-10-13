@@ -1216,22 +1216,22 @@ function MenuDrawer({ open, onClose, onLogOut, onNavigate, lightMode }) {
 function MatchHero({ count, onMeetSomeone, lightMode }) {
   return (
     <div style={{
-      position:"relative", minHeight: lightMode ? 0 : 500, height: lightMode ? "auto" : 500, aspectRatio: lightMode ? "406 / 525" : undefined, overflow:"hidden", display:"flex", alignItems:"flex-start",
-      padding: lightMode ? "112px 22px 24px" : "200px 22px 42px", boxSizing:"border-box",
+      position:"relative", minHeight: 0, height: "auto", aspectRatio: lightMode ? "406 / 525" : undefined, overflow:"hidden", display:"flex", alignItems:"flex-start",
+      padding: lightMode ? "112px 22px 24px" : "478px 22px 34px", boxSizing:"border-box",
       background: lightMode ? "#dceeff" : "#050819"
     }}>
       <img
         src={lightMode ? FAITHCONNECT_LIGHT_HERO : FAITHCONNECT_HERO}
         alt={lightMode ? "Couple sitting together overlooking a valley at sunset" : "Couple watching a sunset together on the beach"}
         style={{
-          position:"absolute", inset:0, width:"100%", height:"100%",
+          position:"absolute", top:0, left:0, width:"100%", height: lightMode ? "100%" : 500,
           objectFit: lightMode ? "contain" : "cover", objectPosition:"center center", pointerEvents:"none",
           filter: lightMode ? "brightness(1) saturate(1.02) contrast(1)" : "saturate(1.08) contrast(1.03)"
         }}
       />
       {lightMode && null}
-      {!lightMode && <div style={{ position:"absolute", inset:0, pointerEvents:"none", background:
-        "linear-gradient(90deg, rgba(4,8,22,.90) 0%, rgba(4,8,22,.58) 38%, rgba(4,8,22,.08) 72%, rgba(4,8,22,.12) 100%), linear-gradient(180deg, rgba(3,6,18,.18) 0%, rgba(3,6,18,.08) 48%, rgba(3,6,18,.88) 100%)" }} />}
+      {!lightMode && <div style={{ position:"absolute", top:0, left:0, right:0, height:500, pointerEvents:"none", background:
+        "linear-gradient(180deg, rgba(3,6,18,.35) 0%, rgba(3,6,18,0) 22%, rgba(3,6,18,0) 62%, #050819 100%)" }} />}
 
       <div style={{ position:"relative", zIndex:2, width:"100%", maxWidth:360 }}>
         <div style={{ display:"flex", alignItems:"center", gap:9, marginBottom:15 }}>
