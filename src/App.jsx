@@ -915,7 +915,7 @@ export default function App() {
   }
 
   if (screen === "people") {
-    return <PeopleScreen onHome={() => setScreen("matches")} matches={matches} onOpenChat={(id, profile) => { setActiveConvo({ otherId: id, otherProfile: profile }); setScreen("chat"); }} nav={nav} />;
+    return <PeopleScreen onHome={() => setScreen("matches")} matches={matches} lightMode={lightMode} onOpenChat={(id, profile) => { setActiveConvo({ otherId: id, otherProfile: profile }); setScreen("chat"); }} nav={nav} />;
   }
 
   if (screen === "matchList") {
@@ -1134,7 +1134,7 @@ function TopBar({ onMenu, dark, overlay, onLogo, lightMode, onToggleTheme }) {
           </div>
           <div style={{ textAlign:"left" }}>
             <div style={{ fontFamily:"Inter, sans-serif", fontWeight:700, fontSize:15, color: dark ? "#F8F4EA" : "#22252B", letterSpacing:-0.3 }}>FaithConnect</div>
-            <div style={{ fontFamily:"Inter, sans-serif", fontSize:7.5, letterSpacing:1.5, color: dark ? "#737b92" : "#8A8578" }}>CONNECT • GROW • BELIEVE</div>
+            <div style={{ fontFamily:"Inter, sans-serif", fontSize:7.5, letterSpacing:1.5, color: dark ? "#F6E7C4" : "#8A6A1F", textShadow: dark ? "0 1px 6px rgba(0,0,0,.6)" : "none", fontWeight:600 }}>CONNECT • GROW • BELIEVE</div>
           </div>
         </button>
       </div>
@@ -1241,7 +1241,7 @@ function MatchHero({ count, onMeetSomeone, lightMode }) {
         <h1 style={{ fontFamily:"Lora, serif", fontSize:21, lineHeight:1.2, letterSpacing:0.2, fontStyle:"italic", fontWeight:600, color: lightMode ? "#FFFFFF" : "#F8F4EA", margin:"0 0 14px", maxWidth:330, textShadow: lightMode ? "0 2px 10px rgba(0,0,0,.48)" : "0 2px 14px rgba(0,0,0,.55)" }}>
           <span>Shared Faith.</span><br/>
           <span>Meaningful Connection.</span><br/>
-          <span style={{ color: lightMode ? "#9ED0FF" : "#c7b1ff" }}>Growing Together.</span>
+          <span style={{ color: lightMode ? "#FFD464" : "#c7b1ff", textShadow: lightMode ? "0 2px 10px rgba(0,0,0,.65)" : undefined }}>Growing Together.</span>
         </h1>
         <p style={{ fontFamily:"Inter, sans-serif", fontSize:14, lineHeight:1.5, color: lightMode ? "#FFFFFF" : "#d0d3df", margin:"0 0 18px", maxWidth:345, fontWeight:500, textShadow: lightMode ? "0 2px 10px rgba(0,0,0,.42)" : "0 2px 8px rgba(0,0,0,.45)" }}>
           Meet someone who shares your faith, values, and desire to grow.
@@ -1323,12 +1323,12 @@ function SecurityScreen({ myId, myProfile, onBack, onUsernameChanged }) {
 }
 
 // People who match you, with their match percentage (shown on the Matches tab).
-function MatchPeopleList({ matches, onOpenChat }) {
+function MatchPeopleList({ matches, onOpenChat, lightMode }) {
   return (
     <div style={{ padding:"22px 16px 0" }}>
       <h2 style={{ fontFamily:"Lora, serif", fontSize:22, color:"var(--fc-text, #F8F4EA)", margin:"0 0 4px" }}>People who match you</h2>
-      <p style={{ fontFamily:"Inter, sans-serif", fontSize:13.5, color:"#B9C9BC", margin:"0 0 12px" }}>Their faith, values, and interests line up with yours.</p>
-      {matches.length === 0 && <div style={emptyState}>No matches yet — check back once more people join.</div>}
+      <p style={{ fontFamily:"Inter, sans-serif", fontSize:13.5, color: lightMode ? "#6B5217" : "#B9C9BC", margin:"0 0 12px" }}>Their faith, values, and interests line up with yours.</p>
+      {matches.length === 0 && <div style={{...emptyState, color: lightMode ? "#6B5217" : undefined}}>No matches yet — check back once more people join.</div>}
         {matches.map(({ profile, score }) => (
           <div key={profile.id} style={matchCard}>
             <div style={{display:"flex", flexDirection:"column", alignItems:"center", position:"relative"}}>
@@ -1359,13 +1359,13 @@ function MatchPeopleList({ matches, onOpenChat }) {
 }
 
 // Matches tab (heart): the people who match you.
-function PeopleScreen({ matches, onOpenChat, onHome, nav }) {
+function PeopleScreen({ matches, onOpenChat, onHome, nav, lightMode }) {
   return (
     <div style={{ ...page, background:"var(--fc-bg, #080b17)" }}>
       <FontLoader />
       <div style={{ flex:1, overflowY:"auto", paddingBottom:110 }}>
         <div style={{ padding:"18px 16px 0" }}><button onClick={onHome} style={{ ...backBtn, color:"#B8935F" }}><ChevronLeft size={18}/> Home</button></div>
-        <MatchPeopleList matches={matches} onOpenChat={onOpenChat} />
+        <MatchPeopleList matches={matches} onOpenChat={onOpenChat} lightMode={lightMode} />
       </div>
       {nav}
     </div>
@@ -1518,15 +1518,15 @@ function IronSharpensIronCard({ onOpen, lightMode }) {
       border: lightMode ? "1px solid rgba(66,104,158,.14)" : "1px solid rgba(255,255,255,.13)",
       boxShadow: lightMode ? "0 12px 30px rgba(41,72,110,.12)" : "0 12px 30px rgba(0,0,0,.22)"
     }} onClick={onOpen}>
-      <div style={{ position:"absolute", inset:0, background:"radial-gradient(circle at 72% 45%, rgba(255,173,74,.18), transparent 32%), linear-gradient(90deg, transparent 35%, rgba(0,0,0,.12), rgba(0,0,0,.55))" }} />
-      <div style={{ position:"absolute", right:-18, top:-8, width:230, height:170, opacity:.55, transform:"rotate(-8deg)", background:"linear-gradient(160deg, rgba(116,72,42,.9), rgba(35,22,20,.95))", borderRadius:"8px 40px 12px 8px", boxShadow:"inset 0 0 25px rgba(255,190,100,.2)" }} />
+      {!lightMode && <div style={{ position:"absolute", inset:0, background:"radial-gradient(circle at 72% 45%, rgba(255,173,74,.18), transparent 32%), linear-gradient(90deg, transparent 35%, rgba(0,0,0,.12), rgba(0,0,0,.55))" }} />}
+      {!lightMode && <div style={{ position:"absolute", right:-18, top:-8, width:230, height:170, opacity:.55, transform:"rotate(-8deg)", background:"linear-gradient(160deg, rgba(116,72,42,.9), rgba(35,22,20,.95))", borderRadius:"8px 40px 12px 8px", boxShadow:"inset 0 0 25px rgba(255,190,100,.2)" }} />}
       <div style={{ position:"relative", zIndex:2, display:"flex", alignItems:"center", minHeight:148, padding:"20px", gap:17 }}>
         <div style={{ width:62, height:62, borderRadius:"50%", flexShrink:0, display:"flex", alignItems:"center", justifyContent:"center", background:"rgba(188,19,77,.34)", border:"1px solid #ff3b91", boxShadow:"0 0 24px rgba(255,46,144,.3)" }}>
           <ArrowRight size={25} color="#fff" />
         </div>
         <div style={{ flex:1 }}>
           <div style={{ fontFamily:"Lora, serif", fontWeight:600, fontSize:19, color:lightMode ? "#162D4B" : "#F8F4EA", marginBottom:6 }}>Iron Sharpens Iron</div>
-          <p style={{ fontFamily:"Inter, sans-serif", fontSize:13.5, color:lightMode ? "#526B86" : "#c8c7d4", lineHeight:1.4, margin:"0 0 14px", maxWidth:260 }}>Meet a random believer and share about your faith.</p>
+          <p style={{ fontFamily:"Inter, sans-serif", fontSize:13.5, color:lightMode ? "#3F566F" : "#c8c7d4", lineHeight:1.4, margin:"0 0 14px", maxWidth:260 }}>Meet a random believer and share about your faith.</p>
           <span style={{ display:"inline-flex", alignItems:"center", gap:7, padding:"8px 15px", borderRadius:999, border:lightMode ? "1px solid #4A72E8" : "1px solid #ff5cb0", color:"#fff", background:lightMode ? "linear-gradient(100deg,#3D73FF,#6758FF)" : "rgba(15,10,30,.4)", fontFamily:"Inter, sans-serif", fontSize:12.5, fontWeight:600 }}>Share with someone <ArrowRight size={15}/></span>
         </div>
       </div>
