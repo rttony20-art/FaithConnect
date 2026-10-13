@@ -964,6 +964,7 @@ export default function App() {
             <PreferenceSection number="5" title="Personality you're drawn to" list={PERSONALITY} sel={form.lookPref} onToggle={v=>toggle("lookPref",v)} limit={5} lightMode={lightMode} />
           </div>
           <button onClick={saveProfile} style={{...primaryBtn, width:"100%", marginTop:20}}>Save changes</button>
+          {err && <div style={{ color: /^Saving/.test(err) ? "#B8935F" : "#E0707B", fontSize:13.5, lineHeight:1.5, marginTop:10, textAlign:"center" }}>{err}</div>}
         </div>
       </div>
     );
