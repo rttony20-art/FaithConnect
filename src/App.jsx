@@ -102,15 +102,20 @@ async function supaRest(path, { method = "GET", token, body, extraHeaders = {} }
 }
 async function supaUpload(bucket, path, file, token) {
   const small = await shrinkImage(file); // phone photos are huge; smaller uploads are faster and more reliable
+  // Read the picture fully into memory first: some phones cannot stream a photo straight from the gallery
+  // (cloud copies, files that changed), which makes the upload fail with a vague network error.
+  let bytes;
+  try { bytes = await small.arrayBuffer(); }
+  catch { throw new Error("this photo could not be read. Please choose a different one (a photo saved on your phone works best), or make an avatar instead."); }
   let res;
   try {
     res = await fetch(`${SUPABASE_URL}/storage/v1/object/${bucket}/${path}`, {
       method: "POST",
       headers: { "apikey": SUPABASE_ANON_KEY, "Authorization": `Bearer ${token}`, "Content-Type": small.type || "application/octet-stream", "x-upsert": "true" },
-      body: small
+      body: bytes
     });
-  } catch {
-    throw new Error("the photo could not be uploaded. Check your connection and try again, or make an avatar instead.");
+  } catch (e) {
+    throw new Error(`the photo could not be sent (${Math.round(bytes.byteLength / 1024)} KB, ${e && e.message ? e.message : "network error"}). Check your connection and try again, or make an avatar instead.`);
   }
   if (!res.ok) { const t = await res.text().catch(() => ""); throw new Error(t || `Photo upload failed (${res.status})`); }
   return `${SUPABASE_URL}/storage/v1/object/public/${bucket}/${path}`;
