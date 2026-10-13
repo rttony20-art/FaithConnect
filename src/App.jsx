@@ -3,7 +3,7 @@ import { createMessagesApi, rowToMsg } from "./messagesApi.js";
 import { getIceServers } from "./iceServers.js";
 import PurposeDiscovery from "./PurposeDiscovery.jsx";
 import { createSessionRestorer } from "./sessionRestore.js";
-import { shrinkImage } from "./shrinkImage.js";
+import { shrinkImage, snapshotImage } from "./shrinkImage.js";
 import AvatarFace from "./avatar/AvatarFace.jsx";
 import AvatarCreator from "./avatar/AvatarCreator.jsx";
 import { isAvatarCode } from "./avatar/code.js";
@@ -500,17 +500,31 @@ export default function App() {
     setScreen("welcome");
   }
 
-  function pickAvatar(e) {
+  async function pickAvatar(e) {
     const f = e.target.files && e.target.files[0];
+    e.target.value = ""; // lets the same photo be picked again
     if (!f) return;
-    setAvatarFile(f);
-    setAvatarPreview(URL.createObjectURL(f));
+    try {
+      const copy = await snapshotImage(f); // read now, while the phone still allows it
+      setErr("");
+      setAvatarFile(copy);
+      setAvatarPreview(URL.createObjectURL(copy));
+    } catch {
+      setErr("This photo could not be read. Please choose a different one, or make an avatar instead.");
+    }
   }
-  function pickPhoto(i, e) {
+  async function pickPhoto(i, e) {
     const f = e.target.files && e.target.files[0];
+    e.target.value = "";
     if (!f) return;
-    setPhotoFiles(arr => { const a = [...arr]; a[i] = f; return a; });
-    setPhotoPreviews(arr => { const a = [...arr]; a[i] = URL.createObjectURL(f); return a; });
+    try {
+      const copy = await snapshotImage(f);
+      setErr("");
+      setPhotoFiles(arr => { const a = [...arr]; a[i] = copy; return a; });
+      setPhotoPreviews(arr => { const a = [...arr]; a[i] = URL.createObjectURL(copy); return a; });
+    } catch {
+      setErr("This photo could not be read. Please choose a different one, or make an avatar instead.");
+    }
   }
   async function uploadSelectedPhotos(userId, token) {
     let avatarUrl = form.avatarUrl || null;

@@ -24,3 +24,13 @@ export async function shrinkImage(file, maxSide = 1280, quality = 0.82) {
     return file;
   }
 }
+
+// Reads a just-picked photo into memory right away (shrunk, as a plain in-memory Blob).
+// Phones can take back access to a picked file after a while, so the app must not keep
+// the original file handle until "Save". Throws if the photo cannot be read.
+export async function snapshotImage(file) {
+  const small = await shrinkImage(file);
+  const bytes = await small.arrayBuffer();
+  if (!bytes.byteLength) throw new Error("empty photo");
+  return new Blob([bytes], { type: small.type || "image/jpeg" });
+}
