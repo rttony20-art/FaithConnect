@@ -6,8 +6,8 @@ import { ZoomableImage } from "./ImageViewer.jsx";
 // `avatar` is the picture element (tappable to enlarge), made by the app.
 export default function ProfileView({ profile, lightMode, avatar, onEdit }) {
   const c = lightMode
-    ? { text: "#16233F", sub: "#5C6D82", body: "#34445A", card: "#F5F7FA", border: "#D7DEE8", label: "#5369D9", chipBg: "rgba(96,112,255,.10)", chipText: "#33445A", chipBorder: "rgba(96,112,255,.28)" }
-    : { text: "#F8F4EA", sub: "#B9C9BC", body: "#E4E7E2", card: "rgba(255,255,255,.04)", border: "rgba(255,255,255,.12)", label: "#D6AE6E", chipBg: "rgba(96,112,255,.12)", chipText: "#F8F4EA", chipBorder: "rgba(108,124,255,.35)" };
+    ? { text: "#16233F", sub: "#8A6A1F", body: "#34445A", card: "#F5F7FA", border: "#D7DEE8", label: "#8A6A1F", chipBg: "rgba(184,147,95,.12)", chipText: "#33445A", chipBorder: "rgba(184,147,95,.4)" }
+    : { text: "#F8F4EA", sub: "#D6AE6E", body: "#E4E7E2", card: "rgba(255,255,255,.04)", border: "rgba(255,255,255,.12)", label: "#D6AE6E", chipBg: "rgba(184,147,95,.14)", chipText: "#F8F4EA", chipBorder: "rgba(184,147,95,.45)" };
 
   const label = { fontFamily: "Inter, sans-serif", fontSize: 10.5, letterSpacing: 1.6, color: c.label, fontWeight: 600, marginBottom: 8, textTransform: "uppercase" };
   const card = { marginTop: 14, padding: "14px 16px", borderRadius: 16, border: `1px solid ${c.border}`, background: c.card };
@@ -30,7 +30,7 @@ export default function ProfileView({ profile, lightMode, avatar, onEdit }) {
       {/* bio, like an Instagram profile */}
       {profile.bio && <p style={{ fontFamily: "Inter, sans-serif", fontSize: 15, color: c.body, lineHeight: 1.6, textAlign: "center", margin: "16px 4px 0", whiteSpace: "pre-wrap" }}>{profile.bio}</p>}
 
-      {onEdit && <button type="button" onClick={onEdit} style={{ display: "block", width: "100%", marginTop: 18, padding: "11px 20px", borderRadius: 12, border: `1.5px solid ${c.chipBorder}`, background: c.chipBg, color: lightMode ? "#356AE8" : "#a0aaff", fontFamily: "Inter, sans-serif", fontSize: 14.5, fontWeight: 600, cursor: "pointer" }}>Edit profile</button>}
+      {onEdit && <button type="button" onClick={onEdit} style={{ display: "block", width: "100%", marginTop: 18, padding: "11px 20px", borderRadius: 12, border: `1.5px solid ${c.chipBorder}`, background: c.chipBg, color: lightMode ? "#8A6A1F" : "#D6AE6E", fontFamily: "Inter, sans-serif", fontSize: 14.5, fontWeight: 600, cursor: "pointer" }}>Edit profile</button>}
 
       {photos.length > 0 && (
         <div style={{ marginTop: 18 }}>

@@ -268,7 +268,7 @@ function PasswordInput({ value, onChange, onKeyDown, placeholder, style }) {
         style={{ ...style, paddingRight:38, width: style?.width || "100%", boxSizing:"border-box" }}
       />
       <button type="button" onClick={() => setShow(s => !s)} style={{ position:"absolute", right:10, top:"50%", transform:"translateY(-50%)", background:"none", border:"none", cursor:"pointer", padding:2, display:"flex" }}>
-        {show ? <EyeOff size={17} color="#8A8578" /> : <Eye size={17} color="#8A8578" />}
+        {show ? <EyeOff size={17} color="#B8935F" /> : <Eye size={17} color="#B8935F" />}
       </button>
     </div>
   );
@@ -287,7 +287,7 @@ function PhotoSlot({ label, preview, existingUrl, onPick, big, emoji, emojiColor
       }}>
         {made ? <AvatarFace code={existingUrl} size={size} round={false} /> : !img && (emoji || <Camera size={big ? 26 : 20} color="#B8935F" />)}
       </div>
-      <span style={{ fontFamily:"Inter, sans-serif", fontSize:11.5, color:"#8A8578" }}>{label}</span>
+      <span style={{ fontFamily:"Inter, sans-serif", fontSize:11.5, color:"#B8935F" }}>{label}</span>
       <input type="file" accept="image/*" onChange={onPick} style={{ display:"none" }} />
     </label>
   );
@@ -356,7 +356,7 @@ export default function App() {
   useEffect(() => {
     document.documentElement.style.setProperty("--fc-bg", lightMode ? LIGHT_BG : GLOW_BG);
     document.documentElement.style.setProperty("--fc-text", lightMode ? "#1B2B43" : "#F8F4EA");
-    document.documentElement.style.setProperty("--fc-muted", lightMode ? "#5C6D82" : "#B9C9BC");
+    document.documentElement.style.setProperty("--fc-muted", lightMode ? "#8A6A1F" : "#D6AE6E");
     document.documentElement.style.setProperty("--fc-input-bg", lightMode ? "rgba(255,255,255,.72)" : "#151b30");
     document.documentElement.style.setProperty("--fc-input-border", lightMode ? "rgba(39,61,91,.22)" : "rgba(255,255,255,.15)");
   }, [lightMode]);
@@ -746,7 +746,7 @@ export default function App() {
     </div>
   );
 
-  if (screen === "loading") return <div style={{...page, alignItems:"center", justifyContent:"center"}}><div style={{fontFamily:"Lora, serif", color:"#a0aaff"}}>Loading…</div></div>;
+  if (screen === "loading") return <div style={{...page, alignItems:"center", justifyContent:"center"}}><div style={{fontFamily:"Lora, serif", color:"#D6AE6E"}}>Loading…</div></div>;
 
   if (screen === "resetPassword") {
     return (
@@ -754,7 +754,7 @@ export default function App() {
         <FontLoader />
         <div style={{ flex:1, display:"flex", flexDirection:"column", justifyContent:"center", padding:"0 28px" }}>
           <h1 style={{ fontFamily:"Lora, serif", fontSize:26, color:"#F8F4EA", marginBottom:8 }}>Set a new password</h1>
-          <p style={{ fontFamily:"Inter, sans-serif", fontSize:14, color:"#C9C2AF", marginBottom:20 }}>Choose a new password for your account (min. 6 characters).</p>
+          <p style={{ fontFamily:"Inter, sans-serif", fontSize:14, color:"var(--fc-muted, #D6AE6E)", marginBottom:20 }}>Choose a new password for your account (min. 6 characters).</p>
           <PasswordInput value={newPassword} onChange={e=>setNewPassword(e.target.value)} placeholder="New password" style={{ ...input, marginBottom:10 }} />
           {newPasswordErr && <div style={{ color:"#E3A6A6", fontSize:13, fontFamily:"Inter, sans-serif", marginBottom:10 }}>{newPasswordErr}</div>}
           <button disabled={newPasswordBusy} onClick={async () => {
@@ -788,7 +788,7 @@ export default function App() {
           <h1 style={{ fontFamily: "Lora, serif", fontSize: 40, lineHeight: 1.15, color: "#F8F4EA", fontWeight: 600, margin: "0 0 18px" }}>
             Built on shared conviction, not just chemistry.
           </h1>
-          <p style={{ fontFamily: "Inter, sans-serif", fontSize: 15.5, color: "#C9C2AF", lineHeight: 1.6, maxWidth: 340 }}>
+          <p style={{ fontFamily: "Inter, sans-serif", fontSize: 15.5, color: "var(--fc-muted, #D6AE6E)", lineHeight: 1.6, maxWidth: 340 }}>
             FaithConnect matches you by faith, values, hobbies, and what you're looking for in a relationship — not a swipe. Chat, send voice notes, or call once you match.
           </p>
 
@@ -840,7 +840,7 @@ export default function App() {
         <FontLoader />
         <div style={{ flex: 1, overflowY: "auto", padding: "28px 22px 100px", background:"var(--fc-bg)" }}>
           <h2 style={{...heading, color:"var(--fc-text)"}}>Tell us about you</h2>
-          <p style={{ fontFamily:"Inter, sans-serif", fontSize:13, color:"#8A8578", lineHeight:1.5, marginTop:-8, marginBottom:18 }}>
+          <p style={{ fontFamily:"Inter, sans-serif", fontSize:13, color:"#B8935F", lineHeight:1.5, marginTop:-8, marginBottom:18 }}>
             What you share on this page is how we match you with someone else — other members can see it to find out if you're a good match.
           </p>
           <div style={{ display:"flex", flexDirection:"column", alignItems:"center", marginBottom:8 }}>
@@ -990,13 +990,13 @@ export default function App() {
           <h2 style={{...heading, color:"#F8F4EA"}}>Messages</h2>
         </div>
         <div style={{ flex:1, overflowY:"auto", padding:"0 16px 100px", background:"var(--fc-bg)" }}>
-          {conversations.length === 0 && <div style={{...emptyState, color:"#B9C9BC"}}>No conversations yet. Start one from your matches.</div>}
+          {conversations.length === 0 && <div style={{...emptyState, color:"var(--fc-muted, #D6AE6E)"}}>No conversations yet. Start one from your matches.</div>}
           {conversations.map(c => (
             <button key={c.otherId} onClick={() => { setActiveConvo({ otherId: c.otherId, otherProfile: c.otherProfile }); setScreen("chat"); }} style={convoRow}>
               <div style={{ marginRight:10 }}><AvatarCircle profile={c.otherProfile} size={38} fontSize={15} /></div>
               <div style={{flex:1, minWidth:0, textAlign:"left"}}>
                 <div style={{fontFamily:"Lora, serif", fontSize:15.5, color:"#22252B", fontWeight:c.unread ? 700 : 400}}>{c.otherProfile?.name || "Someone"}</div>
-                <div style={{fontFamily:"Inter, sans-serif", fontSize:13, color:c.unread ? "#22252B" : "#8A8578", fontWeight:c.unread ? 600 : 400, whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis", maxWidth:220}}>
+                <div style={{fontFamily:"Inter, sans-serif", fontSize:13, color:c.unread ? "#22252B" : "#B8935F", fontWeight:c.unread ? 600 : 400, whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis", maxWidth:220}}>
                   {c.last ? `${c.last.sender === myId ? "You: " : ""}${c.last.type === "voice" ? "🎙️ Voice note" : c.last.text}` : "No messages"}
                 </div>
               </div>
@@ -1029,10 +1029,10 @@ export default function App() {
             }}>
               <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-end", marginBottom:18 }}>
                 <div>
-                  <div style={{ fontFamily:"Inter, sans-serif", fontSize:9, letterSpacing:3, color: lightMode ? "#426B9A" : "#8792ff", marginBottom:7 }}>FAITH · CONNECTION · REAL</div>
+                  <div style={{ fontFamily:"Inter, sans-serif", fontSize:9, letterSpacing:3, color: lightMode ? "#8A6A1F" : "#D6AE6E", marginBottom:7 }}>FAITH · CONNECTION · REAL</div>
                   <div style={{ fontFamily:"Lora, serif", fontSize:25, color: lightMode ? "#162D4B" : "#F8F4EA", letterSpacing:-.6 }}>Find Your Match</div>
                 </div>
-                <div style={{ fontFamily:"cursive", fontSize:18, lineHeight:1.05, color: lightMode ? "#5C70A2" : "#b8a8ff", textAlign:"right", transform:"rotate(-3deg)", paddingBottom:3 }}>
+                <div style={{ fontFamily:"cursive", fontSize:18, lineHeight:1.05, color: lightMode ? "#8A6A1F" : "#D6AE6E", textAlign:"right", transform:"rotate(-3deg)", paddingBottom:3 }}>
                   God brings<br/>people together
                   <div style={{ width:72, height:2, margin:"4px 0 0 auto", background:"linear-gradient(90deg, transparent, #ff55c8)" }} />
                 </div>
@@ -1067,7 +1067,7 @@ export default function App() {
 function Field({ label, children, style }) {
   return (
     <div style={{ marginBottom: 16, ...style }}>
-      <label style={{ fontFamily:"Inter, sans-serif", fontSize:13, color:"var(--fc-muted, #C9C2AF)", display:"block", marginBottom:6 }}>{label}</label>
+      <label style={{ fontFamily:"Inter, sans-serif", fontSize:13, color:"var(--fc-muted, #D6AE6E)", display:"block", marginBottom:6 }}>{label}</label>
       {children}
     </div>
   );
@@ -1080,7 +1080,7 @@ function PreferenceSection({ number, title, list, sel, onToggle, limit, lightMod
   const selected = Array.isArray(sel) ? sel.length : 0;
   const sectionBorder = lightMode ? "1px solid rgba(30,55,90,.12)" : "1px solid rgba(255,255,255,.09)";
   const titleColor = lightMode ? "#1B2B43" : "#F8F4EA";
-  const helperColor = lightMode ? "#5C6D82" : "#737d9f";
+  const helperColor = lightMode ? "#8A6A1F" : "#737d9f";
   const countColor = lightMode ? "#68788D" : "#8993b6";
   return (
     <section style={{ marginTop: 22, paddingTop: 18, borderTop: sectionBorder }}>
@@ -1106,7 +1106,7 @@ function PreferenceSection({ number, title, list, sel, onToggle, limit, lightMod
 function Tag({ list, lightMode=false }) {
   if (!list || !list.length) return null;
   return <div>{list.filter(Boolean).map(t => (
-    <span key={t} style={{ display:"inline-block", fontSize:12, fontFamily:"Inter, sans-serif", color: lightMode ? "#33445A" : "#F8F4EA", background: lightMode ? "rgba(96,112,255,0.10)" : "rgba(96,112,255,0.18)", border: lightMode ? "1px solid rgba(77,105,170,0.25)" : "1px solid rgba(108,124,255,0.3)", padding:"5px 10px", borderRadius:999, marginRight:6, marginBottom:6 }}>{t}</span>
+    <span key={t} style={{ display:"inline-block", fontSize:12, fontFamily:"Inter, sans-serif", color: lightMode ? "#33445A" : "#F8F4EA", background: lightMode ? "rgba(184,147,95,0.12)" : "rgba(96,112,255,0.18)", border: lightMode ? "1px solid rgba(77,105,170,0.25)" : "1px solid rgba(184,147,95,0.45)", padding:"5px 10px", borderRadius:999, marginRight:6, marginBottom:6 }}>{t}</span>
   ))}</div>;
 }
 function FontLoader() {
@@ -1188,7 +1188,7 @@ function MenuDrawer({ open, onClose, onLogOut, onNavigate, lightMode }) {
       }}>
         <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:24 }}>
           <span style={{ fontFamily:"Lora, serif", fontSize:19, color:lightMode ? "#16233F" : "#F8F4EA" }}>FaithConnect</span>
-          <button onClick={onClose} style={{ background:"none", border:"none", cursor:"pointer" }}><X size={20} color={lightMode ? "#8A8578" : "#C9C2AF"} /></button>
+          <button onClick={onClose} style={{ background:"none", border:"none", cursor:"pointer" }}><X size={20} color={lightMode ? "#B8935F" : "#D6AE6E"} /></button>
         </div>
         {items.map(({ icon: Icon, label, action, note }) => (
           <button key={label} onClick={() => { action(); if (!note) onClose(); }} style={{
@@ -1196,7 +1196,7 @@ function MenuDrawer({ open, onClose, onLogOut, onNavigate, lightMode }) {
             padding:"12px 4px", cursor:"pointer", color:lightMode ? "#34445A" : "#E8E3D6", fontFamily:"Inter, sans-serif", fontSize:14.5, textAlign:"left"
           }}>
             <Icon size={18} color={lightMode ? "#9A6F2F" : "#B8935F"} /> {label}
-            {note && <span style={{ marginLeft:"auto", fontSize:11, color:"#6B7690" }}>{note}</span>}
+            {note && <span style={{ marginLeft:"auto", fontSize:11, color:"#D6AE6E" }}>{note}</span>}
           </button>
         ))}
         {inviteMsg && <div style={{ fontFamily:"Inter, sans-serif", fontSize:12, color:lightMode ? "#4D7B55" : "#8AAE8E", padding:"4px 4px 0" }}>{inviteMsg}</div>}
@@ -1236,14 +1236,14 @@ function MatchHero({ count, onMeetSomeone, lightMode }) {
       <div style={{ position:"relative", zIndex:2, width:"100%", maxWidth:360 }}>
         <div style={{ display:"flex", alignItems:"center", gap:9, marginBottom:15 }}>
           <span style={{ width:27, height:2, background:"linear-gradient(90deg,#526cff,#8d5cff)" }} />
-          <span style={{ fontFamily:"Inter, sans-serif", fontSize:9, letterSpacing:3, color: lightMode ? "#FFFFFF" : "#d2d4e4", textShadow: lightMode ? "0 2px 8px rgba(0,0,0,.45)" : "0 2px 8px rgba(0,0,0,.45)" }}>FAITH CONNECT</span>
+          <span style={{ fontFamily:"Inter, sans-serif", fontSize:9, letterSpacing:3, color: lightMode ? "#FFFFFF" : "#F0DCA8", textShadow: lightMode ? "0 2px 8px rgba(0,0,0,.45)" : "0 2px 8px rgba(0,0,0,.45)" }}>FAITH CONNECT</span>
         </div>
         <h1 style={{ fontFamily:"Lora, serif", fontSize:21, lineHeight:1.2, letterSpacing:0.2, fontStyle:"italic", fontWeight:600, color: lightMode ? "#FFFFFF" : "#F8F4EA", margin:"0 0 14px", maxWidth:330, textShadow: lightMode ? "0 2px 10px rgba(0,0,0,.48)" : "0 2px 14px rgba(0,0,0,.55)" }}>
           <span>Shared Faith.</span><br/>
           <span>Meaningful Connection.</span><br/>
-          <span style={{ color: lightMode ? "#FFD464" : "#c7b1ff", textShadow: lightMode ? "0 2px 10px rgba(0,0,0,.65)" : undefined }}>Growing Together.</span>
+          <span style={{ color: lightMode ? "#FFD464" : "#D6AE6E", textShadow: lightMode ? "0 2px 10px rgba(0,0,0,.65)" : undefined }}>Growing Together.</span>
         </h1>
-        <p style={{ fontFamily:"Inter, sans-serif", fontSize:14, lineHeight:1.5, color: lightMode ? "#FFFFFF" : "#d0d3df", margin:"0 0 18px", maxWidth:345, fontWeight:500, textShadow: lightMode ? "0 2px 10px rgba(0,0,0,.42)" : "0 2px 8px rgba(0,0,0,.45)" }}>
+        <p style={{ fontFamily:"Inter, sans-serif", fontSize:14, lineHeight:1.5, color: lightMode ? "#FFFFFF" : "#F0DCA8", margin:"0 0 18px", maxWidth:345, fontWeight:500, textShadow: lightMode ? "0 2px 10px rgba(0,0,0,.42)" : "0 2px 8px rgba(0,0,0,.45)" }}>
           Meet someone who shares your faith, values, and desire to grow.
         </p>
       </div>
@@ -1302,7 +1302,7 @@ function SecurityScreen({ myId, myProfile, onBack, onUsernameChanged }) {
       <div style={{ padding:"18px 22px 8px", background:"var(--fc-bg)" }}>
         <button onClick={onBack} style={{ ...backBtn, color:"#D6AE6E", marginBottom:10 }}><ChevronLeft size={18}/> Back</button>
         <h2 style={{ ...heading, color:"#F8F4EA" }}>Security</h2>
-        <p style={{ fontFamily:"Inter, sans-serif", fontSize:13.5, color:"#C9C2AF", margin:"0 0 16px" }}>Change your username or password anytime.</p>
+        <p style={{ fontFamily:"Inter, sans-serif", fontSize:13.5, color:"var(--fc-muted, #D6AE6E)", margin:"0 0 16px" }}>Change your username or password anytime.</p>
       </div>
       <div style={{ flex:1, overflowY:"auto", padding:"0 22px 100px", background:"var(--fc-bg)" }}>
         <div style={{ background:"#5C4520", border:"1.5px solid #9C7A48", borderRadius:16, padding:18, marginBottom:16 }}>
@@ -1327,21 +1327,21 @@ function MatchPeopleList({ matches, onOpenChat, lightMode }) {
   return (
     <div style={{ padding:"22px 16px 0" }}>
       <h2 style={{ fontFamily:"Lora, serif", fontSize:22, color:"var(--fc-text, #F8F4EA)", margin:"0 0 4px" }}>People who match you</h2>
-      <p style={{ fontFamily:"Inter, sans-serif", fontSize:13.5, color: lightMode ? "#6B5217" : "#B9C9BC", margin:"0 0 12px" }}>Their faith, values, and interests line up with yours.</p>
+      <p style={{ fontFamily:"Inter, sans-serif", fontSize:13.5, color: lightMode ? "#6B5217" : "#D6AE6E", margin:"0 0 12px" }}>Their faith, values, and interests line up with yours.</p>
       {matches.length === 0 && <div style={{...emptyState, color: lightMode ? "#6B5217" : undefined}}>No matches yet — check back once more people join.</div>}
         {matches.map(({ profile, score }) => (
           <div key={profile.id} style={matchCard}>
             <div style={{display:"flex", flexDirection:"column", alignItems:"center", position:"relative"}}>
-              <div style={{position:"absolute", top:0, right:0, fontFamily:"Lora, serif", fontSize:17, color:"#a0aaff", fontWeight:600}}>{score.pct}%</div>
+              <div style={{position:"absolute", top:0, right:0, fontFamily:"Lora, serif", fontSize:17, color:"#D6AE6E", fontWeight:600}}>{score.pct}%</div>
               <AvatarCircle profile={profile} size={84} fontSize={32} zoom />
               <div style={{fontFamily:"Lora, serif", fontSize:20, color:"#F8F4EA", margin:"10px 0 2px", textAlign:"center"}}>{profile.name}{profile.age ? `, ${profile.age}` : ""}</div>
-              {profile.city && <div style={{fontFamily:"Inter, sans-serif", fontSize:13, color:"#B9C9BC"}}>📍 {profile.city}</div>}
+              {profile.city && <div style={{fontFamily:"Inter, sans-serif", fontSize:13, color:"#D6AE6E"}}>📍 {profile.city}</div>}
             </div>
-            {profile.bio && <p style={{fontFamily:"Inter, sans-serif", fontSize:14, color:"#c4c9d8", lineHeight:1.55, margin:"12px 4px", textAlign:"center", whiteSpace:"pre-wrap"}}>{profile.bio}</p>}
+            {profile.bio && <p style={{fontFamily:"Inter, sans-serif", fontSize:14, color:"#D6AE6E", lineHeight:1.55, margin:"12px 4px", textAlign:"center", whiteSpace:"pre-wrap"}}>{profile.bio}</p>}
             {(profile.denom || profile.favoriteBible) && (
               <div style={{padding:"10px 12px", borderRadius:12, border:"1px solid rgba(255,255,255,.12)", background:"rgba(255,255,255,.04)", marginBottom:10}}>
                 <div style={{fontFamily:"Inter, sans-serif", fontSize:10.5, letterSpacing:1.6, color:"#D6AE6E", fontWeight:600, marginBottom:6}}>FAITH</div>
-                {profile.denom && <div style={{display:"flex", justifyContent:"space-between", gap:10, fontFamily:"Inter, sans-serif", fontSize:13.5}}><span style={{color:"#B9C9BC"}}>Denomination</span><span style={{color:"#F8F4EA", fontWeight:600, textAlign:"right"}}>{profile.denom}</span></div>}
+                {profile.denom && <div style={{display:"flex", justifyContent:"space-between", gap:10, fontFamily:"Inter, sans-serif", fontSize:13.5}}><span style={{color:"#D6AE6E"}}>Denomination</span><span style={{color:"#F8F4EA", fontWeight:600, textAlign:"right"}}>{profile.denom}</span></div>}
                 {profile.favoriteBible && <div style={{fontFamily:"Lora, serif", fontSize:14, color:"#F8F4EA", marginTop:profile.denom?8:0}}>📖 {profile.favoriteBible}</div>}
               </div>
             )}
@@ -1423,7 +1423,7 @@ function MatchRevealOverlay({ myProfile, other, score, onClose, onSayHello }) {
         </div>
       </div>
       <div style={{ fontFamily:"Lora, serif", fontSize:64, color:"#D6AE6E", marginTop:32, fontWeight:700 }}>{count}%</div>
-      <div style={{ fontFamily:"Inter, sans-serif", fontSize:14, color:"#C9C2AF", marginTop:-6 }}>match</div>
+      <div style={{ fontFamily:"Inter, sans-serif", fontSize:14, color:"#D6AE6E", marginTop:-6 }}>match</div>
       <button onClick={onSayHello} style={{ ...ctaBtn, marginTop:32 }}>Say hello <ArrowRight size={18} /></button>
     </div>
   );
@@ -1454,7 +1454,7 @@ function FeatureCard({ title, description, gradient, Icon, onConnect, lightMode 
         </div>
         <div style={{ flex:1, minWidth:0 }}>
           <div style={{ fontFamily:"Lora, serif", fontWeight:600, fontSize:20, color: lightMode ? "#162D4B" : "#F8F4EA", marginBottom:7 }}>{title}</div>
-          <p style={{ fontFamily:"Inter, sans-serif", fontSize:13.5, color: lightMode ? "#526B86" : "#bfc4d8", lineHeight:1.45, margin:"0 0 14px", maxWidth:250 }}>{description}</p>
+          <p style={{ fontFamily:"Inter, sans-serif", fontSize:13.5, color: lightMode ? "#8A6A1F" : "#D6AE6E", lineHeight:1.45, margin:"0 0 14px", maxWidth:250 }}>{description}</p>
           <button onClick={onConnect} style={{ display:"inline-flex", alignItems:"center", justifyContent:"center", gap:8, padding:"9px 16px", borderRadius:999, border: lightMode ? "1px solid #4A72E8" : "1px solid #ff5cb0", color:"#fff", background: lightMode ? "linear-gradient(100deg,#3D73FF,#6758FF)" : "rgba(15,10,30,.42)", boxShadow:"0 0 14px rgba(255,92,176,.16)", fontFamily:"Inter, sans-serif", fontSize:12.5, fontWeight:600, cursor:"pointer" }}>
             Meet someone <ArrowRight size={15}/>
           </button>
@@ -1498,12 +1498,12 @@ function TodaysWordCard() {
     <div style={{ position:"relative", background:"linear-gradient(120deg,#15182b,#080a15)", border:"1px solid rgba(255,255,255,.08)", borderRadius:22, padding:"24px", overflow:"hidden", marginBottom:16 }}>
       <div style={{ position:"absolute", inset:0, background:"radial-gradient(circle at 80% 20%, rgba(130,103,255,.2), transparent 35%)", pointerEvents:"none" }} />
       <div style={{ position:"relative" }}>
-        <div style={{ fontFamily:"Inter, sans-serif", fontSize:9, letterSpacing:3, color:"#7887e8", marginBottom:13 }}>TODAY'S WORD</div>
+        <div style={{ fontFamily:"Inter, sans-serif", fontSize:9, letterSpacing:3, color:"#D6AE6E", marginBottom:13 }}>TODAY'S WORD</div>
         <div style={{ fontSize:24, color:"#ff72c8", textShadow:"0 0 20px rgba(255,114,200,.55)", marginBottom:12 }}>♡</div>
         <h3 style={{ fontFamily:"Lora, serif", fontSize:19, lineHeight:1.35, fontWeight:500, color:"#F8F4EA", margin:0 }}>
           “{verse.text}”
         </h3>
-        <p style={{ fontFamily:"Inter, sans-serif", fontSize:12, color:"#757d95", marginTop:11 }}>{verse.ref}</p>
+        <p style={{ fontFamily:"Inter, sans-serif", fontSize:12, color:"#D6AE6E", marginTop:11 }}>{verse.ref}</p>
       </div>
     </div>
   );
@@ -1526,7 +1526,7 @@ function IronSharpensIronCard({ onOpen, lightMode }) {
         </div>
         <div style={{ flex:1 }}>
           <div style={{ fontFamily:"Lora, serif", fontWeight:600, fontSize:19, color:lightMode ? "#162D4B" : "#F8F4EA", marginBottom:6 }}>Iron Sharpens Iron</div>
-          <p style={{ fontFamily:"Inter, sans-serif", fontSize:13.5, color:lightMode ? "#3F566F" : "#c8c7d4", lineHeight:1.4, margin:"0 0 14px", maxWidth:260 }}>Meet a random believer and share about your faith.</p>
+          <p style={{ fontFamily:"Inter, sans-serif", fontSize:13.5, color:lightMode ? "#8A6A1F" : "#D6AE6E", lineHeight:1.4, margin:"0 0 14px", maxWidth:260 }}>Meet a random believer and share about your faith.</p>
           <span style={{ display:"inline-flex", alignItems:"center", gap:7, padding:"8px 15px", borderRadius:999, border:lightMode ? "1px solid #4A72E8" : "1px solid #ff5cb0", color:"#fff", background:lightMode ? "linear-gradient(100deg,#3D73FF,#6758FF)" : "rgba(15,10,30,.4)", fontFamily:"Inter, sans-serif", fontSize:12.5, fontWeight:600 }}>Share with someone <ArrowRight size={15}/></span>
         </div>
       </div>
@@ -1885,7 +1885,7 @@ function ChatScreen({ myId, myProfile, other, onBack, onRead }) {
                 {m.type === "voice" ? <audio controls src={m.content} style={{height:34, maxWidth:200}} /> : m.text}
               </div>
               {mine && m.id === lastMineId && m.readAt && (
-                <div style={{ fontFamily:"Inter, sans-serif", fontSize:11, color:"#858ca1", marginTop:3 }}>Seen</div>
+                <div style={{ fontFamily:"Inter, sans-serif", fontSize:11, color:"#D6AE6E", marginTop:3 }}>Seen</div>
               )}
             </div>
           );
@@ -2355,7 +2355,7 @@ function RandomConnectScreen({ myId, myProfile, onlinePeople = [], onBack, varia
           <h2 style={{ fontFamily:"Lora, serif", fontSize:22, color:"#F8F4EA", marginTop:26, marginBottom:6, textAlign:"center" }}>
             {online.length > 0 ? theme.onlineText(online.length) : theme.emptyText}
           </h2>
-          <p style={{ fontFamily:"Inter, sans-serif", fontSize:13.5, color:"#8A8FA8", textAlign:"center", marginBottom:26, fontStyle:"italic" }}>
+          <p style={{ fontFamily:"Inter, sans-serif", fontSize:13.5, color:"#D6AE6E", textAlign:"center", marginBottom:26, fontStyle:"italic" }}>
             {theme.tagline}
           </p>
           <div style={{ display:"flex", gap:10, marginBottom:26 }}>
@@ -2365,8 +2365,8 @@ function RandomConnectScreen({ myId, myProfile, onlinePeople = [], onBack, varia
                 border: mode===key ? "1.5px solid #B8935F" : "1.5px solid rgba(255,255,255,.15)",
                 background: mode===key ? "rgba(184,147,95,.15)" : "transparent", cursor:"pointer"
               }}>
-                <Icon size={20} color={mode===key ? "#B8935F" : "#C9C2AF"} />
-                <span style={{ fontFamily:"Inter, sans-serif", fontSize:12.5, color: mode===key ? "#B8935F" : "#C9C2AF" }}>{label}</span>
+                <Icon size={20} color={mode===key ? "#B8935F" : "#D6AE6E"} />
+                <span style={{ fontFamily:"Inter, sans-serif", fontSize:12.5, color: mode===key ? "#B8935F" : "#D6AE6E" }}>{label}</span>
               </button>
             ))}
           </div>
@@ -2382,8 +2382,8 @@ function RandomConnectScreen({ myId, myProfile, onlinePeople = [], onBack, varia
         <FontLoader />
         <SonarReveal online={online} variant={variant} active />
         <h2 style={{ fontFamily:"Lora, serif", fontSize:20, color:"#F8F4EA", marginTop:26 }}>Looking for someone…</h2>
-        <p style={{ fontFamily:"Inter, sans-serif", fontSize:13.5, color:"#8A8FA8", marginTop:6 }}>{theme.searchingText}</p>
-        <button onClick={leave} style={{ ...secondaryBtn, marginTop:26, borderColor:"#8A8FA8", color:"#C9C2AF" }}>Cancel</button>
+        <p style={{ fontFamily:"Inter, sans-serif", fontSize:13.5, color:"#D6AE6E", marginTop:6 }}>{theme.searchingText}</p>
+        <button onClick={leave} style={{ ...secondaryBtn, marginTop:26, borderColor:"#D6AE6E", color:"#D6AE6E" }}>Cancel</button>
       </div>
     );
   }
@@ -2541,14 +2541,14 @@ const ctaBtn = {
   boxShadow:"0 12px 32px rgba(88,91,255,.35)",
   display:"inline-flex", alignItems:"center", justifyContent:"center", gap:10
 };
-const secondaryBtn = { background:"rgba(96,112,255,0.12)", color:"#a0aaff", border:"1.5px solid rgba(108,124,255,0.3)", padding:"11px 20px", borderRadius:12, fontFamily:"Inter, sans-serif", fontSize:14.5, fontWeight:600, cursor:"pointer" };
-const backBtn = { display:"flex", alignItems:"center", gap:2, background:"none", border:"none", color:"#8290d9", fontFamily:"Inter, sans-serif", fontSize:14, cursor:"pointer", padding:0, marginBottom:12 };
+const secondaryBtn = { background:"rgba(184,147,95,0.14)", color:"#D6AE6E", border:"1.5px solid rgba(184,147,95,0.45)", padding:"11px 20px", borderRadius:12, fontFamily:"Inter, sans-serif", fontSize:14.5, fontWeight:600, cursor:"pointer" };
+const backBtn = { display:"flex", alignItems:"center", gap:2, background:"none", border:"none", color:"#D6AE6E", fontFamily:"Inter, sans-serif", fontSize:14, cursor:"pointer", padding:0, marginBottom:12 };
 const navBar = lightMode => ({ display:"flex", gap:4, padding:7, margin:"0 14px 14px", background: lightMode ? "rgba(255,255,255,.92)" : "rgba(8,13,31,0.9)", border: lightMode ? "1px solid rgba(66,104,158,.14)" : "1px solid rgba(78,107,255,.35)", borderRadius:23, boxShadow: lightMode ? "0 14px 38px rgba(41,72,110,.14)" : "0 20px 60px rgba(0,0,0,.55)", position:"sticky", bottom:14, backdropFilter:"blur(18px)" });
-const navBtn = (active, lightMode) => ({ flex:1, display:"flex", flexDirection:"column", alignItems:"center", padding:"10px 0", background: active ? (lightMode ? "rgba(61,115,255,.10)" : "rgba(93,108,255,0.15)") : "none", borderRadius:17, border:"none", cursor:"pointer", color: active ? (lightMode ? "#356AE8" : "#a0aaff") : (lightMode ? "#6D7E93" : "#626a80"), gap:4 });
+const navBtn = (active, lightMode) => ({ flex:1, display:"flex", flexDirection:"column", alignItems:"center", padding:"10px 0", background: active ? (lightMode ? "rgba(61,115,255,.10)" : "rgba(93,108,255,0.15)") : "none", borderRadius:17, border:"none", cursor:"pointer", color: active ? (lightMode ? "#8A6A1F" : "#D6AE6E") : (lightMode ? "#6D7E93" : "#626a80"), gap:4 });
 const matchCard = { background:"linear-gradient(145deg, rgba(14,20,42,.96), rgba(8,12,26,.96))", border:"1px solid rgba(100,116,255,.18)", borderRadius:22, padding:16, marginBottom:14, boxShadow:"0 12px 30px rgba(0,0,0,.18)" };
 const avatarMd = { width:52, height:52, borderRadius:"50%", background:"#EFE9DC", color:"#B8935F", display:"flex", alignItems:"center", justifyContent:"center", fontFamily:"Lora, serif", fontSize:20, flexShrink:0 };
 const avatarSm = { width:38, height:38, borderRadius:"50%", background:"#EFE9DC", color:"#B8935F", display:"flex", alignItems:"center", justifyContent:"center", fontFamily:"Lora, serif", fontSize:15, flexShrink:0, marginRight:10 };
-const emptyState = { textAlign:"center", color:"#9B9585", fontFamily:"Inter, sans-serif", fontSize:14, padding:"60px 20px" };
+const emptyState = { textAlign:"center", color:"#B8935F", fontFamily:"Inter, sans-serif", fontSize:14, padding:"60px 20px" };
 const unreadBadge = extra => ({ minWidth:18, height:18, padding:"0 5px", borderRadius:9, background:"#ff3b5c", color:"#fff", fontFamily:"Inter, sans-serif", fontSize:11, fontWeight:700, display:"inline-flex", alignItems:"center", justifyContent:"center", boxSizing:"border-box", ...extra });
 const convoRow = { display:"flex", alignItems:"center", width:"100%", background:"#fff", border:"none", borderRadius:14, padding:12, marginBottom:10, cursor:"pointer", boxShadow:"0 1px 2px rgba(20,20,15,.05)" };
 const chatHeader = { display:"flex", alignItems:"center", padding:"14px 12px", background:"var(--fc-bg)" };
