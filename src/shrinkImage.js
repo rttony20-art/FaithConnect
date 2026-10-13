@@ -1,8 +1,8 @@
 // Phone photos are often 4-12 MB, which is slow and unreliable to upload on mobile data.
-// This shrinks a picture to at most `maxSide` pixels on its longest edge and re-saves it
+// This shrinks a picture to at most `maxSide` pixels (2048 by default, sharp enough for full-screen viewing) on its longest edge and re-saves it
 // as a JPEG (usually 100-400 KB). If anything goes wrong it returns the original file.
 
-export async function shrinkImage(file, maxSide = 1280, quality = 0.82) {
+export async function shrinkImage(file, maxSide = 2048, quality = 0.92) {
   try {
     if (!file || !/^image\//.test(file.type) || /svg|gif/.test(file.type)) return file;
     const bitmap = await createImageBitmap(file, { imageOrientation: "from-image" });
