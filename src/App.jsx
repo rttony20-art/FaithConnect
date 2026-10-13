@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from "react";
 import { createMessagesApi, rowToMsg } from "./messagesApi.js";
 import { getIceServers } from "./iceServers.js";
 import PurposeDiscovery from "./PurposeDiscovery.jsx";
+import { shrinkImage } from "./shrinkImage.js";
 import AvatarFace from "./avatar/AvatarFace.jsx";
 import AvatarCreator from "./avatar/AvatarCreator.jsx";
 import { isAvatarCode } from "./avatar/code.js";
@@ -99,11 +100,17 @@ async function supaRest(path, { method = "GET", token, body, extraHeaders = {} }
   return txt ? JSON.parse(txt) : null;
 }
 async function supaUpload(bucket, path, file, token) {
-  const res = await fetch(`${SUPABASE_URL}/storage/v1/object/${bucket}/${path}`, {
-    method: "POST",
-    headers: { "apikey": SUPABASE_ANON_KEY, "Authorization": `Bearer ${token}`, "Content-Type": file.type || "application/octet-stream", "x-upsert": "true" },
-    body: file
-  });
+  const small = await shrinkImage(file); // phone photos are huge; smaller uploads are faster and more reliable
+  let res;
+  try {
+    res = await fetch(`${SUPABASE_URL}/storage/v1/object/${bucket}/${path}`, {
+      method: "POST",
+      headers: { "apikey": SUPABASE_ANON_KEY, "Authorization": `Bearer ${token}`, "Content-Type": small.type || "application/octet-stream", "x-upsert": "true" },
+      body: small
+    });
+  } catch {
+    throw new Error("the photo could not be uploaded. Check your connection and try again, or make an avatar instead.");
+  }
   if (!res.ok) { const t = await res.text().catch(() => ""); throw new Error(t || `Photo upload failed (${res.status})`); }
   return `${SUPABASE_URL}/storage/v1/object/public/${bucket}/${path}`;
 }
