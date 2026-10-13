@@ -357,6 +357,10 @@ export default function App() {
     document.documentElement.style.setProperty("--fc-bg", lightMode ? LIGHT_BG : GLOW_BG);
     document.documentElement.style.setProperty("--fc-text", lightMode ? "#1B2B43" : "#F8F4EA");
     document.documentElement.style.setProperty("--fc-muted", lightMode ? "#8A6A1F" : "#D6AE6E");
+    document.documentElement.style.setProperty("--fc-card", lightMode ? "#FFFFFF" : "#111936");
+    document.documentElement.style.setProperty("--fc-card-border", lightMode ? "#E5DFD1" : "rgba(119,105,255,.28)");
+    document.documentElement.style.setProperty("--fc-card-text", lightMode ? "#22252B" : "#F8F4EA");
+    document.documentElement.style.setProperty("--fc-bubble", lightMode ? "#EFE9DC" : "#1D2647");
     document.documentElement.style.setProperty("--fc-input-bg", lightMode ? "rgba(255,255,255,.72)" : "#151b30");
     document.documentElement.style.setProperty("--fc-input-border", lightMode ? "rgba(39,61,91,.22)" : "rgba(255,255,255,.15)");
   }, [lightMode]);
@@ -995,8 +999,8 @@ export default function App() {
             <button key={c.otherId} onClick={() => { setActiveConvo({ otherId: c.otherId, otherProfile: c.otherProfile }); setScreen("chat"); }} style={convoRow}>
               <div style={{ marginRight:10 }}><AvatarCircle profile={c.otherProfile} size={38} fontSize={15} /></div>
               <div style={{flex:1, minWidth:0, textAlign:"left"}}>
-                <div style={{fontFamily:"Lora, serif", fontSize:15.5, color:"#22252B", fontWeight:c.unread ? 700 : 400}}>{c.otherProfile?.name || "Someone"}</div>
-                <div style={{fontFamily:"Inter, sans-serif", fontSize:13, color:c.unread ? "#22252B" : "#B8935F", fontWeight:c.unread ? 600 : 400, whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis", maxWidth:220}}>
+                <div style={{fontFamily:"Lora, serif", fontSize:15.5, color:"var(--fc-card-text)", fontWeight:c.unread ? 700 : 400}}>{c.otherProfile?.name || "Someone"}</div>
+                <div style={{fontFamily:"Inter, sans-serif", fontSize:13, color:c.unread ? "var(--fc-card-text)" : "#B8935F", fontWeight:c.unread ? 600 : 400, whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis", maxWidth:220}}>
                   {c.last ? `${c.last.sender === myId ? "You: " : ""}${c.last.type === "voice" ? "🎙️ Voice note" : c.last.text}` : "No messages"}
                 </div>
               </div>
@@ -1881,7 +1885,7 @@ function ChatScreen({ myId, myProfile, other, onBack, onRead }) {
           const mine = m.sender === myId;
           return (
             <div key={m.id || `${m.sender}-${m.ts}`} style={{ alignSelf:mine ? "flex-end" : "flex-start", maxWidth:"75%", marginBottom:10, display:"flex", flexDirection:"column", alignItems:mine ? "flex-end" : "flex-start" }}>
-              <div style={{ background:mine ? "#B8935F" : "#EFE9DC", color:mine ? "#FAF7F0" : "#22252B", padding:"9px 13px", borderRadius:16, fontFamily:"Inter, sans-serif", fontSize:14.5, opacity:m.pending ? 0.6 : 1 }}>
+              <div style={{ background:mine ? "#B8935F" : "var(--fc-bubble)", color:mine ? "#FAF7F0" : "var(--fc-card-text)", padding:"9px 13px", borderRadius:16, fontFamily:"Inter, sans-serif", fontSize:14.5, opacity:m.pending ? 0.6 : 1 }}>
                 {m.type === "voice" ? <audio controls src={m.content} style={{height:34, maxWidth:200}} /> : m.text}
               </div>
               {mine && m.id === lastMineId && m.readAt && (
@@ -1893,8 +1897,8 @@ function ChatScreen({ myId, myProfile, other, onBack, onRead }) {
       </div>
       {callErr && <div style={{fontSize:12, color:"#B5616B", fontFamily:"Inter, sans-serif", padding:"4px 14px", background:"var(--fc-bg)"}}>{callErr}</div>}
       <div style={{ ...composer, flexShrink:0, paddingBottom:"calc(10px + env(safe-area-inset-bottom))" }}>
-        <button onClick={recording ? stopRecording : startRecording} style={{ ...iconBtnLight, background:recording ? "#B5616B" : "#EFE9DC" }}>{recording ? <Square size={17} color="#fff" /> : <Mic size={18} color="#4A4A45" />}</button>
-        <input value={text} onChange={e=>setText(e.target.value)} onKeyDown={e=>{ if(e.key==="Enter" && text.trim()) sendMessage("text", text.trim()); }} placeholder="Type a message…" style={{ flex:1, border:"none", outline:"none", fontFamily:"Inter, sans-serif", fontSize:14.5, background:"transparent", padding:"10px 4px", minWidth:0 }} />
+        <button onClick={recording ? stopRecording : startRecording} style={{ ...iconBtnLight, background:recording ? "#B5616B" : "var(--fc-bubble)" }}>{recording ? <Square size={17} color="#fff" /> : <Mic size={18} color="var(--fc-card-text)" />}</button>
+        <input value={text} onChange={e=>setText(e.target.value)} onKeyDown={e=>{ if(e.key==="Enter" && text.trim()) sendMessage("text", text.trim()); }} placeholder="Type a message…" style={{ flex:1, border:"none", outline:"none", fontFamily:"Inter, sans-serif", fontSize:14.5, background:"transparent", color:"var(--fc-card-text)", padding:"10px 4px", minWidth:0 }} />
         <button onClick={() => text.trim() && sendMessage("text", text.trim())} style={iconBtnLight}><Send size={18} color="#B8935F" /></button>
       </div>
       {confirmClear && (
@@ -2403,13 +2407,13 @@ function RandomConnectScreen({ myId, myProfile, onlinePeople = [], onBack, varia
           {messages.length === 0 && <div style={emptyState}>Say hello and share what's on your heart.</div>}
           {messages.map((m, i) => (
             <div key={i} style={{ alignSelf: m.sender === myId ? "flex-end" : "flex-start", maxWidth:"75%", marginBottom:10 }}>
-              <div style={{ background: m.sender === myId ? "#B8935F" : "#EFE9DC", color: m.sender === myId ? "#FAF7F0" : "#22252B", padding:"9px 13px", borderRadius:16, fontFamily:"Inter, sans-serif", fontSize:14.5 }}>{m.text}</div>
+              <div style={{ background: m.sender === myId ? "#B8935F" : "var(--fc-bubble)", color: m.sender === myId ? "#FAF7F0" : "var(--fc-card-text)", padding:"9px 13px", borderRadius:16, fontFamily:"Inter, sans-serif", fontSize:14.5 }}>{m.text}</div>
             </div>
           ))}
           <div style={{ height:1, flexShrink:0 }} />
         </div>
         <div style={{ ...composer, flexShrink:0, paddingBottom:"calc(10px + env(safe-area-inset-bottom))" }}>
-          <input value={text} onChange={e=>setText(e.target.value)} onKeyDown={e => e.key === "Enter" && sendRandomMsg()} placeholder="Type a message…" style={{ flex:1, border:"none", outline:"none", fontFamily:"Inter, sans-serif", fontSize:14.5, background:"transparent", padding:"10px 4px", minWidth:0 }} />
+          <input value={text} onChange={e=>setText(e.target.value)} onKeyDown={e => e.key === "Enter" && sendRandomMsg()} placeholder="Type a message…" style={{ flex:1, border:"none", outline:"none", fontFamily:"Inter, sans-serif", fontSize:14.5, background:"transparent", color:"var(--fc-card-text)", padding:"10px 4px", minWidth:0 }} />
           <button onClick={sendRandomMsg} style={iconBtnLight}><Send size={18} color="#B8935F" /></button>
         </div>
       </div>
@@ -2550,10 +2554,10 @@ const avatarMd = { width:52, height:52, borderRadius:"50%", background:"#EFE9DC"
 const avatarSm = { width:38, height:38, borderRadius:"50%", background:"#EFE9DC", color:"#B8935F", display:"flex", alignItems:"center", justifyContent:"center", fontFamily:"Lora, serif", fontSize:15, flexShrink:0, marginRight:10 };
 const emptyState = { textAlign:"center", color:"#B8935F", fontFamily:"Inter, sans-serif", fontSize:14, padding:"60px 20px" };
 const unreadBadge = extra => ({ minWidth:18, height:18, padding:"0 5px", borderRadius:9, background:"#ff3b5c", color:"#fff", fontFamily:"Inter, sans-serif", fontSize:11, fontWeight:700, display:"inline-flex", alignItems:"center", justifyContent:"center", boxSizing:"border-box", ...extra });
-const convoRow = { display:"flex", alignItems:"center", width:"100%", background:"#fff", border:"none", borderRadius:14, padding:12, marginBottom:10, cursor:"pointer", boxShadow:"0 1px 2px rgba(20,20,15,.05)" };
+const convoRow = { display:"flex", alignItems:"center", width:"100%", background:"var(--fc-card)", border:"1px solid var(--fc-card-border)", borderRadius:14, padding:12, marginBottom:10, cursor:"pointer", boxShadow:"0 1px 2px rgba(20,20,15,.05)" };
 const chatHeader = { display:"flex", alignItems:"center", padding:"14px 12px", background:"var(--fc-bg)" };
 const iconBtn = { background:"rgba(255,255,255,.1)", border:"none", borderRadius:10, width:36, height:36, display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", marginLeft:6 };
-const composer = { display:"flex", alignItems:"center", gap:8, padding:"10px 12px", background:"#fff", borderTop:"1px solid #E5DFD1", flexShrink:0 };
-const iconBtnLight = { width:38, height:38, borderRadius:"50%", border:"none", background:"#EFE9DC", display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", flexShrink:0 };
+const composer = { display:"flex", alignItems:"center", gap:8, padding:"10px 12px", background:"var(--fc-card)", borderTop:"1px solid var(--fc-card-border)", flexShrink:0 };
+const iconBtnLight = { width:38, height:38, borderRadius:"50%", border:"none", background:"var(--fc-bubble)", display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", flexShrink:0 };
 const callBtn = bg => ({ width:58, height:58, borderRadius:"50%", background:bg, border:"none", display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer" });
 
