@@ -1469,24 +1469,24 @@ function FeatureCard({ title, description, gradient, Icon, onConnect, lightMode 
 }
 
 const DAILY_BIBLE_VERSES = [
-  { text:"I can do all things through Christ which strengtheneth me.", ref:"Philippians 4:13" },
-  { text:"Trust in the LORD with all thine heart; and lean not unto thine own understanding.", ref:"Proverbs 3:5" },
-  { text:"The LORD is my shepherd; I shall not want.", ref:"Psalm 23:1" },
-  { text:"Be strong and of a good courage; fear not, nor be afraid.", ref:"Deuteronomy 31:6" },
-  { text:"This is the day which the LORD hath made; we will rejoice and be glad in it.", ref:"Psalm 118:24" },
-  { text:"Let all your things be done with charity.", ref:"1 Corinthians 16:14" },
-  { text:"The LORD is my light and my salvation; whom shall I fear?", ref:"Psalm 27:1" },
-  { text:"Cast thy burden upon the LORD, and he shall sustain thee.", ref:"Psalm 55:22" },
-  { text:"And above all things have fervent charity among yourselves.", ref:"1 Peter 4:8" },
-  { text:"Rejoice in the Lord alway: and again I say, Rejoice.", ref:"Philippians 4:4" },
-  { text:"For God hath not given us the spirit of fear; but of power, and of love, and of a sound mind.", ref:"2 Timothy 1:7" },
-  { text:"Commit thy works unto the LORD, and thy thoughts shall be established.", ref:"Proverbs 16:3" },
-  { text:"The LORD is nigh unto all them that call upon him.", ref:"Psalm 145:18" },
-  { text:"Let your light so shine before men, that they may see your good works.", ref:"Matthew 5:16" },
-  { text:"My grace is sufficient for thee: for my strength is made perfect in weakness.", ref:"2 Corinthians 12:9" },
-  { text:"Wait on the LORD: be of good courage, and he shall strengthen thine heart.", ref:"Psalm 27:14" },
-  { text:"A friend loveth at all times.", ref:"Proverbs 17:17" },
-  { text:"Iron sharpeneth iron; so a man sharpeneth the countenance of his friend.", ref:"Proverbs 27:17" }
+  { text:"I can do all this through him who gives me strength.", ref:"Philippians 4:13" },
+  { text:"Trust in the LORD with all your heart and lean not on your own understanding.", ref:"Proverbs 3:5" },
+  { text:"The LORD is my shepherd, I lack nothing.", ref:"Psalm 23:1" },
+  { text:"Be strong and courageous. Do not be afraid or terrified because of them, for the LORD your God goes with you; he will never leave you nor forsake you.", ref:"Deuteronomy 31:6" },
+  { text:"The LORD has done it this very day; let us rejoice today and be glad.", ref:"Psalm 118:24" },
+  { text:"Do everything in love.", ref:"1 Corinthians 16:14" },
+  { text:"The LORD is my light and my salvation—whom shall I fear?", ref:"Psalm 27:1" },
+  { text:"Cast your cares on the LORD and he will sustain you; he will never let the righteous be shaken.", ref:"Psalm 55:22" },
+  { text:"Above all, love each other deeply, because love covers over a multitude of sins.", ref:"1 Peter 4:8" },
+  { text:"Rejoice in the Lord always. I will say it again: Rejoice!", ref:"Philippians 4:4" },
+  { text:"For the Spirit God gave us does not make us timid, but gives us power, love and self-discipline.", ref:"2 Timothy 1:7" },
+  { text:"Commit to the LORD whatever you do, and he will establish your plans.", ref:"Proverbs 16:3" },
+  { text:"The LORD is near to all who call on him, to all who call on him in truth.", ref:"Psalm 145:18" },
+  { text:"In the same way, let your light shine before others, that they may see your good deeds and glorify your Father in heaven.", ref:"Matthew 5:16" },
+  { text:"My grace is sufficient for you, for my power is made perfect in weakness.", ref:"2 Corinthians 12:9" },
+  { text:"Wait for the LORD; be strong and take heart and wait for the LORD.", ref:"Psalm 27:14" },
+  { text:"A friend loves at all times, and a brother is born for a time of adversity.", ref:"Proverbs 17:17" },
+  { text:"As iron sharpens iron, so one person sharpens another.", ref:"Proverbs 27:17" }
 ];
 
 function getDailyVerse() {
@@ -1507,7 +1507,7 @@ function TodaysWordCard() {
         <h3 style={{ fontFamily:"Lora, serif", fontSize:19, lineHeight:1.35, fontWeight:500, color:"#F8F4EA", margin:0 }}>
           “{verse.text}”
         </h3>
-        <p style={{ fontFamily:"Inter, sans-serif", fontSize:12, color:"#D6AE6E", marginTop:11 }}>{verse.ref}</p>
+        <p style={{ fontFamily:"Inter, sans-serif", fontSize:12, color:"#D6AE6E", marginTop:11 }}>{verse.ref} (NIV)</p>
       </div>
     </div>
   );
