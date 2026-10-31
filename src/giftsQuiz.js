@@ -7,115 +7,115 @@
 //    gives a random mix instead of always the same result.
 
 export const GIFTS = {
-  apostle:       { title: "Apostolic: pioneering and building", group: "Fivefold ministry", desc: "You may be wired to start new things, send and build teams, and carry the gospel or a ministry into places where nothing exists yet." },
-  prophet:       { title: "Prophetic: speaking what God is saying", group: "Fivefold ministry", desc: "You may be sensitive to what God is saying and drawn to call people back to Him with courage and care. Every impression should be tested against Scripture and wise counsel." },
-  evangelist:    { title: "Evangelism", group: "Fivefold ministry", desc: "You may find it natural to bring the good news of Jesus to people, build bridges with those far from God, and help them take a first step toward Him." },
-  pastor:        { title: "Pastoral care and shepherding", group: "Fivefold ministry", desc: "You may be gifted at looking after people over time: walking with them, guarding their growth, and helping them stay close to God." },
-  teacher:       { title: "Teaching", group: "Fivefold ministry", desc: "You may be gifted at studying Scripture, making it clear, and helping people build a solid foundation of truth." },
-  wisdom:        { title: "Word of wisdom", group: "Gifts of the Spirit (1 Corinthians 12)", desc: "You may often receive the right counsel for a hard situation and be able to point people to God's way forward." },
-  knowledge:     { title: "Word of knowledge", group: "Gifts of the Spirit (1 Corinthians 12)", desc: "You may sometimes receive insight about a person or situation that you had no natural way to know, which helps them know God sees them." },
-  faith:         { title: "Gift of faith", group: "Gifts of the Spirit (1 Corinthians 12)", desc: "You may carry a steady, unusual confidence that God will act, even when a situation looks impossible and others have given up." },
-  healing:       { title: "Healing and miracles", group: "Gifts of the Spirit (1 Corinthians 12)", desc: "You may feel drawn to pray for the sick and hurting, expecting God to bring healing and show His power." },
-  discernment:   { title: "Discerning of spirits", group: "Gifts of the Spirit (1 Corinthians 12)", desc: "You may sense whether a teaching, a person, or an atmosphere is truly from God. Grow this with humility, Scripture and trusted counsel." },
-  tongues:       { title: "Tongues and interpretation", group: "Gifts of the Spirit (1 Corinthians 12)", desc: "You may be drawn to deep worship and prayer in the Spirit, and sometimes to help others understand what is being expressed." },
-  intercession:  { title: "Intercession", group: "Gifts of prayer and care", desc: "You may be called to sustained, faithful prayer for people, churches and nations, often unseen by others." },
-  mercy:         { title: "Mercy and compassion", group: "Gifts of prayer and care (Romans 12)", desc: "You may feel others' pain deeply and be moved to comfort, care for and stand with the hurting and the overlooked." },
-  service:       { title: "Service and helps", group: "Gifts of prayer and care (Romans 12)", desc: "You may love meeting practical needs, working behind the scenes so that people and ministries can flourish." },
-  encouragement: { title: "Encouragement", group: "Gifts of prayer and care (Romans 12)", desc: "You may have a gift for lifting people up, restoring hope, and helping them keep going in faith." },
+  apostle:       { title: "Apostle: starting new things", group: "Leadership gifts (Ephesians 4)", desc: "You may be good at starting new things and building teams. You want to take the gospel or a ministry to places where nothing exists yet." },
+  prophet:       { title: "Prophet: speaking what God is saying", group: "Leadership gifts (Ephesians 4)", desc: "You may often sense what God is saying and feel brave enough to share it with love. Always check what you sense against the Bible and with wise leaders." },
+  evangelist:    { title: "Evangelist: sharing the good news", group: "Leadership gifts (Ephesians 4)", desc: "You may find it easy to tell people about Jesus. You make friends with people who are far from God and help them take a first step toward Him." },
+  pastor:        { title: "Pastor: caring for people", group: "Leadership gifts (Ephesians 4)", desc: "You may be good at caring for people over a long time. You walk with them, help them grow, and help them stay close to God." },
+  teacher:       { title: "Teacher: explaining God's Word", group: "Leadership gifts (Ephesians 4)", desc: "You may love studying the Bible and making it easy to understand. You help people build a strong base of truth." },
+  wisdom:        { title: "Word of wisdom: knowing what to do", group: "Gifts of the Spirit (1 Corinthians 12)", desc: "You may often find the right advice for a hard situation and help people see God's way forward." },
+  knowledge:     { title: "Word of knowledge: knowing what you could not know", group: "Gifts of the Spirit (1 Corinthians 12)", desc: "You may sometimes know something about a person or situation that you had no way to know. It shows them that God sees them." },
+  faith:         { title: "Gift of faith: trusting God when it looks impossible", group: "Gifts of the Spirit (1 Corinthians 12)", desc: "You may have a calm, strong trust that God will act, even when things look impossible and others have given up." },
+  healing:       { title: "Healing and miracles", group: "Gifts of the Spirit (1 Corinthians 12)", desc: "You may feel drawn to pray for people who are sick or hurting. You expect God to heal and to show His power." },
+  discernment:   { title: "Discernment: sensing what is from God", group: "Gifts of the Spirit (1 Corinthians 12)", desc: "You may sense whether a teaching, a person or a place is truly from God. Use this gift with humility, and check it with the Bible and wise leaders." },
+  tongues:       { title: "Tongues and explaining them", group: "Gifts of the Spirit (1 Corinthians 12)", desc: "You may be drawn to deep worship and prayer in the Spirit. Sometimes you may help others understand what is being said." },
+  intercession:  { title: "Intercession: praying for others", group: "Gifts of prayer and care", desc: "You may be called to pray faithfully for people, churches and countries, often where nobody sees." },
+  mercy:         { title: "Mercy: showing kindness to people who hurt", group: "Gifts of prayer and care (Romans 12)", desc: "You may feel other people's pain deeply. You want to comfort, help and stand with people who are hurting or forgotten." },
+  service:       { title: "Service: helping in practical ways", group: "Gifts of prayer and care (Romans 12)", desc: "You may love meeting practical needs and working behind the scenes, so that people and ministries can do well." },
+  encouragement: { title: "Encouragement: lifting people up", group: "Gifts of prayer and care (Romans 12)", desc: "You may be good at lifting people up, giving them hope, and helping them keep going in their faith." },
 };
 
 export const GIFT_KEYS = Object.keys(GIFTS);
 
-// The five indicators (shown as small headings above each question).
+// The five parts (shown as small headings above each question).
 export const INDICATORS = [
-  { title: "The Holy Burden", intro: "Notice the needs and concerns that keep weighing on your heart." },
-  { title: "The Witness of the Spirit", intro: "Think about what you sense in prayer, in Scripture and as you serve." },
-  { title: "Providential Positioning", intro: "Look at the experiences and opportunities God has put in your path." },
-  { title: "The Affirmations of the Righteous", intro: "Think about what mature, trustworthy believers have noticed in you." },
-  { title: "Sanctified Desire", intro: "Consider what you truly long to do for God's glory and the good of others." },
+  { title: "What weighs on my heart", intro: "Think about the problems you keep caring about." },
+  { title: "What I sense from God", intro: "Think about what you feel when you pray, read the Bible and serve." },
+  { title: "Where God has placed me", intro: "Think about the things that have happened in your life and the chances God has given you." },
+  { title: "What others see in me", intro: "Think about what mature, trusted Christians have told you." },
+  { title: "What I truly want", intro: "Think about what you really want to do for God and for other people." },
 ];
 
-// 15 questions, 4 answers each: [gift, wording]. Three questions per indicator, in order.
+// 15 questions, 4 answers each: [gift, wording]. Three questions per part, in order.
 export const QUESTIONS = [
-  { q: "Which concern weighs on your heart the most, even when nobody asks you to care?", a: [
-    ["apostle", "Places or people with no church, and no one starting anything there"],
-    ["prophet", "Believers drifting from God's ways while everyone stays silent"],
-    ["pastor", "Individual believers who are struggling and have no one walking with them"],
-    ["faith", "Situations that look impossible, where people have stopped believing God can act"] ] },
-  { q: "When you see a need around you, what stirs in you first?", a: [
-    ["prophet", "A strong sense of what God is saying about it, and an urge to say it"],
-    ["evangelist", "Sadness for people who have never heard the good news clearly"],
-    ["teacher", "Frustration that people are confused about what the Bible actually says"],
-    ["healing", "A desire to lay hands on the sick and pray for their healing"] ] },
+  { q: "Which problem do you worry about most, even when nobody asks you to?", a: [
+    ["apostle", "Places with no church, where nobody is starting anything"],
+    ["prophet", "Believers moving away from God's ways while everyone stays quiet"],
+    ["pastor", "Believers who are struggling and have nobody walking with them"],
+    ["faith", "Hard situations where people have stopped believing God can help"] ] },
+  { q: "When you see a need around you, what do you feel first?", a: [
+    ["prophet", "A strong sense of what God is saying about it, and a wish to say it"],
+    ["evangelist", "Sadness for people who have never clearly heard the good news"],
+    ["teacher", "Frustration that people do not understand what the Bible really says"],
+    ["healing", "A wish to put my hands on sick people and pray for them"] ] },
   { q: "Which situation would be hardest for you to walk away from?", a: [
-    ["evangelist", "A stranger who is open to talking about Jesus right now"],
-    ["pastor", "A church member quietly going through a hard season alone"],
-    ["wisdom", "A group stuck on a hard decision that needs a wise, God-given way forward"],
-    ["discernment", "A teaching or a person that sounds right, but something in your spirit says it is not"] ] },
+    ["evangelist", "A stranger who is ready to talk about Jesus right now"],
+    ["pastor", "A church member who is quietly going through a hard time alone"],
+    ["wisdom", "A group that cannot decide and needs wise advice from God"],
+    ["discernment", "A teaching or a person that sounds good, but something inside you says no"] ] },
 
-  { q: "In prayer or Bible reading, what does God seem to press on you most often?", a: [
-    ["pastor", "Names of people to check on, comfort and stay close to"],
-    ["teacher", "An understanding of a passage that you feel you must explain to others"],
-    ["knowledge", "Sudden insight about a person or situation that you had no natural way to know"],
-    ["tongues", "Prayer and praise that go beyond your own words, sometimes with a sense of their meaning"] ] },
-  { q: "When you serve, how do you most often sense the Holy Spirit working through you?", a: [
-    ["teacher", "Hard truths become clear and simple as I explain them"],
-    ["wisdom", "The right advice comes at the right moment, and it proves wise"],
+  { q: "When you pray or read the Bible, what does God often put on your heart?", a: [
+    ["pastor", "The names of people to visit, comfort and stay close to"],
+    ["teacher", "A Bible passage that you feel you must explain to others"],
+    ["knowledge", "Sudden knowledge about a person or situation that you had no way to know"],
+    ["tongues", "Prayer and praise that go beyond your own words"] ] },
+  { q: "When you serve, how does the Holy Spirit most often work through you?", a: [
+    ["teacher", "Hard things become clear and simple when I explain them"],
+    ["wisdom", "The right advice comes at the right time, and it turns out to be wise"],
     ["faith", "A calm certainty that God will come through, while others doubt"],
-    ["intercession", "I am drawn into long, heavy prayer for someone or something"] ] },
+    ["intercession", "I feel pulled into long, serious prayer for someone or something"] ] },
   { q: "Which of these has happened to you more than once?", a: [
-    ["wisdom", "People kept your answer because it solved a problem others could not"],
-    ["knowledge", "You knew a detail about someone's life that was later confirmed"],
+    ["wisdom", "People used your advice because it solved a problem nobody else could solve"],
+    ["knowledge", "You knew something about a person's life, and it was later proven true"],
     ["healing", "Someone you prayed for got better in a way that surprised you"],
-    ["mercy", "You sensed someone's pain before they said anything, and felt it with them"] ] },
+    ["mercy", "You felt someone's pain before they said a word, and you felt it with them"] ] },
 
-  { q: "Looking at your life so far, which kind of experience stands out most?", a: [
-    ["knowledge", "Times I had accurate insight that helped or protected someone"],
-    ["faith", "Times I stepped out in trust when it made no sense, and God came through"],
-    ["discernment", "Times I sensed something was spiritually wrong and it later proved true"],
-    ["service", "Times I quietly made things work, setting up, fixing and helping, so others could focus"] ] },
-  { q: "What have you seen God do through you or around you?", a: [
-    ["faith", "Provision, open doors, or answers to prayers others had given up on"],
-    ["healing", "People recovering after prayer, or hope returning to someone who was sick"],
-    ["tongues", "Moments of deep worship or prayer in the Spirit that moved the whole room"],
+  { q: "Looking at your life so far, which kind of moment stands out most?", a: [
+    ["knowledge", "Times I knew something that helped or protected someone"],
+    ["faith", "Times I trusted God when it made no sense, and He came through"],
+    ["discernment", "Times I felt something was spiritually wrong, and later I was proven right"],
+    ["service", "Times I quietly set things up and fixed them so others could focus"] ] },
+  { q: "What have you seen God do through you or near you?", a: [
+    ["faith", "Provision, open doors, or answers to prayer that others had given up on"],
+    ["healing", "People getting better after prayer, or a sick person getting hope again"],
+    ["tongues", "Moments of deep worship or prayer that touched everyone in the room"],
     ["encouragement", "People finding strength to keep going after talking with me"] ] },
-  { q: "Which opportunity keeps being put in front of you?", a: [
+  { q: "Which chance keeps coming to you again and again?", a: [
     ["healing", "Praying with people who are sick or hurting"],
-    ["discernment", "Being asked to weigh up a decision, a teaching or a person"],
-    ["intercession", "Being asked, again and again, to pray for others and their needs"],
-    ["apostle", "Being asked to start something new, or lead where nothing exists yet"] ] },
+    ["discernment", "Being asked to check a decision, a teaching or a person"],
+    ["intercession", "Being asked, again and again, to pray for others"],
+    ["apostle", "Being asked to start something new, or to lead where nothing exists yet"] ] },
 
   { q: "What have mature believers said about you?", a: [
-    ["discernment", "You can tell when something is off, even before you can say why"],
-    ["tongues", "Your worship and prayer in the Spirit lifts others and changes the atmosphere"],
-    ["mercy", "You are gentle and compassionate; people feel safe with you"],
-    ["prophet", "You say difficult things people need to hear, and you say them with care"] ] },
+    ["discernment", "You can tell when something is wrong, even before you can say why"],
+    ["tongues", "Your worship and prayer lift people up and change the mood in the room"],
+    ["mercy", "You are gentle and kind, and people feel safe with you"],
+    ["prophet", "You say hard things that people need to hear, and you say them with love"] ] },
   { q: "Which comment have you heard more than once?", a: [
-    ["tongues", "People are stirred when you pray or worship in the Spirit"],
-    ["intercession", "You are the one people ask to pray for them, and you really follow through"],
-    ["service", "You keep everything running smoothly; we would be lost without you behind the scenes"],
-    ["evangelist", "You make people feel welcome, and you talk about Jesus without it feeling awkward"] ] },
-  { q: "Which responsibility would trusted leaders most likely hand to you?", a: [
+    ["tongues", "People are moved when you pray or worship in the Spirit"],
+    ["intercession", "You are the one people ask to pray for them, and you really do it"],
+    ["service", "You keep everything running well. We would be lost without you"],
+    ["evangelist", "You make people feel welcome, and you talk about Jesus in a natural way"] ] },
+  { q: "Which job would trusted leaders most likely give you?", a: [
     ["intercession", "Leading a prayer team or a night of prayer"],
-    ["mercy", "Visiting and supporting people who are hurting or in need"],
-    ["encouragement", "Cheering on new or struggling believers and keeping their spirits up"],
-    ["pastor", "Looking after a small group and helping its members grow close to God"] ] },
+    ["mercy", "Visiting and helping people who are hurting or in need"],
+    ["encouragement", "Cheering up new or struggling believers"],
+    ["pastor", "Caring for a small group and helping them grow close to God"] ] },
 
   { q: "If you could give your life to one kind of work for God, which would you choose?", a: [
-    ["mercy", "Caring for the poor, the sick, the lonely and the overlooked"],
-    ["service", "Using my practical skills and time to keep ministries running"],
-    ["apostle", "Pioneering new churches or ministries in places that have none"],
-    ["teacher", "Studying God's Word in depth and teaching it to others"] ] },
-  { q: "What would you gladly do even if nobody ever thanked you?", a: [
+    ["mercy", "Caring for the poor, the sick, the lonely and the forgotten"],
+    ["service", "Using my time and practical skills to keep ministries running"],
+    ["apostle", "Starting new churches or ministries in places that have none"],
+    ["teacher", "Studying God's Word deeply and teaching it to others"] ] },
+  { q: "What would you gladly do even if nobody ever said thank you?", a: [
     ["service", "Setting up, cleaning up and fixing things so others can worship"],
-    ["encouragement", "Sending a message, a verse or a visit that lifts someone's spirits"],
-    ["prophet", "Speaking what I believe God is saying, even when it costs me"],
+    ["encouragement", "Sending a message, a verse or a visit that cheers someone up"],
+    ["prophet", "Saying what I believe God is saying, even when it costs me"],
     ["wisdom", "Helping people think through their problems and find God's way"] ] },
-  { q: "Which outcome would bring you the deepest joy?", a: [
+  { q: "Which result would make you happiest?", a: [
     ["encouragement", "Someone who wanted to give up decides to keep going in faith"],
-    ["apostle", "A new ministry or community exists because I helped start it"],
-    ["evangelist", "Someone chooses to follow Jesus for the first time"],
-    ["knowledge", "Someone realises God knew exactly what they needed, and I helped them see it"] ] },
+    ["apostle", "A new ministry or group exists because I helped start it"],
+    ["evangelist", "Someone decides to follow Jesus for the first time"],
+    ["knowledge", "Someone sees that God knew exactly what they needed, and I helped them see it"] ] },
 ];
 
 function shuffle(list, rnd) {
