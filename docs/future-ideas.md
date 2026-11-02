@@ -2,7 +2,7 @@
 
 ## Ways to make money (brainstormed 2 Nov 2026, Tony likes all of them)
 1. Premium membership: free matching/messaging/quiz; paid for see-who-likes-you, unlimited voice/video, extra filters, verified badge. Pay with MTN MoMo / Airtel Money.
-2. Short passes like Reva Movie: daily / weekly / monthly access (e.g. about 1,000 RWF a week) to something people love and come back for.
+2. Short passes like Rebamovie: daily / weekly / monthly access (e.g. about 1,000 RWF a week) to something people love and come back for.
 3. Faith advertising and sponsors: churches, events, conferences, bookshops, Christian musicians ("Featured events" card on Home).
 4. Church / ministry group plans: own space, members' group, announcements, Live/debate page (StreamYard idea).
 5. Paid events and courses: Bible study series, marriage teaching, "find your gift" follow-up course.
