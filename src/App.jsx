@@ -1950,6 +1950,10 @@ function RandomConnectScreen({ myId, myProfile, onlinePeople = [], onBack, varia
   const matchLeaderRef = useRef(false);
   const pendingCallSignalsRef = useRef([]);
   const remoteStreamRef = useRef(null);
+  const stageRef = useRef("setup");
+  const modeRef = useRef("chat");
+  useEffect(() => { stageRef.current = stage; }, [stage]);
+  useEffect(() => { modeRef.current = mode; }, [mode]);
 
   useEffect(() => {
     loadPresence();
@@ -2066,7 +2070,7 @@ function RandomConnectScreen({ myId, myProfile, onlinePeople = [], onBack, varia
       const otherId = msg.from === myId ? msg.to : msg.from;
       const other = msg.from === myId ? msg.partner : msg.fromProfile;
       clearInterval(searchPollRef.current);
-      connectTo({ id: otherId, name: other?.name || "Believer" }, mode);
+      connectTo({ id: otherId, name: other?.name || "Believer" }, modeRef.current);
     });
 
     await new Promise((resolve, reject) => {
@@ -2106,7 +2110,7 @@ function RandomConnectScreen({ myId, myProfile, onlinePeople = [], onBack, varia
   }
 
   async function tryPairFromQueue(channel) {
-    if (stage !== "searching" || queueChannelRef.current !== channel) return;
+    if (stageRef.current !== "searching" || queueChannelRef.current !== channel) return;
     const all = queueUsers(channel);
     if (!all.length) return;
 
@@ -2133,13 +2137,14 @@ function RandomConnectScreen({ myId, myProfile, onlinePeople = [], onBack, varia
       try { channel.unsubscribe(); } catch {}
       if (queueChannelRef.current === channel) queueChannelRef.current = null;
       clearInterval(searchPollRef.current);
-      connectTo({ id:candidate.id, name:candidate.name || "Believer" }, mode);
+      connectTo({ id:candidate.id, name:candidate.name || "Believer" }, modeRef.current);
     } catch (e) {
       console.error("FaithConnect queue pairing failed:", e);
     }
   }
 
   async function startSearch(m) {
+    stageRef.current = "searching"; modeRef.current = m;
     setMode(m); setStage("searching"); setPartner(null); setSessionId(null); setMessages([]);
     clearInterval(searchPollRef.current);
     try {
@@ -2151,12 +2156,14 @@ function RandomConnectScreen({ myId, myProfile, onlinePeople = [], onBack, varia
       }, 300);
     } catch (e) {
       console.error("FaithConnect queue setup failed:", e);
-      setCallErr("Could not connect to the matching queue. Please try again.");
+      setCallErr("Could not connect to the matching queue. Please check your internet and try again.");
+      stageRef.current = "setup";
       setStage("setup");
     }
   }
 
   function connectTo(p, m) {
+    stageRef.current = "connected";
     setPartner(p);
     setSessionId(null);
     setStage("connected");
@@ -2374,7 +2381,9 @@ function RandomConnectScreen({ myId, myProfile, onlinePeople = [], onBack, varia
               </button>
             ))}
           </div>
-          <button onClick={() => startSearch(mode)} style={{ ...primaryBtn, padding:"14px 40px" }}>{theme.findLabel}</button>
+          {isLove && !["Male","Female"].includes(myProfile?.gender) && <div style={{ color:"#E3A6A6", fontSize:12.5, fontFamily:"Inter, sans-serif", textAlign:"center", marginBottom:14, maxWidth:300 }}>Add your gender in Edit profile so we can find someone to meet.</div>}
+          {callErr && <div style={{ color:"#E3A6A6", fontSize:12.5, fontFamily:"Inter, sans-serif", textAlign:"center", marginBottom:14, maxWidth:300 }}>{callErr}</div>}
+          <button onClick={() => { setCallErr(""); startSearch(mode); }} style={{ ...primaryBtn, padding:"14px 40px" }}>{theme.findLabel}</button>
         </div>
       </div>
     );
