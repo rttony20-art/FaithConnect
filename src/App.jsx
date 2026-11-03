@@ -1950,6 +1950,7 @@ function RandomConnectScreen({ myId, myProfile, onlinePeople = [], onBack, varia
   const matchLeaderRef = useRef(false);
   const pendingCallSignalsRef = useRef([]);
   const remoteStreamRef = useRef(null);
+  const [partnerLeft, setPartnerLeft] = useState(false);
   const stageRef = useRef("setup");
   const modeRef = useRef("chat");
   useEffect(() => { stageRef.current = stage; }, [stage]);
@@ -2163,7 +2164,7 @@ function RandomConnectScreen({ myId, myProfile, onlinePeople = [], onBack, varia
   }
 
   function connectTo(p, m) {
-    stageRef.current = "connected";
+    stageRef.current = "connected"; setPartnerLeft(false);
     setPartner(p);
     setSessionId(null);
     setStage("connected");
@@ -2188,6 +2189,11 @@ function RandomConnectScreen({ myId, myProfile, onlinePeople = [], onBack, varia
         matchSessionRef.current = msg.sessionId;
         setSessionId(msg.sessionId);
         if (msg.mode && msg.mode === "chat" && mode === "chat") setMessages([]);
+        return;
+      }
+      if (msg.type === "left") {
+        if (msg.sessionId && matchSessionRef.current && msg.sessionId !== matchSessionRef.current) return;
+        handlePartnerLeft();
         return;
       }
       if (msg.type === "session_request") {
@@ -2294,7 +2300,14 @@ function RandomConnectScreen({ myId, myProfile, onlinePeople = [], onBack, varia
         await pc.setLocalDescription(offer);
         await matchChannelRef.current.send({ type:"broadcast", event:"match", payload:{ type:"call", sessionId:matchSessionRef.current, from:myId, signal:{ type:"offer", caller:myId, mode:m, offer } } });
       }
-    } catch(e) { console.error(e); setCallErr("Camera/microphone access was blocked or the match connection failed."); }
+    } catch(e) {
+      console.error(e);
+      const n = e?.name || "";
+      if (n === "NotAllowedError" || n === "SecurityError") setCallErr("Camera or microphone is blocked. Tap the lock icon next to the web address, open Permissions, and allow Camera and Microphone. Then press Next.");
+      else if (n === "NotFoundError" || n === "OverconstrainedError") setCallErr("No camera or microphone was found on this device.");
+      else if (n === "NotReadableError") setCallErr("Your camera or microphone is being used by another app. Close it and press Next.");
+      else setCallErr("The connection failed. Please press Next to try again.");
+    }
   }
 
   async function handleRandomCallSignal(signal) {
@@ -2339,13 +2352,46 @@ function RandomConnectScreen({ myId, myProfile, onlinePeople = [], onBack, varia
     for (const signal of pending) await handleRandomCallSignal(signal);
   }
 
-  function skip() {
+  // The other person pressed Next or Back: stop the call, keep the screen, show a message.
+  function handlePartnerLeft() {
+    setPartnerLeft(true);
+    pcRef.current?.close(); pcRef.current = null;
+    localStreamRef.current?.getTracks().forEach(t => t.stop()); localStreamRef.current = null;
+    remoteStreamRef.current = null;
+    pendingCallSignalsRef.current = [];
+    setCallStatus("connecting");
+  }
+
+  // Tell the other person that I left, before closing the connection.
+  async function tellPartnerLeft() {
+    const ch = matchChannelRef.current;
+    if (!ch || !matchPeerRef.current) return;
+    try {
+      await Promise.race([
+        ch.send({ type:"broadcast", event:"match", payload:{ type:"left", from:myId, sessionId:matchSessionRef.current } }),
+        new Promise(r => setTimeout(r, 1200))
+      ]);
+    } catch {}
+  }
+
+  useEffect(() => {
+    // Closing the tab or locking the phone should also tell the other person.
+    const bye = () => { if (stageRef.current === "connected") tellPartnerLeft(); };
+    window.addEventListener("pagehide", bye);
+    return () => window.removeEventListener("pagehide", bye);
+    // eslint-disable-next-line
+  }, []);
+
+  async function skip() {
+    await tellPartnerLeft();
+    setPartnerLeft(false);
     clearAll();
     answeredIce.current = new Set();
     setPartner(null); setSessionId(null); setMessages([]); setCallStatus("connecting");
     startSearch(mode);
   }
-  function leave() {
+  async function leave() {
+    await tellPartnerLeft();
     clearAll();
     onBack();
   }
@@ -2413,16 +2459,22 @@ function RandomConnectScreen({ myId, myProfile, onlinePeople = [], onBack, varia
           <button onClick={skip} style={iconBtn}><SkipForward size={18} color="#F8F4EA" /></button>
         </div>
         <div ref={chatScrollRef} style={{ flex:1, minHeight:0, overflowY:"auto", WebkitOverflowScrolling:"touch", overscrollBehavior:"contain", padding:"16px 14px", background:"var(--fc-bg)", display:"flex", flexDirection:"column" }}>
-          {messages.length === 0 && <div style={emptyState}>Say hello and share what's on your heart.</div>}
+          {messages.length === 0 && !partnerLeft && <div style={emptyState}>Say hello and share what's on your heart.</div>}
           {messages.map((m, i) => (
             <div key={i} style={{ alignSelf: m.sender === myId ? "flex-end" : "flex-start", maxWidth:"75%", marginBottom:10 }}>
               <div style={{ background: m.sender === myId ? "#B8935F" : "var(--fc-bubble)", color: m.sender === myId ? "#FAF7F0" : "var(--fc-card-text)", padding:"9px 13px", borderRadius:16, fontFamily:"Inter, sans-serif", fontSize:14.5 }}>{m.text}</div>
             </div>
           ))}
+          {partnerLeft && (
+            <div style={{ alignSelf:"center", textAlign:"center", margin:"14px 10px", padding:"12px 16px", borderRadius:14, border:"1px solid rgba(214,174,110,.35)", background:"rgba(214,174,110,.08)", fontFamily:"Inter, sans-serif", fontSize:13.5, color:"var(--fc-muted, #D6AE6E)" }}>
+              {partner?.name || "The other person"} left the conversation (they pressed Next).
+              <div><button onClick={skip} style={{ ...secondaryBtn, marginTop:10, padding:"9px 18px" }}>Find someone new</button></div>
+            </div>
+          )}
           <div style={{ height:1, flexShrink:0 }} />
         </div>
         <div style={{ ...composer, flexShrink:0, paddingBottom:"calc(10px + env(safe-area-inset-bottom))" }}>
-          <input value={text} onChange={e=>setText(e.target.value)} onKeyDown={e => e.key === "Enter" && sendRandomMsg()} placeholder="Type a message…" style={{ flex:1, border:"none", outline:"none", fontFamily:"Inter, sans-serif", fontSize:14.5, background:"transparent", color:"var(--fc-card-text)", padding:"10px 4px", minWidth:0 }} />
+          <input value={text} disabled={partnerLeft} onChange={e=>setText(e.target.value)} onKeyDown={e => e.key === "Enter" && sendRandomMsg()} placeholder={partnerLeft ? "They left the chat" : "Type a message…"} style={{ flex:1, border:"none", outline:"none", fontFamily:"Inter, sans-serif", fontSize:14.5, background:"transparent", color:"var(--fc-card-text)", padding:"10px 4px", minWidth:0 }} />
           <button onClick={sendRandomMsg} style={iconBtnLight}><Send size={18} color="#B8935F" /></button>
         </div>
       </div>
@@ -2449,7 +2501,7 @@ function RandomConnectScreen({ myId, myProfile, onlinePeople = [], onBack, varia
         )}
         <div style={{ position:"absolute", top:40, color:"#F8F4EA", fontFamily:"Lora, serif", fontSize:19, textAlign:"center" }}>
           {partner?.name || "Believer"}
-          <div style={{ fontFamily:"Inter, sans-serif", fontSize:13, color:"#B8935F", marginTop:4 }}>{callStatus === "connecting" ? "Connecting…" : "Connected"}</div>
+          <div style={{ fontFamily:"Inter, sans-serif", fontSize:13, color:"#B8935F", marginTop:4 }}>{partnerLeft ? "Left the call. Press Next to find someone new." : callStatus === "connecting" ? "Connecting…" : "Connected"}</div>
         </div>
         {callErr && <div style={{position:"absolute", bottom:190, color:"#E3A6A6", fontSize:12.5, fontFamily:"Inter, sans-serif", textAlign:"center", padding:"0 30px"}}>{callErr}</div>}
         <div style={{ position:"absolute", bottom:30, display:"flex", gap:18 }}>
