@@ -1951,6 +1951,10 @@ function RandomConnectScreen({ myId, myProfile, onlinePeople = [], onBack, varia
   const pendingCallSignalsRef = useRef([]);
   const remoteStreamRef = useRef(null);
   const [partnerLeft, setPartnerLeft] = useState(false);
+  const callSentRef = useRef({ offer:null, answer:null, candidates:[] });
+  const remoteCandidatesRef = useRef([]);
+  const callChainRef = useRef(Promise.resolve());
+  const peerReadyRef = useRef(false);
   const stageRef = useRef("setup");
   const modeRef = useRef("chat");
   useEffect(() => { stageRef.current = stage; }, [stage]);
@@ -1981,6 +1985,7 @@ function RandomConnectScreen({ myId, myProfile, onlinePeople = [], onBack, varia
             id: myId,
             name: myProfile?.name || "Believer",
             gender: myProfile?.gender || null,
+            mode: modeRef.current,
             ts: Date.now()
           });
           tryPairFromQueue(ch);
@@ -2039,6 +2044,8 @@ function RandomConnectScreen({ myId, myProfile, onlinePeople = [], onBack, varia
   }
 
   function isCompatible(entry) {
+    // Only people who picked the same way to connect (chat, voice or video) are paired.
+    if (entry.mode && entry.mode !== modeRef.current) return false;
     // Iron Sharpens Iron: anyone can match anyone.
     if (!isLove) return true;
 
@@ -2085,6 +2092,7 @@ function RandomConnectScreen({ myId, myProfile, onlinePeople = [], onBack, varia
               id: myId,
               name: myProfile?.name || "Believer",
               gender: myProfile?.gender || null,
+              mode: modeRef.current,
               ts: Date.now()
             });
             finish(resolve);
@@ -2165,6 +2173,7 @@ function RandomConnectScreen({ myId, myProfile, onlinePeople = [], onBack, varia
 
   function connectTo(p, m) {
     stageRef.current = "connected"; setPartnerLeft(false);
+    peerReadyRef.current = false; callStateRef.current = null; remoteCandidatesRef.current = []; callChainRef.current = Promise.resolve();
     setPartner(p);
     setSessionId(null);
     setStage("connected");
@@ -2264,6 +2273,10 @@ function RandomConnectScreen({ myId, myProfile, onlinePeople = [], onBack, varia
   }
 
   /* --- call mode (audio/video) --- */
+  // Messages sent over the match channel are not stored, so a message sent before the other
+  // phone is listening is lost. To be safe the receiver says "I am ready" every 1.5 seconds,
+  // the caller answers each "ready" by sending the offer again, and every signal is handled
+  // one at a time (candidates wait until the offer/answer has been applied).
   async function startRandomCall(sid, p, m) {
     setCallErr(""); setCallStatus("connecting");
     const iAmCaller = myId < p.id;
@@ -2275,30 +2288,44 @@ function RandomConnectScreen({ myId, myProfile, onlinePeople = [], onBack, varia
       if (m === "video" && localVideoRef.current) localVideoRef.current.srcObject = stream;
       const pc = new RTCPeerConnection({ iceServers: await icePromise });
       pcRef.current = pc;
+      callSentRef.current = { offer:null, answer:null, candidates:[] };
+      remoteCandidatesRef.current = [];
       stream.getTracks().forEach(t=>pc.addTrack(t,stream));
       const remoteStream = new MediaStream();
       remoteStreamRef.current = remoteStream;
       pc.ontrack = e => {
         if (!remoteStream.getTracks().some(t => t.id === e.track.id)) remoteStream.addTrack(e.track);
-        if (remoteVideoRef.current) remoteVideoRef.current.srcObject = remoteStream;
-        if (remoteAudioRef.current) remoteAudioRef.current.srcObject = remoteStream;
+        if (remoteVideoRef.current) { remoteVideoRef.current.srcObject = remoteStream; remoteVideoRef.current.play?.().catch(() => {}); }
+        if (remoteAudioRef.current) { remoteAudioRef.current.srcObject = remoteStream; remoteAudioRef.current.play?.().catch(() => {}); }
       };
-      // The call can start before React has mounted the video elements. Attach the
-      // local/remote streams again whenever the call screen is rendered below.
+      const onState = () => {
+        const st = pc.connectionState || pc.iceConnectionState;
+        if (st === "connected" || st === "completed") { setCallStatus("active"); setCallErr(""); }
+        else if (st === "failed") setCallErr("Could not connect the " + (m === "video" ? "video" : "call") + ". Check the internet on both devices, then press Next to try again.");
+      };
+      pc.onconnectionstatechange = onState;
+      pc.oniceconnectionstatechange = onState;
       if (m === "video" && localVideoRef.current) localVideoRef.current.srcObject = stream;
-      if (m === "video" && remoteVideoRef.current && remoteStream.getTracks().length) remoteVideoRef.current.srcObject = remoteStream;
-      if (m !== "video" && remoteAudioRef.current && remoteStream.getTracks().length) remoteAudioRef.current.srcObject = remoteStream;
       pc.onicecandidate = e => {
-        if(e.candidate && matchChannelRef.current && matchSessionRef.current) {
-          matchChannelRef.current.send({ type:"broadcast", event:"match", payload:{ type:"call", sessionId:matchSessionRef.current, from:myId, signal:{ type:"ice", candidate:e.candidate } } }).catch(()=>{});
-        }
+        if (!e.candidate) return;
+        const signal = { type:"ice", candidate:e.candidate };
+        callSentRef.current.candidates.push(signal);
+        sendCallSignal(signal);
       };
       callStateRef.current={ caller:iAmCaller ? myId : p.id, mode:m };
       await flushPendingCallSignals();
       if (iAmCaller) {
-        const offer=await pc.createOffer();
-        await pc.setLocalDescription(offer);
-        await matchChannelRef.current.send({ type:"broadcast", event:"match", payload:{ type:"call", sessionId:matchSessionRef.current, from:myId, signal:{ type:"offer", caller:myId, mode:m, offer } } });
+        if (peerReadyRef.current) await handleRandomCallSignal({ type:"ready" });
+      } else {
+        // tell the caller that this phone is ready, until the call connects
+        clearInterval(callPollRef.current);
+        const ping = () => {
+          const cur = pcRef.current;
+          if (!cur || cur.connectionState === "connected" || cur.iceConnectionState === "connected" || cur.iceConnectionState === "completed") { clearInterval(callPollRef.current); return; }
+          sendCallSignal({ type:"ready" });
+        };
+        ping();
+        callPollRef.current = setInterval(ping, 1500);
       }
     } catch(e) {
       console.error(e);
@@ -2306,33 +2333,77 @@ function RandomConnectScreen({ myId, myProfile, onlinePeople = [], onBack, varia
       if (n === "NotAllowedError" || n === "SecurityError") setCallErr("Camera or microphone is blocked. Tap the lock icon next to the web address, open Permissions, and allow Camera and Microphone. Then press Next.");
       else if (n === "NotFoundError" || n === "OverconstrainedError") setCallErr("No camera or microphone was found on this device.");
       else if (n === "NotReadableError") setCallErr("Your camera or microphone is being used by another app. Close it and press Next.");
-      else setCallErr("The connection failed. Please press Next to try again.");
+      else setCallErr(`The connection failed (${n || e?.message || "unknown"}). Please press Next to try again.`);
     }
   }
 
-  async function handleRandomCallSignal(signal) {
-    if (!signal || signal.caller === myId) return;
+  function sendCallSignal(signal) {
+    const ch = matchChannelRef.current;
+    if (!ch || !matchSessionRef.current) return Promise.resolve();
+    return ch.send({ type:"broadcast", event:"match", payload:{ type:"call", sessionId:matchSessionRef.current, from:myId, signal } }).catch(() => {});
+  }
+
+  async function sendOffer() {
+    const pc = pcRef.current;
+    if (!pc || pc.currentRemoteDescription) return;
+    if (!callSentRef.current.offer) {
+      const offer = await pc.createOffer();
+      await pc.setLocalDescription(offer);
+      callSentRef.current.offer = { type:"offer", caller:myId, mode:callStateRef.current?.mode, offer:pc.localDescription || offer };
+    }
+    await sendCallSignal(callSentRef.current.offer);
+    for (const c of callSentRef.current.candidates) await sendCallSignal(c); // resend what was gathered before
+  }
+
+  // Signals are processed one after another, never at the same time.
+  function handleRandomCallSignal(signal) {
+    callChainRef.current = callChainRef.current.then(() => processCallSignal(signal)).catch(e => console.error("Temporary call signaling failed", e));
+    return callChainRef.current;
+  }
+
+  async function addRemoteCandidates() {
+    const pc = pcRef.current;
+    if (!pc || !pc.remoteDescription) return;
+    const list = remoteCandidatesRef.current.splice(0);
+    for (const c of list) { try { await pc.addIceCandidate(c); } catch {} }
+  }
+
+  async function processCallSignal(signal) {
+    if (!signal) return;
+    if (signal.type === "ready") {
+      // the callee is listening: (re)send the offer
+      peerReadyRef.current = true;
+      if (pcRef.current && callStateRef.current?.caller === myId) await sendOffer();
+      return;
+    }
     if (!pcRef.current) {
       pendingCallSignalsRef.current.push(signal);
       return;
     }
-    try {
-      if (signal.type === "offer" && signal.caller !== myId && !pcRef.current.currentRemoteDescription) {
-        await pcRef.current.setRemoteDescription(signal.offer);
-        const answer=await pcRef.current.createAnswer();
-        await pcRef.current.setLocalDescription(answer);
-        await matchChannelRef.current.send({ type:"broadcast", event:"match", payload:{ type:"call", sessionId:matchSessionRef.current, from:myId, signal:{ type:"answer", caller:signal.caller, answer } } });
-        setCallStatus("connecting");
-      } else if (signal.type === "answer" && callStateRef.current?.caller === myId && !pcRef.current.currentRemoteDescription) {
-        await pcRef.current.setRemoteDescription(signal.answer);
-        setCallStatus("active");
-      } else if (signal.type === "ice" && signal.candidate) {
-        try { await pcRef.current.addIceCandidate(signal.candidate); } catch {}
-      } else if (signal.type === "ended") {
-        clearAll();
-        setCallStatus("connecting");
+    const pc = pcRef.current;
+    if (signal.type === "offer" && signal.caller !== myId) {
+      if (pc.currentRemoteDescription || pc.remoteDescription) {
+        // the caller sent it again because our answer may have been lost
+        if (callSentRef.current.answer) {
+          await sendCallSignal(callSentRef.current.answer);
+          for (const c of callSentRef.current.candidates) await sendCallSignal(c);
+        }
+        return;
       }
-    } catch(e) { console.error("Temporary call signaling failed",e); }
+      await pc.setRemoteDescription(signal.offer);
+      const answer = await pc.createAnswer();
+      await pc.setLocalDescription(answer);
+      callSentRef.current.answer = { type:"answer", caller:signal.caller, answer:pc.localDescription || answer };
+      await sendCallSignal(callSentRef.current.answer);
+      await addRemoteCandidates();
+    } else if (signal.type === "answer" && callStateRef.current?.caller === myId) {
+      if (pc.remoteDescription) return;
+      await pc.setRemoteDescription(signal.answer);
+      await addRemoteCandidates();
+    } else if (signal.type === "ice" && signal.candidate) {
+      remoteCandidatesRef.current.push(signal.candidate);
+      await addRemoteCandidates();
+    }
   }
 
   useEffect(() => {
@@ -2442,6 +2513,7 @@ function RandomConnectScreen({ myId, myProfile, onlinePeople = [], onBack, varia
         <SonarReveal online={online} variant={variant} active />
         <h2 style={{ fontFamily:"Lora, serif", fontSize:20, color:"#F8F4EA", marginTop:26 }}>Looking for someone…</h2>
         <p style={{ fontFamily:"Inter, sans-serif", fontSize:13.5, color:"#D6AE6E", marginTop:6 }}>{theme.searchingText}</p>
+        <p style={{ fontFamily:"Inter, sans-serif", fontSize:12.5, color:"#D6AE6E", marginTop:4, textAlign:"center", padding:"0 30px" }}>We match you with someone who also chose {mode}.</p>
         <button onClick={leave} style={{ ...secondaryBtn, marginTop:26, borderColor:"#D6AE6E", color:"#D6AE6E" }}>Cancel</button>
       </div>
     );
@@ -2467,8 +2539,8 @@ function RandomConnectScreen({ myId, myProfile, onlinePeople = [], onBack, varia
           ))}
           {partnerLeft && (
             <div style={{ alignSelf:"center", textAlign:"center", margin:"14px 10px", padding:"12px 16px", borderRadius:14, border:"1px solid rgba(214,174,110,.35)", background:"rgba(214,174,110,.08)", fontFamily:"Inter, sans-serif", fontSize:13.5, color:"var(--fc-muted, #D6AE6E)" }}>
-              {partner?.name || "The other person"} left the conversation (they pressed Next).
-              <div><button onClick={skip} style={{ ...secondaryBtn, marginTop:10, padding:"9px 18px" }}>Find someone new</button></div>
+              The other person left the chat.
+              <div><button onClick={skip} style={{ ...secondaryBtn, marginTop:10, padding:"9px 18px" }}>Find someone else</button></div>
             </div>
           )}
           <div style={{ height:1, flexShrink:0 }} />
@@ -2501,7 +2573,7 @@ function RandomConnectScreen({ myId, myProfile, onlinePeople = [], onBack, varia
         )}
         <div style={{ position:"absolute", top:40, color:"#F8F4EA", fontFamily:"Lora, serif", fontSize:19, textAlign:"center" }}>
           {partner?.name || "Believer"}
-          <div style={{ fontFamily:"Inter, sans-serif", fontSize:13, color:"#B8935F", marginTop:4 }}>{partnerLeft ? "Left the call. Press Next to find someone new." : callStatus === "connecting" ? "Connecting…" : "Connected"}</div>
+          <div style={{ fontFamily:"Inter, sans-serif", fontSize:13, color:"#B8935F", marginTop:4 }}>{partnerLeft ? "The other person left. Press Next to find someone else." : callStatus === "connecting" ? "Connecting…" : "Connected"}</div>
         </div>
         {callErr && <div style={{position:"absolute", bottom:190, color:"#E3A6A6", fontSize:12.5, fontFamily:"Inter, sans-serif", textAlign:"center", padding:"0 30px"}}>{callErr}</div>}
         <div style={{ position:"absolute", bottom:30, display:"flex", gap:18 }}>
