@@ -1953,6 +1953,7 @@ function RandomConnectScreen({ myId, myProfile, onlinePeople = [], onBack, varia
   const [partnerLeft, setPartnerLeft] = useState(false);
   const [needsTap, setNeedsTap] = useState(false); // the browser blocked autoplay of the other person's video
   const [linkInfo, setLinkInfo] = useState("");
+  const [remoteCamOff, setRemoteCamOff] = useState(false); // the other person turned their camera off
   const callSentRef = useRef({ offer:null, answer:null, candidates:[] });
   const remoteCandidatesRef = useRef([]);
   const callChainRef = useRef(Promise.resolve());
@@ -2175,7 +2176,7 @@ function RandomConnectScreen({ myId, myProfile, onlinePeople = [], onBack, varia
 
   function connectTo(p, m) {
     stageRef.current = "connected"; setPartnerLeft(false);
-    setNeedsTap(false); setLinkInfo(""); peerReadyRef.current = false; callStateRef.current = null; remoteCandidatesRef.current = []; callChainRef.current = Promise.resolve();
+    setRemoteCamOff(false); setCamOn(true); setNeedsTap(false); setLinkInfo(""); peerReadyRef.current = false; callStateRef.current = null; remoteCandidatesRef.current = []; callChainRef.current = Promise.resolve();
     setPartner(p);
     setSessionId(null);
     setStage("connected");
@@ -2200,6 +2201,11 @@ function RandomConnectScreen({ myId, myProfile, onlinePeople = [], onBack, varia
         matchSessionRef.current = msg.sessionId;
         setSessionId(msg.sessionId);
         if (msg.mode && msg.mode === "chat" && mode === "chat") setMessages([]);
+        return;
+      }
+      if (msg.type === "cam") {
+        if (msg.sessionId && matchSessionRef.current && msg.sessionId !== matchSessionRef.current) return;
+        setRemoteCamOff(!msg.on);
         return;
       }
       if (msg.type === "left") {
@@ -2347,6 +2353,15 @@ function RandomConnectScreen({ myId, myProfile, onlinePeople = [], onBack, varia
     el.srcObject = remote;
     const p = el.play?.();
     if (p && p.catch) p.then(() => setNeedsTap(false)).catch(() => setNeedsTap(true));
+  }
+
+  // Some phones keep showing the last picture when a camera is switched off, so tell the other person.
+  function toggleCamera() {
+    const next = !camOn;
+    localStreamRef.current?.getVideoTracks().forEach(t => { t.enabled = next; });
+    setCamOn(next);
+    const ch = matchChannelRef.current;
+    if (ch) ch.send({ type:"broadcast", event:"match", payload:{ type:"cam", on:next, from:myId, sessionId:matchSessionRef.current } }).catch(() => {});
   }
 
   function sendCallSignal(signal) {
@@ -2568,6 +2583,12 @@ function RandomConnectScreen({ myId, myProfile, onlinePeople = [], onBack, varia
         {mode === "video" ? (
           <>
             <video ref={remoteVideoRef} autoPlay playsInline style={{ position:"absolute", inset:0, width:"100%", height:"100%", objectFit:"cover", background:"#0A0F0A" }} />
+            {remoteCamOff && !partnerLeft && (
+              <div style={{ position:"absolute", inset:0, background:"#0A0F0A", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", gap:14 }}>
+                <div style={{ width:110, height:110, borderRadius:"50%", background:"#B8935F", display:"flex", alignItems:"center", justifyContent:"center", fontFamily:"Lora, serif", fontSize:40, color:"#2A1F0E" }}>{partner?.name?.[0]?.toUpperCase() || "?"}</div>
+                <div style={{ fontFamily:"Inter, sans-serif", fontSize:14, color:"#D6AE6E" }}>Camera is off</div>
+              </div>
+            )}
             <video ref={localVideoRef} autoPlay playsInline muted style={{ position:"absolute", bottom:110, right:16, width:100, height:140, borderRadius:14, objectFit:"cover", border:"2px solid #B8935F" }} />
           </>
         ) : (
@@ -2590,7 +2611,7 @@ function RandomConnectScreen({ myId, myProfile, onlinePeople = [], onBack, varia
             {micOn ? <Mic size={20} color="#fff"/> : <MicOff size={20} color="#fff"/>}
           </button>
           {mode === "video" && (
-            <button onClick={() => { localStreamRef.current?.getVideoTracks().forEach(t => t.enabled = !camOn); setCamOn(!camOn); }} style={callBtn(camOn ? "#5C4520" : "#B5616B")}>
+            <button onClick={toggleCamera} style={callBtn(camOn ? "#5C4520" : "#B5616B")}>
               {camOn ? <Camera size={20} color="#fff"/> : <VideoOff size={20} color="#fff"/>}
             </button>
           )}
