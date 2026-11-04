@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { createMessagesApi, rowToMsg } from "./messagesApi.js";
-import { getIceServers } from "./iceServers.js";
+import { getIceServers, iceHasTurn } from "./iceServers.js";
 import PurposeDiscovery from "./PurposeDiscovery.jsx";
 import { createSessionRestorer } from "./sessionRestore.js";
 import { shrinkImage, snapshotImage } from "./shrinkImage.js";
@@ -1951,6 +1951,8 @@ function RandomConnectScreen({ myId, myProfile, onlinePeople = [], onBack, varia
   const pendingCallSignalsRef = useRef([]);
   const remoteStreamRef = useRef(null);
   const [partnerLeft, setPartnerLeft] = useState(false);
+  const [needsTap, setNeedsTap] = useState(false); // the browser blocked autoplay of the other person's video
+  const [linkInfo, setLinkInfo] = useState("");
   const callSentRef = useRef({ offer:null, answer:null, candidates:[] });
   const remoteCandidatesRef = useRef([]);
   const callChainRef = useRef(Promise.resolve());
@@ -2173,7 +2175,7 @@ function RandomConnectScreen({ myId, myProfile, onlinePeople = [], onBack, varia
 
   function connectTo(p, m) {
     stageRef.current = "connected"; setPartnerLeft(false);
-    peerReadyRef.current = false; callStateRef.current = null; remoteCandidatesRef.current = []; callChainRef.current = Promise.resolve();
+    setNeedsTap(false); setLinkInfo(""); peerReadyRef.current = false; callStateRef.current = null; remoteCandidatesRef.current = []; callChainRef.current = Promise.resolve();
     setPartner(p);
     setSessionId(null);
     setStage("connected");
@@ -2295,11 +2297,11 @@ function RandomConnectScreen({ myId, myProfile, onlinePeople = [], onBack, varia
       remoteStreamRef.current = remoteStream;
       pc.ontrack = e => {
         if (!remoteStream.getTracks().some(t => t.id === e.track.id)) remoteStream.addTrack(e.track);
-        if (remoteVideoRef.current) { remoteVideoRef.current.srcObject = remoteStream; remoteVideoRef.current.play?.().catch(() => {}); }
-        if (remoteAudioRef.current) { remoteAudioRef.current.srcObject = remoteStream; remoteAudioRef.current.play?.().catch(() => {}); }
+        playRemote();
       };
       const onState = () => {
         const st = pc.connectionState || pc.iceConnectionState;
+        setLinkInfo(`${st} · relay ${iceHasTurn() ? "on" : "off"}`);
         if (st === "connected" || st === "completed") { setCallStatus("active"); setCallErr(""); }
         else if (st === "failed") setCallErr("Could not connect the " + (m === "video" ? "video" : "call") + ". Check the internet on both devices, then press Next to try again.");
       };
@@ -2335,6 +2337,16 @@ function RandomConnectScreen({ myId, myProfile, onlinePeople = [], onBack, varia
       else if (n === "NotReadableError") setCallErr("Your camera or microphone is being used by another app. Close it and press Next.");
       else setCallErr(`The connection failed (${n || e?.message || "unknown"}). Please press Next to try again.`);
     }
+  }
+
+  function playRemote() {
+    const remote = remoteStreamRef.current;
+    if (!remote) return;
+    const el = remoteVideoRef.current || remoteAudioRef.current;
+    if (!el) return;
+    el.srcObject = remote;
+    const p = el.play?.();
+    if (p && p.catch) p.then(() => setNeedsTap(false)).catch(() => setNeedsTap(true));
   }
 
   function sendCallSignal(signal) {
@@ -2408,15 +2420,10 @@ function RandomConnectScreen({ myId, myProfile, onlinePeople = [], onBack, varia
 
   useEffect(() => {
     const local = localStreamRef.current;
-    const remote = remoteStreamRef.current;
-    if (mode === "video") {
-      if (local && localVideoRef.current) localVideoRef.current.srcObject = local;
-      if (remote && remoteVideoRef.current) remoteVideoRef.current.srcObject = remote;
-    } else if (remote && remoteAudioRef.current) {
-      remoteAudioRef.current.srcObject = remote;
-      remoteAudioRef.current.play?.().catch(() => {});
-    }
-  }, [stage, mode, callStatus]);
+    if (mode === "video" && local && localVideoRef.current) localVideoRef.current.srcObject = local;
+    playRemote();
+    // eslint-disable-next-line
+  }, [stage, mode, callStatus, partnerLeft]);
 
   async function flushPendingCallSignals() {
     const pending = pendingCallSignalsRef.current.splice(0);
@@ -2575,6 +2582,8 @@ function RandomConnectScreen({ myId, myProfile, onlinePeople = [], onBack, varia
           {partner?.name || "Believer"}
           <div style={{ fontFamily:"Inter, sans-serif", fontSize:13, color:"#B8935F", marginTop:4 }}>{partnerLeft ? "The other person left. Press Next to find someone else." : callStatus === "connecting" ? "Connecting…" : "Connected"}</div>
         </div>
+        {needsTap && !partnerLeft && <button onClick={() => { setNeedsTap(false); playRemote(); }} style={{ ...primaryBtn, position:"absolute", top:"42%", padding:"12px 26px" }}>Tap to start video</button>}
+        {linkInfo && <div style={{ position:"absolute", top:96, fontFamily:"Inter, sans-serif", fontSize:11, color:"rgba(248,244,234,.55)" }}>{linkInfo}</div>}
         {callErr && <div style={{position:"absolute", bottom:190, color:"#E3A6A6", fontSize:12.5, fontFamily:"Inter, sans-serif", textAlign:"center", padding:"0 30px"}}>{callErr}</div>}
         <div style={{ position:"absolute", bottom:30, display:"flex", gap:18 }}>
           <button onClick={() => { localStreamRef.current?.getAudioTracks().forEach(t => t.enabled = !micOn); setMicOn(!micOn); }} style={callBtn(micOn ? "#5C4520" : "#B5616B")}>

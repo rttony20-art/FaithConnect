@@ -8,6 +8,8 @@
 const STUN_ONLY = [{ urls: "stun:stun.l.google.com:19302" }];
 const CACHE_MS = 10 * 60 * 1000;
 
+let lastHadTurn = false;
+export function iceHasTurn() { return lastHadTurn; }
 let cache = null;    // { servers, at }
 let inflight = null; // shared by calls that start at the same time
 
@@ -32,9 +34,9 @@ async function fetchServers({ getToken, refresh }) {
 }
 
 export async function getIceServers(auth) {
-  if (cache && Date.now() - cache.at < CACHE_MS) return cache.servers;
+  if (cache && Date.now() - cache.at < CACHE_MS) { lastHadTurn = cache.servers.length > 1; return cache.servers; }
   inflight ||= fetchServers(auth)
-    .then(servers => { cache = { servers, at: Date.now() }; return servers; })
+    .then(servers => { cache = { servers, at: Date.now() }; lastHadTurn = servers.length > 1; return servers; })
     .catch(e => { console.warn("FaithConnect calls: using STUN only.", e); return STUN_ONLY; })
     .finally(() => { inflight = null; });
   return inflight;
