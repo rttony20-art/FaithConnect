@@ -753,7 +753,8 @@ export default function App() {
         const client = await getRealtimeClient();
         if (stopped) return;
         ch = client.channel(`faithconnect-inbox-${myId}`)
-          .on("postgres_changes", { event:"INSERT", schema:"public", table:"private_messages", filter:`recipient_id=eq.${myId}` }, () => { if (!stopped) loadConversations(); })
+          .on("postgres_changes", { event:"INSERT", schema:"public", table:"private_messages", filter:`recipient_id=eq.${myId}` }, () => { if (!stopped) { loadConversations(); window.dispatchEvent(new Event("fc-new-message")); } })
+          .on("postgres_changes", { event:"UPDATE", schema:"public", table:"private_messages", filter:`recipient_id=eq.${myId}` }, () => { if (!stopped) window.dispatchEvent(new Event("fc-new-message")); })
           .subscribe();
       } catch (e) { console.error("FaithConnect inbox realtime failed", e); }
     })();
@@ -1048,9 +1049,6 @@ export default function App() {
           {deleteConvo && (
             <div onClick={() => setDeleteConvo(null)} style={{ position:"fixed", inset:0, zIndex:40, background:"rgba(0,0,0,.55)", display:"flex", alignItems:"flex-end", justifyContent:"center", padding:"16px 16px calc(16px + env(safe-area-inset-bottom))" }}>
               <div onClick={e => e.stopPropagation()} style={{ width:"100%", maxWidth:420, background:"#1B2140", border:"1px solid rgba(255,255,255,.14)", borderRadius:16, overflow:"hidden" }}>
-                <div style={{ padding:"16px 18px", fontFamily:"Inter, sans-serif", fontSize:13.5, lineHeight:1.5, color:"#D6AE6E", borderBottom:"1px solid rgba(255,255,255,.1)" }}>
-                  Remove {deleteConvo.otherProfile?.name || "this person"} from your messages? Your messages with them are cleared for you only. They keep their copy, and if they write to you again the chat comes back.
-                </div>
                 <button onClick={() => deleteConversation(deleteConvo)} style={{ display:"block", width:"100%", background:"none", border:"none", borderBottom:"1px solid rgba(255,255,255,.1)", color:"#E3A6A6", fontFamily:"Inter, sans-serif", fontSize:16, fontWeight:600, padding:16, cursor:"pointer" }}>Delete conversation</button>
                 <button onClick={() => setDeleteConvo(null)} style={{ display:"block", width:"100%", background:"none", border:"none", color:"#F8F4EA", fontFamily:"Inter, sans-serif", fontSize:16, padding:16, cursor:"pointer" }}>Cancel</button>
               </div>
@@ -1684,8 +1682,10 @@ function ChatScreen({ myId, myProfile, other, onBack, onRead }) {
     (async () => {
       try {
         getIceServers(iceAuth); // warm up call relay credentials
+        const channelReady = ensureChannel(); // connect the live channel while the messages load
+        channelReady.catch(() => {});
         await refreshThread();
-        await ensureChannel();
+        await channelReady;
       } catch (e) {
         // Messages still work without the live channel (it only carries calls and instant nudges).
         console.error("FaithConnect realtime chat failed", e);
@@ -1694,10 +1694,12 @@ function ChatScreen({ myId, myProfile, other, onBack, onRead }) {
     const poll = setInterval(() => { if (!document.hidden) refreshThread(); }, 4000);
     const onVisible = () => { if (!document.hidden) refreshThread(); };
     document.addEventListener("visibilitychange", onVisible);
+    window.addEventListener("fc-new-message", onVisible); // the inbox feed heard about a new or edited message
     return () => {
       cancelled = true;
       clearInterval(poll);
       document.removeEventListener("visibilitychange", onVisible);
+      window.removeEventListener("fc-new-message", onVisible);
       const ch = chatChannelRef.current;
       chatChannelRef.current = null;
       if (ch) { try { ch.unsubscribe(); } catch {} }
