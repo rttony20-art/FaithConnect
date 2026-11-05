@@ -2467,7 +2467,7 @@ function RandomConnectScreen({ myId, myProfile, onlinePeople = [], onBack, varia
 
   /* --- call mode (audio/video) --- */
   // Messages sent over the match channel are not stored, so a message sent before the other
-  // phone is listening is lost. To be safe the receiver says "I am ready" every 0.6 seconds,
+  // phone is listening is lost. To be safe the receiver says "I am ready" every second,
   // the caller answers each "ready" by sending the offer again, and every signal is handled
   // one at a time (candidates wait until the offer/answer has been applied).
   async function startRandomCall(sid, p, m) {
@@ -2521,7 +2521,7 @@ function RandomConnectScreen({ myId, myProfile, onlinePeople = [], onBack, varia
           sendCallSignal({ type:"ready" });
         };
         ping();
-        callPollRef.current = setInterval(ping, 600);
+        callPollRef.current = setInterval(ping, 1000);
       }
     } catch(e) {
       console.error(e);
@@ -2557,6 +2557,10 @@ function RandomConnectScreen({ myId, myProfile, onlinePeople = [], onBack, varia
   async function sendOffer() {
     const pc = pcRef.current;
     if (!pc || pc.currentRemoteDescription) return;
+    // Resend at most every 2.5 seconds: the realtime service drops messages when too many are sent at once.
+    const now = Date.now();
+    if (callSentRef.current.offer && now - (callSentRef.current.offerAt || 0) < 2500) return;
+    callSentRef.current.offerAt = now;
     if (!callSentRef.current.offer) {
       const offer = await pc.createOffer();
       await pc.setLocalDescription(offer);
@@ -2595,7 +2599,9 @@ function RandomConnectScreen({ myId, myProfile, onlinePeople = [], onBack, varia
     if (signal.type === "offer" && signal.caller !== myId) {
       if (pc.currentRemoteDescription || pc.remoteDescription) {
         // the caller sent it again because our answer may have been lost
-        if (callSentRef.current.answer) {
+        const t = Date.now();
+        if (callSentRef.current.answer && t - (callSentRef.current.answerAt || 0) > 2500) {
+          callSentRef.current.answerAt = t;
           await sendCallSignal(callSentRef.current.answer);
           for (const c of callSentRef.current.candidates) await sendCallSignal(c);
         }
@@ -2605,6 +2611,7 @@ function RandomConnectScreen({ myId, myProfile, onlinePeople = [], onBack, varia
       const answer = await pc.createAnswer();
       await pc.setLocalDescription(answer);
       callSentRef.current.answer = { type:"answer", caller:signal.caller, answer:pc.localDescription || answer };
+      callSentRef.current.answerAt = Date.now();
       await sendCallSignal(callSentRef.current.answer);
       await addRemoteCandidates();
     } else if (signal.type === "answer" && callStateRef.current?.caller === myId) {
