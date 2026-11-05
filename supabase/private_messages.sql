@@ -68,3 +68,26 @@ exception
   when duplicate_object then null;
   when undefined_object then null;
 end $$;
+
+
+-- ---- Edit messages + delete conversation (added Nov 2026). Run once. ----
+alter table public.private_messages add column if not exists edited_at timestamptz;
+alter table public.conversation_clears add column if not exists hidden boolean not null default false;
+
+-- The sender may change the text of their own messages.
+drop policy if exists pm_update_sender on public.private_messages;
+create policy pm_update_sender on public.private_messages for update to authenticated
+  using (sender_id = auth.uid()) with check (sender_id = auth.uid());
+grant update (body, edited_at) on public.private_messages to authenticated;
+
+-- Safety: only the sender's edit of the text is kept (a receiver cannot change what was written).
+create or replace function public.pm_guard() returns trigger language plpgsql as $$
+begin
+  if new.body is distinct from old.body then
+    if auth.uid() is distinct from old.sender_id then new.body := old.body;
+    else new.edited_at := now(); end if;
+  end if;
+  return new;
+end $$;
+create or replace trigger pm_guard_t before update on public.private_messages
+  for each row execute function public.pm_guard();

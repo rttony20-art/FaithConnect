@@ -13,6 +13,7 @@ export function rowToMsg(r) {
     content: r.audio || undefined,
     ts: Date.parse(r.created_at) || 0,
     readAt: r.read_at || null,
+    edited: !!r.edited_at,
   };
 }
 
@@ -42,9 +43,9 @@ export function createMessagesApi({ rest, getToken, refresh }) {
 
   return {
     // Latest messages of one conversation, oldest first, minus anything I cleared.
-    async thread(myId, cid) {
+    async thread(myId, cid, limit = 200) {
       const [rows, cleared] = await Promise.all([
-        call(`private_messages?convo_id=eq.${encodeURIComponent(cid)}&order=created_at.desc&limit=200&select=*`),
+        call(`private_messages?convo_id=eq.${encodeURIComponent(cid)}&order=created_at.desc&limit=${limit}&select=*`),
         clearedAt(myId, cid),
       ]);
       return (rows || [])
@@ -69,11 +70,29 @@ export function createMessagesApi({ rest, getToken, refresh }) {
 
     // "Clear chat": hide every message up to `upTo` (ISO time of the newest message I have
     // seen, taken from the server) for me only. The other person keeps everything.
-    clear(myId, cid, upTo) {
+    async clear(myId, cid, upTo) {
+      const post = body => call("conversation_clears?on_conflict=user_id,convo_id", {
+        method: "POST", body,
+        extraHeaders: { Prefer: "resolution=merge-duplicates,return=minimal" },
+      });
+      try { return await post({ user_id: myId, convo_id: cid, cleared_at: upTo, hidden: false }); }
+      catch { return post({ user_id: myId, convo_id: cid, cleared_at: upTo }); } // database not updated yet
+    },
+
+    // "Delete conversation": clear it AND take the person out of my Messages list.
+    // If they write to me again after `upTo`, the conversation comes back.
+    hide(myId, cid, upTo) {
       return call("conversation_clears?on_conflict=user_id,convo_id", {
         method: "POST",
-        body: { user_id: myId, convo_id: cid, cleared_at: upTo },
+        body: { user_id: myId, convo_id: cid, cleared_at: upTo, hidden: true },
         extraHeaders: { Prefer: "resolution=merge-duplicates,return=minimal" },
+      });
+    },
+
+    // Change the text of one of MY messages (the database refuses anyone else).
+    edit(id, text) {
+      return call(`private_messages?id=eq.${encodeURIComponent(id)}`, {
+        method: "PATCH", body: { body: text }, ...MIN,
       });
     },
 
@@ -82,7 +101,7 @@ export function createMessagesApi({ rest, getToken, refresh }) {
       const [latest, unreadRows, clears] = await Promise.all([
         call(`private_messages?or=(sender_id.eq.${myId},recipient_id.eq.${myId})&order=created_at.desc&limit=300&select=id,convo_id,sender_id,recipient_id,type,body,created_at`),
         call(`private_messages?recipient_id=eq.${myId}&read_at=is.null&select=convo_id,created_at&limit=1000`),
-        call(`conversation_clears?user_id=eq.${myId}&select=convo_id,cleared_at`),
+        call(`conversation_clears?user_id=eq.${myId}&select=*`),
       ]);
       return buildInbox(myId, latest || [], unreadRows || [], clears || []);
     },
@@ -92,6 +111,7 @@ export function createMessagesApi({ rest, getToken, refresh }) {
 // Pure function (easy to test): groups messages into conversations with unread counts.
 export function buildInbox(myId, latest, unreadRows, clears) {
   const clearedAt = new Map(clears.map(c => [c.convo_id, Date.parse(c.cleared_at)]));
+  const hiddenIds = new Set(clears.filter(c => c.hidden).map(c => c.convo_id));
   const visible = r => Date.parse(r.created_at) > (clearedAt.get(r.convo_id) || 0);
 
   const convos = new Map();
@@ -106,6 +126,8 @@ export function buildInbox(myId, latest, unreadRows, clears) {
       unread: 0,
     });
   }
+  // A deleted conversation stays out of the list until a newer message arrives.
+  for (const [cid, c] of convos) if (hiddenIds.has(cid) && !c.last) convos.delete(cid);
   for (const r of unreadRows) {
     if (visible(r) && convos.has(r.convo_id)) convos.get(r.convo_id).unread += 1;
   }

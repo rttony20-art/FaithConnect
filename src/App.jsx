@@ -37,6 +37,21 @@ const FAITHCONNECT_LIGHT_HERO = "/hero-light.jpg";
 function genId() { return Math.random().toString(36).slice(2, 10); }
 function convoId(a, b) { return [a, b].sort().join("-"); }
 
+// Last loaded messages of each chat, so a chat opens at once instead of showing an empty screen.
+const threadCache = new Map();
+function readThreadCache(cid) {
+  if (threadCache.has(cid)) return threadCache.get(cid);
+  try {
+    const raw = localStorage.getItem(`fc-thread:${cid}`);
+    if (raw) { const list = JSON.parse(raw); threadCache.set(cid, list); return list; }
+  } catch {}
+  return null;
+}
+function writeThreadCache(cid, list) {
+  threadCache.set(cid, list);
+  try { localStorage.setItem(`fc-thread:${cid}`, JSON.stringify(list.filter(m => m.type === "text" && !m.pending).slice(-60))); } catch {}
+}
+
 /* ---------- Supabase (real accounts + profiles) — plain HTTP, no external library ---------- */
 const SUPABASE_URL = "https://vyhhyqegboenrznkjjjc.supabase.co";
 const SUPABASE_ANON_KEY = "sb_publishable_E5w6gJK9yQKrvJNWyzhhlg_i78m_wde";
@@ -334,6 +349,21 @@ export default function App() {
   const [matches, setMatches] = useState([]);
   const [activeConvo, setActiveConvo] = useState(null); // {otherId, otherProfile}
   const [conversations, setConversations] = useState([]);
+  const [deleteConvo, setDeleteConvo] = useState(null); // conversation waiting for "Delete conversation" confirmation
+  async function deleteConversation(c) {
+    setDeleteConvo(null);
+    const before = conversations;
+    setConversations(prev => prev.filter(x => x.otherId !== c.otherId)); // disappears at once
+    try {
+      await msgApi.hide(myId, c.cid, new Date(c.ts || Date.now()).toISOString());
+      threadCache.delete(c.cid);
+      try { localStorage.removeItem(`fc-thread:${c.cid}`); } catch {}
+    } catch (e) {
+      console.error("Delete conversation failed", e);
+      setConversations(before);
+      alert("Could not delete the conversation. Please try again.");
+    }
+  }
   const [err, setErr] = useState("");
   const [loginUser, setLoginUser] = useState("");
   const [loginPass, setLoginPass] = useState("");
@@ -696,9 +726,14 @@ export default function App() {
             if (otherProfile) await sset(`profiles:${c.otherId}`, otherProfile, false);
           } catch {}
         }
-        mine.push({ otherId: c.otherId, otherProfile, last: c.last, unread: c.unread });
+        mine.push({ otherId: c.otherId, otherProfile, last: c.last, unread: c.unread, ts: c.ts, cid: c.cid });
       }
       setConversations(mine);
+      // Load the newest chats in the background, so opening one is instant.
+      mine.slice(0, 5).forEach(c => {
+        if (threadCache.has(c.cid)) return;
+        msgApi.thread(myId, c.cid, 40).then(rows => { if (!threadCache.has(c.cid)) writeThreadCache(c.cid, rows.map(rowToMsg)); }).catch(() => {});
+      });
     } catch (e) { console.error("FaithConnect load conversations failed", e); }
   }, [myId]);
 
@@ -996,7 +1031,8 @@ export default function App() {
         <div style={{ flex:1, overflowY:"auto", padding:"0 16px 100px", background:"var(--fc-bg)" }}>
           {conversations.length === 0 && <div style={{...emptyState, color:"var(--fc-muted, #D6AE6E)"}}>No conversations yet. Start one from your matches.</div>}
           {conversations.map(c => (
-            <button key={c.otherId} onClick={() => { setActiveConvo({ otherId: c.otherId, otherProfile: c.otherProfile }); setScreen("chat"); }} style={convoRow}>
+            <div key={c.otherId} style={{ ...convoRow, padding:0 }}>
+            <button onClick={() => { setActiveConvo({ otherId: c.otherId, otherProfile: c.otherProfile }); setScreen("chat"); }} style={{ display:"flex", alignItems:"center", flex:1, minWidth:0, background:"none", border:"none", padding:12, cursor:"pointer" }}>
               <div style={{ marginRight:10 }}><AvatarCircle profile={c.otherProfile} size={38} fontSize={15} /></div>
               <div style={{flex:1, minWidth:0, textAlign:"left"}}>
                 <div style={{fontFamily:"Lora, serif", fontSize:15.5, color:"var(--fc-card-text)", fontWeight:c.unread ? 700 : 400}}>{c.otherProfile?.name || "Someone"}</div>
@@ -1006,7 +1042,20 @@ export default function App() {
               </div>
               {c.unread > 0 && <span style={unreadBadge({ marginLeft:8, flexShrink:0 })}>{c.unread > 99 ? "99+" : c.unread}</span>}
             </button>
+            <button onClick={() => setDeleteConvo(c)} aria-label={`Options for ${c.otherProfile?.name || "this chat"}`} style={{ background:"none", border:"none", padding:"12px 12px 12px 4px", cursor:"pointer", display:"flex" }}><MoreVertical size={18} color="var(--fc-muted, #D6AE6E)" /></button>
+            </div>
           ))}
+          {deleteConvo && (
+            <div onClick={() => setDeleteConvo(null)} style={{ position:"fixed", inset:0, zIndex:40, background:"rgba(0,0,0,.55)", display:"flex", alignItems:"flex-end", justifyContent:"center", padding:"16px 16px calc(16px + env(safe-area-inset-bottom))" }}>
+              <div onClick={e => e.stopPropagation()} style={{ width:"100%", maxWidth:420, background:"#1B2140", border:"1px solid rgba(255,255,255,.14)", borderRadius:16, overflow:"hidden" }}>
+                <div style={{ padding:"16px 18px", fontFamily:"Inter, sans-serif", fontSize:13.5, lineHeight:1.5, color:"#D6AE6E", borderBottom:"1px solid rgba(255,255,255,.1)" }}>
+                  Remove {deleteConvo.otherProfile?.name || "this person"} from your messages? Your messages with them are cleared for you only. They keep their copy, and if they write to you again the chat comes back.
+                </div>
+                <button onClick={() => deleteConversation(deleteConvo)} style={{ display:"block", width:"100%", background:"none", border:"none", borderBottom:"1px solid rgba(255,255,255,.1)", color:"#E3A6A6", fontFamily:"Inter, sans-serif", fontSize:16, fontWeight:600, padding:16, cursor:"pointer" }}>Delete conversation</button>
+                <button onClick={() => setDeleteConvo(null)} style={{ display:"block", width:"100%", background:"none", border:"none", color:"#F8F4EA", fontFamily:"Inter, sans-serif", fontSize:16, padding:16, cursor:"pointer" }}>Cancel</button>
+              </div>
+            </div>
+          )}
         </div>
         {nav}
       </div>
@@ -1542,7 +1591,11 @@ function IronSharpensIronCard({ onOpen, lightMode }) {
 }
 /* ---------------- CHAT + CALL SCREEN ---------------- */
 function ChatScreen({ myId, myProfile, other, onBack, onRead }) {
-  const [messages, setMessages] = useState([]);
+  const [messages, setMessages] = useState(() => readThreadCache(convoId(myId, other.otherId)) || []);
+  const [loaded, setLoaded] = useState(() => !!readThreadCache(convoId(myId, other.otherId)));
+  const [editingId, setEditingId] = useState(null); // message being edited
+  const [actionMsg, setActionMsg] = useState(null); // my message the person tapped (edit sheet)
+  const didFirstScroll = useRef(false);
   const [text, setText] = useState("");
   const [recording, setRecording] = useState(false);
   const [callMode, setCallMode] = useState(null); // null | audio | video
@@ -1581,6 +1634,8 @@ function ChatScreen({ myId, myProfile, other, onBack, onRead }) {
       const rows = await msgApi.thread(myId, cid);
       if (seq !== refreshSeq.current) return;
       const server = rows.map(rowToMsg);
+      writeThreadCache(cid, server);
+      setLoaded(true);
       setMessages(prev => {
         const ids = new Set(server.map(m => m.id));
         const pending = prev.filter(m => m.pending && !ids.has(m.id));
@@ -1654,6 +1709,7 @@ function ChatScreen({ myId, myProfile, other, onBack, onRead }) {
   useEffect(() => {
     const el = chatScrollRef.current;
     if (!el) return;
+    if (!didFirstScroll.current && messages.length) { el.scrollTop = el.scrollHeight; didFirstScroll.current = true; return; } // open at the newest message
     const nearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 120;
     if (nearBottom) el.scrollTo({ top: el.scrollHeight, behavior:"smooth" });
   }, [messages]);
@@ -1662,7 +1718,29 @@ function ChatScreen({ myId, myProfile, other, onBack, onRead }) {
     ensureChannel().then(ch => ch.send({ type:"broadcast", event:"message", payload:{ ping:true } })).catch(() => {});
   }
 
+  // Edit one of my text messages.
+  function startEdit(m) { setActionMsg(null); setEditingId(m.id); setText(m.text || ""); setCallErr(""); }
+  function cancelEdit() { setEditingId(null); setText(""); }
+  async function saveEdit() {
+    const newText = text.trim();
+    const m = messages.find(x => x.id === editingId);
+    if (!m || !newText) return;
+    if (newText === m.text) { cancelEdit(); return; }
+    const oldText = m.text;
+    setEditingId(null); setText("");
+    setMessages(prev => prev.map(x => x.id === m.id ? { ...x, text:newText, edited:true } : x));
+    try {
+      await msgApi.edit(m.id, newText);
+      refreshThread(); nudgeOther();
+    } catch (e) {
+      console.error("Edit failed", e);
+      setMessages(prev => prev.map(x => x.id === m.id ? { ...x, text:oldText, edited:m.edited } : x));
+      setCallErr("The message could not be edited. Please try again.");
+    }
+  }
+
   async function sendMessage(type, content) {
+    if (type === "text" && editingId) { saveEdit(); return; }
     const msg = {
       id:`${myId}-${Date.now()}-${Math.random().toString(36).slice(2,8)}`,
       sender:myId,
@@ -1899,14 +1977,16 @@ function ChatScreen({ myId, myProfile, other, onBack, onRead }) {
         )}
       </div>
       <div ref={chatScrollRef} style={{ flex:1, minHeight:0, overflowY:"auto", WebkitOverflowScrolling:"touch", overscrollBehavior:"contain", padding:"16px 14px", background:"var(--fc-bg)", display:"flex", flexDirection:"column" }}>
-        {messages.length === 0 && <div style={emptyState}>Say hello — your conversation starts here.</div>}
+        {messages.length === 0 && !loaded && <div style={{ ...emptyState, opacity:.7 }}>Loading messages…</div>}
+        {messages.length === 0 && loaded && <div style={emptyState}>Say hello — your conversation starts here.</div>}
         {messages.map(m => {
           const mine = m.sender === myId;
           return (
             <div key={m.id || `${m.sender}-${m.ts}`} style={{ alignSelf:mine ? "flex-end" : "flex-start", maxWidth:"75%", marginBottom:10, display:"flex", flexDirection:"column", alignItems:mine ? "flex-end" : "flex-start" }}>
-              <div style={{ background:mine ? "#B8935F" : "var(--fc-bubble)", color:mine ? "#FAF7F0" : "var(--fc-card-text)", padding:"9px 13px", borderRadius:16, fontFamily:"Inter, sans-serif", fontSize:14.5, opacity:m.pending ? 0.6 : 1 }}>
-                {m.type === "voice" ? <audio controls src={m.content} style={{height:34, maxWidth:200}} /> : m.text}
+              <div onClick={() => { if (mine && m.type === "text" && !m.pending) setActionMsg(m); }} style={{ background:mine ? "#B8935F" : "var(--fc-bubble)", color:mine ? "#FAF7F0" : "var(--fc-card-text)", padding:"9px 13px", borderRadius:16, fontFamily:"Inter, sans-serif", fontSize:14.5, opacity:m.pending ? 0.6 : 1, cursor: mine && m.type === "text" ? "pointer" : "default", outline: editingId === m.id ? "2px solid #D6AE6E" : "none" }}>
+                {m.type === "voice" ? (m.content ? <audio controls src={m.content} style={{height:34, maxWidth:200}} /> : "🎙️ Voice note") : m.text}
               </div>
+              {m.edited && <div style={{ fontFamily:"Inter, sans-serif", fontSize:10.5, color:"#D6AE6E", marginTop:2 }}>edited</div>}
               {mine && m.id === lastMineId && m.readAt && (
                 <div style={{ fontFamily:"Inter, sans-serif", fontSize:11, color:"#D6AE6E", marginTop:3 }}>Seen</div>
               )}
@@ -1915,11 +1995,25 @@ function ChatScreen({ myId, myProfile, other, onBack, onRead }) {
         })}
       </div>
       {callErr && <div style={{fontSize:12, color:"#B5616B", fontFamily:"Inter, sans-serif", padding:"4px 14px", background:"var(--fc-bg)"}}>{callErr}</div>}
+      {editingId && (
+        <div style={{ flexShrink:0, display:"flex", alignItems:"center", gap:8, padding:"7px 14px", background:"var(--fc-card)", borderTop:"1px solid var(--fc-card-border)", fontFamily:"Inter, sans-serif", fontSize:12.5, color:"#D6AE6E" }}>
+          <span style={{ flex:1 }}>Editing message</span>
+          <button onClick={cancelEdit} style={{ background:"none", border:"none", cursor:"pointer", display:"flex" }} aria-label="Cancel editing"><X size={16} color="#D6AE6E" /></button>
+        </div>
+      )}
       <div style={{ ...composer, flexShrink:0, paddingBottom:"calc(10px + env(safe-area-inset-bottom))" }}>
-        <button onClick={recording ? stopRecording : startRecording} style={{ ...iconBtnLight, background:recording ? "#B5616B" : "var(--fc-bubble)" }}>{recording ? <Square size={17} color="#fff" /> : <Mic size={18} color="var(--fc-card-text)" />}</button>
-        <input value={text} onChange={e=>setText(e.target.value)} onKeyDown={e=>{ if(e.key==="Enter" && text.trim()) sendMessage("text", text.trim()); }} placeholder="Type a message…" style={{ flex:1, border:"none", outline:"none", fontFamily:"Inter, sans-serif", fontSize:14.5, background:"transparent", color:"var(--fc-card-text)", padding:"10px 4px", minWidth:0 }} />
+        {!editingId && <button onClick={recording ? stopRecording : startRecording} style={{ ...iconBtnLight, background:recording ? "#B5616B" : "var(--fc-bubble)" }}>{recording ? <Square size={17} color="#fff" /> : <Mic size={18} color="var(--fc-card-text)" />}</button>}
+        <input value={text} onChange={e=>setText(e.target.value)} onKeyDown={e=>{ if(e.key==="Enter" && text.trim()) sendMessage("text", text.trim()); }} placeholder={editingId ? "Edit your message…" : "Type a message…"} autoCorrect="on" autoCapitalize="sentences" spellCheck={true} autoComplete="off" enterKeyHint="send" style={{ flex:1, border:"none", outline:"none", fontFamily:"Inter, sans-serif", fontSize:14.5, background:"transparent", color:"var(--fc-card-text)", padding:"10px 4px", minWidth:0 }} />
         <button onClick={() => text.trim() && sendMessage("text", text.trim())} style={iconBtnLight}><Send size={18} color="#B8935F" /></button>
       </div>
+      {actionMsg && (
+        <div onClick={() => setActionMsg(null)} style={{ position:"fixed", inset:0, zIndex:40, background:"rgba(0,0,0,.55)", display:"flex", alignItems:"flex-end", justifyContent:"center", padding:"16px 16px calc(16px + env(safe-area-inset-bottom))" }}>
+          <div onClick={e => e.stopPropagation()} style={{ width:"100%", maxWidth:420, background:"#1B2140", border:"1px solid rgba(255,255,255,.14)", borderRadius:16, overflow:"hidden" }}>
+            <button onClick={() => startEdit(actionMsg)} style={{ display:"block", width:"100%", background:"none", border:"none", borderBottom:"1px solid rgba(255,255,255,.1)", color:"#F8F4EA", fontFamily:"Inter, sans-serif", fontSize:16, fontWeight:600, padding:16, cursor:"pointer" }}>Edit message</button>
+            <button onClick={() => setActionMsg(null)} style={{ display:"block", width:"100%", background:"none", border:"none", color:"#D6AE6E", fontFamily:"Inter, sans-serif", fontSize:16, padding:16, cursor:"pointer" }}>Cancel</button>
+          </div>
+        </div>
+      )}
       {confirmClear && (
         <div onClick={() => setConfirmClear(false)} style={{ position:"fixed", inset:0, zIndex:40, background:"rgba(0,0,0,.55)", display:"flex", alignItems:"flex-end", justifyContent:"center", padding:"16px 16px calc(16px + env(safe-area-inset-bottom))" }}>
           <div onClick={e => e.stopPropagation()} style={{ width:"100%", maxWidth:420, background:"#1B2140", border:"1px solid rgba(255,255,255,.14)", borderRadius:16, overflow:"hidden" }}>
@@ -2659,7 +2753,7 @@ function RandomConnectScreen({ myId, myProfile, onlinePeople = [], onBack, varia
         </div>
         {callErr && <div style={{ flexShrink:0, padding:"6px 16px", background:"var(--fc-bg)", color:"#E3A6A6", fontSize:12.5, fontFamily:"Inter, sans-serif", textAlign:"center" }}>{callErr}</div>}
         <div style={{ ...composer, flexShrink:0, paddingBottom:"calc(10px + env(safe-area-inset-bottom))" }}>
-          <input value={text} disabled={partnerLeft} onChange={e=>setText(e.target.value)} onKeyDown={e => e.key === "Enter" && sendRandomMsg()} placeholder={partnerLeft ? "They left the chat" : "Type a message…"} style={{ flex:1, border:"none", outline:"none", fontFamily:"Inter, sans-serif", fontSize:14.5, background:"transparent", color:"var(--fc-card-text)", padding:"10px 4px", minWidth:0 }} />
+          <input value={text} disabled={partnerLeft} onChange={e=>setText(e.target.value)} onKeyDown={e => e.key === "Enter" && sendRandomMsg()} placeholder={partnerLeft ? "They left the chat" : "Type a message…"} autoCorrect="on" autoCapitalize="sentences" spellCheck={true} autoComplete="off" style={{ flex:1, border:"none", outline:"none", fontFamily:"Inter, sans-serif", fontSize:14.5, background:"transparent", color:"var(--fc-card-text)", padding:"10px 4px", minWidth:0 }} />
           {noteRecording && <div style={{ fontFamily:"Inter, sans-serif", fontSize:13, color:"#E3A6A6", whiteSpace:"nowrap" }}>● {Math.floor(noteSecs/60)}:{String(noteSecs%60).padStart(2,"0")}</div>}
           {noteRecording && <button onClick={cancelNote} style={iconBtnLight} aria-label="Cancel voice note"><X size={18} color="var(--fc-card-text)" /></button>}
           <button onClick={noteRecording ? stopNote : startNote} disabled={partnerLeft} style={{ ...iconBtnLight, background: noteRecording ? "#B5616B" : "var(--fc-bubble)" }} aria-label={noteRecording ? "Send voice note" : "Record voice note"}>{noteRecording ? <Send size={17} color="#fff" /> : <Mic size={18} color="var(--fc-card-text)" />}</button>
