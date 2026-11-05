@@ -1549,6 +1549,7 @@ function ChatScreen({ myId, myProfile, other, onBack, onRead }) {
   const [callStatus, setCallStatus] = useState("idle"); // idle, calling, ringing, active
   const [micOn, setMicOn] = useState(true);
   const [camOn, setCamOn] = useState(true);
+  const [remoteCamOff, setRemoteCamOff] = useState(false); // the other person turned their camera off
   const [callErr, setCallErr] = useState("");
 
   const cid = convoId(myId, other.otherId);
@@ -1762,7 +1763,16 @@ function ChatScreen({ myId, myProfile, other, onBack, onRead }) {
     }
   }
 
+  function toggleCamera1to1() {
+    const next = !camOn;
+    localStreamRef.current?.getVideoTracks().forEach(t => { t.enabled = next; });
+    setCamOn(next);
+    broadcastCall({ type:"cam", on:next, from:myId }).catch(() => {});
+  }
+
   async function handleCallSignal(signal) {
+    // Some phones keep the last picture when a camera is switched off, so the other side is told.
+    if (signal?.type === "cam") { if (signal.from !== myId) setRemoteCamOff(!signal.on); return; }
     if (!signal || signal.caller === myId) return;
     if (signal.type === "offer") {
       pendingOfferRef.current = signal;
@@ -1813,7 +1823,7 @@ function ChatScreen({ myId, myProfile, other, onBack, onRead }) {
   }
   function endCallLocal() {
     teardown(); pendingOfferRef.current = null; callStateRef.current = null;
-    setCallStatus("idle"); setCallMode(null); setMicOn(true); setCamOn(true); answeredIce.current = new Set(); myIceRef.current = [];
+    setCallStatus("idle"); setCallMode(null); setMicOn(true); setCamOn(true); setRemoteCamOff(false); answeredIce.current = new Set(); myIceRef.current = [];
   }
   async function hangUp() {
     try { await broadcastCall({ type:"ended", caller:callStateRef.current?.caller || myId }); } catch {}
@@ -1828,6 +1838,12 @@ function ChatScreen({ myId, myProfile, other, onBack, onRead }) {
           {callMode === "video" ? (
             <>
               <video ref={remoteVideoRef} autoPlay playsInline style={{ position:"absolute", inset:0, width:"100%", height:"100%", objectFit:"cover", background:"#0A0F0A" }} />
+              {remoteCamOff && (
+                <div style={{ position:"absolute", inset:0, background:"#0A0F0A", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", gap:14 }}>
+                  <div style={{ width:110, height:110, borderRadius:"50%", background:"#B8935F", display:"flex", alignItems:"center", justifyContent:"center", fontFamily:"Lora, serif", fontSize:40, color:"#2A1F0E" }}>{other.otherProfile?.name?.[0]?.toUpperCase() || "?"}</div>
+                  <div style={{ fontFamily:"Inter, sans-serif", fontSize:14, color:"#D6AE6E" }}>Camera is off</div>
+                </div>
+              )}
               <video ref={localVideoRef} autoPlay playsInline muted style={{ position:"absolute", bottom:110, right:16, width:100, height:140, borderRadius:14, objectFit:"cover", border:"2px solid #B8935F" }} />
             </>
           ) : (
@@ -1852,7 +1868,7 @@ function ChatScreen({ myId, myProfile, other, onBack, onRead }) {
             ) : (
               <>
                 <button onClick={() => { localStreamRef.current?.getAudioTracks().forEach(t => t.enabled=!micOn); setMicOn(!micOn); }} style={callBtn(micOn ? "#5C4520" : "#B5616B")}>{micOn ? <Mic size={20} color="#fff"/> : <MicOff size={20} color="#fff"/>}</button>
-                {callMode === "video" && <button onClick={() => { localStreamRef.current?.getVideoTracks().forEach(t => t.enabled=!camOn); setCamOn(!camOn); }} style={callBtn(camOn ? "#5C4520" : "#B5616B")}>{camOn ? <Camera size={20} color="#fff"/> : <VideoOff size={20} color="#fff"/>}</button>}
+                {callMode === "video" && <button onClick={toggleCamera1to1} style={callBtn(camOn ? "#5C4520" : "#B5616B")}>{camOn ? <Camera size={20} color="#fff"/> : <VideoOff size={20} color="#fff"/>}</button>}
                 <button onClick={hangUp} style={callBtn("#B5616B")}><PhoneOff size={20} color="#fff" /></button>
               </>
             )}
@@ -1917,6 +1933,14 @@ function ChatScreen({ myId, myProfile, other, onBack, onRead }) {
 }
 
 /* ---------------- FELLOWSHIP (random believer connect) ---------------- */
+function mediaErrorText(e) {
+  const n = e?.name || "";
+  if (n === "NotAllowedError" || n === "SecurityError") return "Camera or microphone is blocked. Tap the lock icon next to the web address, open Permissions, and allow Camera and Microphone. Then try again.";
+  if (n === "NotFoundError" || n === "OverconstrainedError") return "No camera or microphone was found on this device.";
+  if (n === "NotReadableError") return "Your camera or microphone is being used by another app. Close it and try again.";
+  return `The connection failed (${n || e?.message || "unknown"}). Please press Next to try again.`;
+}
+
 function RandomConnectScreen({ myId, myProfile, onlinePeople = [], onBack, variant = "faith" }) {
   const isLove = variant === "love";
   const kp = isLove ? "m" : "f"; // key prefix keeps the two queues fully separate
@@ -1954,6 +1978,12 @@ function RandomConnectScreen({ myId, myProfile, onlinePeople = [], onBack, varia
   const pendingCallSignalsRef = useRef([]);
   const remoteStreamRef = useRef(null);
   const [partnerLeft, setPartnerLeft] = useState(false);
+  const [noteRecording, setNoteRecording] = useState(false);
+  const [noteSecs, setNoteSecs] = useState(0);
+  const noteRecRef = useRef(null);
+  const noteChunksRef = useRef([]);
+  const noteTimerRef = useRef(null);
+  const noteCancelRef = useRef(false);
   const [needsTap, setNeedsTap] = useState(false); // the browser blocked autoplay of the other person's video
   const [linkInfo, setLinkInfo] = useState("");
   const [remoteCamOff, setRemoteCamOff] = useState(false); // the other person turned their camera off
@@ -2010,6 +2040,7 @@ function RandomConnectScreen({ myId, myProfile, onlinePeople = [], onBack, varia
   }, [messages]);
 
   function clearAll() {
+    if (noteRecRef.current) cancelNote();
     clearInterval(searchPollRef.current); clearInterval(chatPollRef.current); clearInterval(callPollRef.current);
     clearTimeout(revealTimer.current);
     const ch = matchChannelRef.current;
@@ -2162,6 +2193,21 @@ function RandomConnectScreen({ myId, myProfile, onlinePeople = [], onBack, varia
     stageRef.current = "searching"; modeRef.current = m;
     setMode(m); setStage("searching"); setPartner(null); setSessionId(null); setMessages([]);
     clearInterval(searchPollRef.current);
+    getIceServers(iceAuth); // load relay details now so the call starts faster
+    if (m !== "chat") {
+      // Ask for the camera/microphone now, so a blocked camera shows up straight away
+      // and the call can start the moment someone is found.
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio:true, video:m === "video" });
+        if (stageRef.current !== "searching" || modeRef.current !== m) { stream.getTracks().forEach(t => t.stop()); return; }
+        localStreamRef.current?.getTracks().forEach(t => t.stop());
+        localStreamRef.current = stream;
+      } catch (e) {
+        setCallErr(mediaErrorText(e));
+        stageRef.current = "setup"; setStage("setup");
+        return;
+      }
+    }
     try {
       await ensureQueueChannel();
       // Presence sync/join events perform the actual random pairing. There is no
@@ -2273,6 +2319,48 @@ function RandomConnectScreen({ myId, myProfile, onlinePeople = [], onBack, varia
     catch (e) { setCallErr("Could not connect the temporary chat. Please press Next and try again."); }
   }
 
+  // Voice notes in the temporary chat: sent straight to the other person, never saved.
+  async function startNote() {
+    if (noteRecRef.current || partnerLeft || !matchChannelRef.current) return;
+    setCallErr("");
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio:true });
+      const type = ["audio/webm;codecs=opus", "audio/webm", "audio/mp4"].find(t => window.MediaRecorder?.isTypeSupported?.(t));
+      const mr = new MediaRecorder(stream, type ? { mimeType:type, audioBitsPerSecond:24000 } : { audioBitsPerSecond:24000 });
+      noteChunksRef.current = []; noteCancelRef.current = false;
+      const startedAt = Date.now();
+      mr.ondataavailable = e => { if (e.data?.size) noteChunksRef.current.push(e.data); };
+      mr.onstop = () => {
+        stream.getTracks().forEach(t => t.stop());
+        clearInterval(noteTimerRef.current); noteRecRef.current = null; setNoteRecording(false); setNoteSecs(0);
+        if (noteCancelRef.current) return;
+        const blob = new Blob(noteChunksRef.current, { type: mr.mimeType || type || "audio/webm" });
+        if (blob.size > 150000) { setCallErr("That voice note is too long. Keep it under 30 seconds."); return; }
+        const dur = Math.max(1, Math.round((Date.now() - startedAt) / 1000));
+        const reader = new FileReader();
+        reader.onloadend = () => sendNote(reader.result, dur);
+        reader.readAsDataURL(blob);
+      };
+      mr.start();
+      noteRecRef.current = mr; setNoteRecording(true); setNoteSecs(0);
+      noteTimerRef.current = setInterval(() => {
+        const secs = Math.round((Date.now() - startedAt) / 1000);
+        setNoteSecs(secs);
+        if (secs >= 30) stopNote();
+      }, 500);
+    } catch (e) { setCallErr(mediaErrorText(e).replace("Camera or microphone", "Microphone")); }
+  }
+  function stopNote() { try { noteRecRef.current?.stop(); } catch {} }
+  function cancelNote() { noteCancelRef.current = true; clearInterval(noteTimerRef.current); stopNote(); }
+  async function sendNote(audio, dur) {
+    if (!matchChannelRef.current || !matchSessionRef.current) return;
+    const msg = { id:`${myId}-${Date.now()}-${genId()}`, sender:myId, type:"voice", audio, dur, ts:Date.now() };
+    setMessages(prev => [...prev, msg]);
+    try {
+      await matchChannelRef.current.send({ type:"broadcast", event:"match", payload:{ type:"message", sessionId:matchSessionRef.current, message:msg, from:myId } });
+    } catch { setCallErr("Voice note could not be delivered. Please try again."); }
+  }
+
   async function sendRandomMsg() {
     if (!text.trim() || !matchChannelRef.current || !matchSessionRef.current) return;
     const msg={ id:`${myId}-${Date.now()}-${genId()}`, sender:myId, text:text.trim(), ts:Date.now() };
@@ -2285,7 +2373,7 @@ function RandomConnectScreen({ myId, myProfile, onlinePeople = [], onBack, varia
 
   /* --- call mode (audio/video) --- */
   // Messages sent over the match channel are not stored, so a message sent before the other
-  // phone is listening is lost. To be safe the receiver says "I am ready" every 1.5 seconds,
+  // phone is listening is lost. To be safe the receiver says "I am ready" every 0.6 seconds,
   // the caller answers each "ready" by sending the offer again, and every signal is handled
   // one at a time (candidates wait until the offer/answer has been applied).
   async function startRandomCall(sid, p, m) {
@@ -2294,7 +2382,10 @@ function RandomConnectScreen({ myId, myProfile, onlinePeople = [], onBack, varia
     const icePromise = getIceServers(iceAuth); // fetched while the match session is being set up
     try {
       await waitForMatchSession(p, m);
-      const stream = await navigator.mediaDevices.getUserMedia({ audio:true, video:m === "video" });
+      let stream = localStreamRef.current;
+      if (!stream || !stream.getTracks().some(t => t.readyState === "live")) {
+        stream = await navigator.mediaDevices.getUserMedia({ audio:true, video:m === "video" });
+      }
       localStreamRef.current = stream;
       if (m === "video" && localVideoRef.current) localVideoRef.current.srcObject = stream;
       const pc = new RTCPeerConnection({ iceServers: await icePromise });
@@ -2336,15 +2427,11 @@ function RandomConnectScreen({ myId, myProfile, onlinePeople = [], onBack, varia
           sendCallSignal({ type:"ready" });
         };
         ping();
-        callPollRef.current = setInterval(ping, 1500);
+        callPollRef.current = setInterval(ping, 600);
       }
     } catch(e) {
       console.error(e);
-      const n = e?.name || "";
-      if (n === "NotAllowedError" || n === "SecurityError") setCallErr("Camera or microphone is blocked. Tap the lock icon next to the web address, open Permissions, and allow Camera and Microphone. Then press Next.");
-      else if (n === "NotFoundError" || n === "OverconstrainedError") setCallErr("No camera or microphone was found on this device.");
-      else if (n === "NotReadableError") setCallErr("Your camera or microphone is being used by another app. Close it and press Next.");
-      else setCallErr(`The connection failed (${n || e?.message || "unknown"}). Please press Next to try again.`);
+      setCallErr(mediaErrorText(e));
     }
   }
 
@@ -2559,7 +2646,7 @@ function RandomConnectScreen({ myId, myProfile, onlinePeople = [], onBack, varia
           {messages.length === 0 && !partnerLeft && <div style={emptyState}>Say hello and share what's on your heart.</div>}
           {messages.map((m, i) => (
             <div key={i} style={{ alignSelf: m.sender === myId ? "flex-end" : "flex-start", maxWidth:"75%", marginBottom:10 }}>
-              <div style={{ background: m.sender === myId ? "#B8935F" : "var(--fc-bubble)", color: m.sender === myId ? "#FAF7F0" : "var(--fc-card-text)", padding:"9px 13px", borderRadius:16, fontFamily:"Inter, sans-serif", fontSize:14.5 }}>{m.text}</div>
+              <div style={{ background: m.sender === myId ? "#B8935F" : "var(--fc-bubble)", color: m.sender === myId ? "#FAF7F0" : "var(--fc-card-text)", padding:"9px 13px", borderRadius:16, fontFamily:"Inter, sans-serif", fontSize:14.5 }}>{m.type === "voice" ? <audio controls src={m.audio} style={{ height:34, maxWidth:210 }} /> : m.text}</div>
             </div>
           ))}
           {partnerLeft && (
@@ -2570,9 +2657,13 @@ function RandomConnectScreen({ myId, myProfile, onlinePeople = [], onBack, varia
           )}
           <div style={{ height:1, flexShrink:0 }} />
         </div>
+        {callErr && <div style={{ flexShrink:0, padding:"6px 16px", background:"var(--fc-bg)", color:"#E3A6A6", fontSize:12.5, fontFamily:"Inter, sans-serif", textAlign:"center" }}>{callErr}</div>}
         <div style={{ ...composer, flexShrink:0, paddingBottom:"calc(10px + env(safe-area-inset-bottom))" }}>
           <input value={text} disabled={partnerLeft} onChange={e=>setText(e.target.value)} onKeyDown={e => e.key === "Enter" && sendRandomMsg()} placeholder={partnerLeft ? "They left the chat" : "Type a message…"} style={{ flex:1, border:"none", outline:"none", fontFamily:"Inter, sans-serif", fontSize:14.5, background:"transparent", color:"var(--fc-card-text)", padding:"10px 4px", minWidth:0 }} />
-          <button onClick={sendRandomMsg} style={iconBtnLight}><Send size={18} color="#B8935F" /></button>
+          {noteRecording && <div style={{ fontFamily:"Inter, sans-serif", fontSize:13, color:"#E3A6A6", whiteSpace:"nowrap" }}>● {Math.floor(noteSecs/60)}:{String(noteSecs%60).padStart(2,"0")}</div>}
+          {noteRecording && <button onClick={cancelNote} style={iconBtnLight} aria-label="Cancel voice note"><X size={18} color="var(--fc-card-text)" /></button>}
+          <button onClick={noteRecording ? stopNote : startNote} disabled={partnerLeft} style={{ ...iconBtnLight, background: noteRecording ? "#B5616B" : "var(--fc-bubble)" }} aria-label={noteRecording ? "Send voice note" : "Record voice note"}>{noteRecording ? <Send size={17} color="#fff" /> : <Mic size={18} color="var(--fc-card-text)" />}</button>
+          {!noteRecording && <button onClick={sendRandomMsg} style={iconBtnLight}><Send size={18} color="#B8935F" /></button>}
         </div>
       </div>
     );
