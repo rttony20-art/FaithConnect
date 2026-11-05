@@ -1691,13 +1691,20 @@ function ChatScreen({ myId, myProfile, other, onBack, onRead }) {
         console.error("FaithConnect realtime chat failed", e);
       }
     })();
-    const poll = setInterval(() => { if (!document.hidden) refreshThread(); }, 4000);
+    // Check often until the live channel is connected (it can take a few seconds), then relax.
+    let pollTimer = null;
+    const pollTick = () => {
+      if (cancelled) return;
+      if (!document.hidden) refreshThread();
+      pollTimer = setTimeout(pollTick, chatChannelRef.current ? 4000 : 1500);
+    };
+    pollTimer = setTimeout(pollTick, 1500);
     const onVisible = () => { if (!document.hidden) refreshThread(); };
     document.addEventListener("visibilitychange", onVisible);
     window.addEventListener("fc-new-message", onVisible); // the inbox feed heard about a new or edited message
     return () => {
       cancelled = true;
-      clearInterval(poll);
+      clearTimeout(pollTimer);
       document.removeEventListener("visibilitychange", onVisible);
       window.removeEventListener("fc-new-message", onVisible);
       const ch = chatChannelRef.current;
