@@ -1115,7 +1115,10 @@ function Tag({ list, lightMode=false }) {
 }
 function FontLoader() {
   return <style>{`@import url('https://fonts.googleapis.com/css2?family=Lora:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap');
-    html, body, #root { min-height:100%; }
+    html, body, #root { width:100%; min-height:100%; margin:0; }
+    :root { --fc-page-width: 460px; }
+    @media (min-width: 700px) { :root { --fc-page-width: 760px; } }
+    @media (min-width: 1024px) { :root { --fc-page-width: 980px; } }
     @media (max-width: 700px) {
       input, textarea { font-size:16px !important; }
     }
@@ -2695,7 +2698,12 @@ function SonarReveal({ online, active, variant = "faith" }) {
 }
 
 /* ---------------- styles ---------------- */
-const page = { display:"flex", flexDirection:"column", height:"100dvh", maxWidth:460, margin:"0 auto", fontFamily:"Inter, sans-serif", background:"var(--fc-bg, #080b17)", overflow:"hidden" };
+const page = {
+  display:"flex", flexDirection:"column", width:"100%", height:"100dvh",
+  maxWidth:"var(--fc-page-width, 460px)", margin:"0 auto",
+  fontFamily:"Inter, sans-serif", background:"var(--fc-bg, #080b17)",
+  overflow:"hidden", boxSizing:"border-box"
+};
 const heading = { fontFamily:"Lora, serif", fontSize:24, color:"#F8F4EA", margin:"0 0 14px", fontWeight:600 };
 const input = { width:"100%", padding:"10px 12px", borderRadius:10, border:"1.5px solid rgba(255,255,255,0.15)", fontFamily:"Inter, sans-serif", fontSize:14.5, background:"var(--fc-input-bg, #151b30)", color:"var(--fc-text, #F8F4EA)", borderColor:"var(--fc-input-border, rgba(255,255,255,0.15))", boxSizing:"border-box" };
 const primaryBtn = { background:ACCENT_GRADIENT, color:"#FFFFFF", border:"none", padding:"13px 26px", borderRadius:12, fontFamily:"Inter, sans-serif", fontSize:15, fontWeight:600, cursor:"pointer", boxShadow:"0 8px 24px rgba(88,91,255,.3)" };
