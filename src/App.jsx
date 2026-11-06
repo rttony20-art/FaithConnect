@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from "react";
 import { createMessagesApi, rowToMsg } from "./messagesApi.js";
 import { getIceServers, iceHasTurn } from "./iceServers.js";
 import PurposeDiscovery from "./PurposeDiscovery.jsx";
-import { createSessionRestorer } from "./sessionRestore.js";
+import { createSessionRestorer, tokenIsFresh } from "./sessionRestore.js";
 import { shrinkImage, snapshotImage } from "./shrinkImage.js";
 import ProfileView from "./ProfileView.jsx";
 import { ImageViewer, ZoomableImage } from "./ImageViewer.jsx";
@@ -59,6 +59,22 @@ const SUPABASE_ANON_KEY = "sb_publishable_E5w6gJK9yQKrvJNWyzhhlg_i78m_wde";
 // conversation live between separate Chrome/Opera/phone clients without relying
 // on browser-local storage.
 let realtimeClientPromise = null;
+let lastRealtimeToken = null;
+// The live connection (chat nudges, who is online, matching) needs a valid login token.
+// Tokens last about an hour, so an old saved token made every live channel fail with
+// "could not connect to the matching queue". Refresh it before use and every few minutes.
+async function refreshRealtimeAuth(client) {
+  try {
+    const sess = await sget("supabase-session", false);
+    if (!sess?.access_token) return;
+    let token = sess.access_token;
+    if (!tokenIsFresh(token, Date.now(), 120)) {
+      const fresh = await restoreSupaSession();
+      if (fresh?.access_token) token = fresh.access_token;
+    }
+    if (token !== lastRealtimeToken) { client.realtime.setAuth(token); lastRealtimeToken = token; }
+  } catch {}
+}
 async function getRealtimeClient() {
   if (!realtimeClientPromise) {
     realtimeClientPromise = import("https://esm.sh/@supabase/supabase-js@2.107.0")
@@ -66,14 +82,13 @@ async function getRealtimeClient() {
         const client = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
           auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false }
         });
-        try {
-          const sess = await sget("supabase-session", false);
-          if (sess?.access_token) client.realtime.setAuth(sess.access_token);
-        } catch {}
+        setInterval(() => refreshRealtimeAuth(client), 10 * 60 * 1000);
         return client;
       });
   }
-  return realtimeClientPromise;
+  const client = await realtimeClientPromise;
+  await refreshRealtimeAuth(client);
+  return client;
 }
 
 
@@ -2322,7 +2337,7 @@ function RandomConnectScreen({ myId, myProfile, onlinePeople = [], onBack, varia
       }, 300);
     } catch (e) {
       console.error("FaithConnect queue setup failed:", e);
-      setCallErr("Could not connect to the matching queue. Please check your internet and try again.");
+      setCallErr(`Could not connect to the matching queue (${e?.message || "unknown"}). Please check your internet and try again.`);
       stageRef.current = "setup";
       setStage("setup");
     }
