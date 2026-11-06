@@ -2086,6 +2086,12 @@ function RandomConnectScreen({ myId, myProfile, onlinePeople = [], onBack, varia
   const answeredIce = useRef(new Set());
   const callStateRef = useRef(null);
   const myQueueEntryTs = useRef(null);
+  const [noteRecording, setNoteRecording] = useState(false);
+  const [noteSecs, setNoteSecs] = useState(0);
+  const noteRecRef = useRef(null);
+  const noteChunksRef = useRef([]);
+  const noteTimerRef = useRef(null);
+  const noteCancelRef = useRef(false);
   const matchChannelRef = useRef(null);
   const queueChannelRef = useRef(null);
   const queueTopicRef = useRef(null);
@@ -2152,6 +2158,7 @@ function RandomConnectScreen({ myId, myProfile, onlinePeople = [], onBack, varia
   }, [messages]);
 
   function clearAll() {
+    if (noteRecRef.current) cancelNote();
     clearInterval(searchPollRef.current); clearInterval(chatPollRef.current); clearInterval(callPollRef.current);
     clearTimeout(revealTimer.current);
     const ch = matchChannelRef.current;
@@ -2413,6 +2420,48 @@ function RandomConnectScreen({ myId, myProfile, onlinePeople = [], onBack, varia
     setText("");
     try { await waitForMatchSession(p, "chat"); }
     catch (e) { setCallErr("Could not connect the temporary chat. Please press Next and try again."); }
+  }
+
+  // Voice notes in the temporary chat: sent straight to the other person, never saved.
+  async function startNote() {
+    if (noteRecRef.current || partnerLeft || !matchChannelRef.current) return;
+    setCallErr("");
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio:true });
+      const type = ["audio/webm;codecs=opus", "audio/webm", "audio/mp4"].find(t => window.MediaRecorder?.isTypeSupported?.(t));
+      const mr = new MediaRecorder(stream, type ? { mimeType:type, audioBitsPerSecond:24000 } : { audioBitsPerSecond:24000 });
+      noteChunksRef.current = []; noteCancelRef.current = false;
+      const startedAt = Date.now();
+      mr.ondataavailable = e => { if (e.data?.size) noteChunksRef.current.push(e.data); };
+      mr.onstop = () => {
+        stream.getTracks().forEach(t => t.stop());
+        clearInterval(noteTimerRef.current); noteRecRef.current = null; setNoteRecording(false); setNoteSecs(0);
+        if (noteCancelRef.current) return;
+        const blob = new Blob(noteChunksRef.current, { type: mr.mimeType || type || "audio/webm" });
+        if (blob.size > 150000) { setCallErr("That voice note is too long. Keep it under 30 seconds."); return; }
+        const dur = Math.max(1, Math.round((Date.now() - startedAt) / 1000));
+        const reader = new FileReader();
+        reader.onloadend = () => sendNote(reader.result, dur);
+        reader.readAsDataURL(blob);
+      };
+      mr.start();
+      noteRecRef.current = mr; setNoteRecording(true); setNoteSecs(0);
+      noteTimerRef.current = setInterval(() => {
+        const secs = Math.round((Date.now() - startedAt) / 1000);
+        setNoteSecs(secs);
+        if (secs >= 30) stopNote();
+      }, 500);
+    } catch (e) { setCallErr(mediaErrorText(e).replace("Camera or microphone", "Microphone")); }
+  }
+  function stopNote() { try { noteRecRef.current?.stop(); } catch {} }
+  function cancelNote() { noteCancelRef.current = true; clearInterval(noteTimerRef.current); stopNote(); }
+  async function sendNote(audio, dur) {
+    if (!matchChannelRef.current || !matchSessionRef.current) return;
+    const msg = { id:`${myId}-${Date.now()}-${genId()}`, sender:myId, type:"voice", audio, dur, ts:Date.now() };
+    setMessages(prev => [...prev, msg]);
+    try {
+      await matchChannelRef.current.send({ type:"broadcast", event:"match", payload:{ type:"message", sessionId:matchSessionRef.current, message:msg, from:myId } });
+    } catch { setCallErr("Voice note could not be delivered. Please try again."); }
   }
 
   async function sendRandomMsg() {
@@ -2701,7 +2750,7 @@ function RandomConnectScreen({ myId, myProfile, onlinePeople = [], onBack, varia
           {messages.length === 0 && !partnerLeft && <div style={emptyState}>Say hello and share what's on your heart.</div>}
           {messages.map((m, i) => (
             <div key={i} style={{ alignSelf: m.sender === myId ? "flex-end" : "flex-start", maxWidth:"75%", marginBottom:10 }}>
-              <div style={{ background: m.sender === myId ? "#B8935F" : "var(--fc-bubble)", color: m.sender === myId ? "#FAF7F0" : "var(--fc-card-text)", padding:"9px 13px", borderRadius:16, fontFamily:"Inter, sans-serif", fontSize:14.5 }}>{m.text}</div>
+              <div style={{ background: m.sender === myId ? "#B8935F" : "var(--fc-bubble)", color: m.sender === myId ? "#FAF7F0" : "var(--fc-card-text)", padding:"9px 13px", borderRadius:16, fontFamily:"Inter, sans-serif", fontSize:14.5 }}>{m.type === "voice" ? <audio controls src={m.audio} style={{ height:34, maxWidth:210 }} /> : m.text}</div>
             </div>
           ))}
           {partnerLeft && (
@@ -2712,9 +2761,13 @@ function RandomConnectScreen({ myId, myProfile, onlinePeople = [], onBack, varia
           )}
           <div style={{ height:1, flexShrink:0 }} />
         </div>
+        {callErr && <div style={{ flexShrink:0, padding:"6px 16px", background:"var(--fc-bg)", color:"#E3A6A6", fontSize:12.5, fontFamily:"Inter, sans-serif", textAlign:"center" }}>{callErr}</div>}
         <div style={{ ...composer, flexShrink:0, paddingBottom:"calc(10px + env(safe-area-inset-bottom))" }}>
           <input value={text} disabled={partnerLeft} onChange={e=>setText(e.target.value)} onKeyDown={e => e.key === "Enter" && sendRandomMsg()} placeholder={partnerLeft ? "They left the chat" : "Type a message…"} style={{ flex:1, border:"none", outline:"none", fontFamily:"Inter, sans-serif", fontSize:14.5, background:"transparent", color:"var(--fc-card-text)", padding:"10px 4px", minWidth:0 }} />
-          <button onClick={sendRandomMsg} style={iconBtnLight}><Send size={18} color="#B8935F" /></button>
+          {noteRecording && <div style={{ fontFamily:"Inter, sans-serif", fontSize:13, color:"#E3A6A6", whiteSpace:"nowrap" }}>● {Math.floor(noteSecs/60)}:{String(noteSecs%60).padStart(2,"0")}</div>}
+          {noteRecording && <button onClick={cancelNote} style={iconBtnLight} aria-label="Cancel voice note"><X size={18} color="var(--fc-card-text)" /></button>}
+          <button onClick={noteRecording ? stopNote : startNote} disabled={partnerLeft} style={{ ...iconBtnLight, background: noteRecording ? "#B5616B" : "var(--fc-bubble)" }} aria-label={noteRecording ? "Send voice note" : "Record voice note"}>{noteRecording ? <Send size={17} color="#fff" /> : <Mic size={18} color="var(--fc-card-text)" />}</button>
+          {!noteRecording && <button onClick={sendRandomMsg} style={iconBtnLight}><Send size={18} color="#B8935F" /></button>}
         </div>
       </div>
     );
