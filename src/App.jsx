@@ -2092,6 +2092,7 @@ function RandomConnectScreen({ myId, myProfile, onlinePeople = [], onBack, varia
   const matchTopicRef = useRef(null);
   const matchSessionRef = useRef(null);
   const matchPeerRef = useRef(null);
+  const pairingRef = useRef(false);
   const matchLeaderRef = useRef(false);
   const pendingCallSignalsRef = useRef([]);
   const remoteStreamRef = useRef(null);
@@ -2172,6 +2173,7 @@ function RandomConnectScreen({ myId, myProfile, onlinePeople = [], onBack, varia
     matchTopicRef.current = null;
     matchSessionRef.current = null;
     matchPeerRef.current = null;
+    pairingRef.current = false;
     matchLeaderRef.current = false;
     if (ch) { try { ch.unsubscribe(); } catch {} }
     pcRef.current?.close(); pcRef.current = null;
@@ -2227,6 +2229,7 @@ function RandomConnectScreen({ myId, myProfile, onlinePeople = [], onBack, varia
     });
     channel.on("broadcast", { event: "pair" }, ({ payload }) => {
       const msg = payload || {};
+      if (stageRef.current !== "searching") return;
       if (msg.from !== myId && msg.to !== myId) return;
       if (!msg.partnerId || (msg.from !== myId && msg.to !== myId)) return;
       try { channel.untrack(); } catch {}
@@ -2276,7 +2279,7 @@ function RandomConnectScreen({ myId, myProfile, onlinePeople = [], onBack, varia
   }
 
   async function tryPairFromQueue(channel) {
-    if (stageRef.current !== "searching" || queueChannelRef.current !== channel) return;
+    if (stageRef.current !== "searching" || queueChannelRef.current !== channel || pairingRef.current) return;
     const all = queueUsers(channel);
     if (!all.length) return;
 
@@ -2296,8 +2299,10 @@ function RandomConnectScreen({ myId, myProfile, onlinePeople = [], onBack, varia
       partner: { name: candidate.name || "Believer" },
       partnerId: candidate.id
     };
+    pairingRef.current = true;
     try {
       await channel.send({ type:"broadcast", event:"pair", payload });
+      if (stageRef.current !== "searching") return;
       // Broadcast excludes the sender, so connect this phone explicitly too.
       try { channel.untrack(); } catch {}
       try { channel.unsubscribe(); } catch {}
@@ -2306,7 +2311,7 @@ function RandomConnectScreen({ myId, myProfile, onlinePeople = [], onBack, varia
       connectTo({ id:candidate.id, name:candidate.name || "Believer" }, modeRef.current);
     } catch (e) {
       console.error("FaithConnect queue pairing failed:", e);
-    }
+    } finally { pairingRef.current = false; }
   }
 
   async function startSearch(m) {
@@ -2344,6 +2349,7 @@ function RandomConnectScreen({ myId, myProfile, onlinePeople = [], onBack, varia
   }
 
   function connectTo(p, m) {
+    if (stageRef.current === "connected") return;
     stageRef.current = "connected"; setPartnerLeft(false);
     setRemoteCamOff(false); setCamOn(true); setNeedsTap(false); setLinkInfo(""); setCallLog([]); candCountRef.current = { host:0, srflx:0, relay:0 }; peerReadyRef.current = false; callStateRef.current = null; remoteCandidatesRef.current = []; callChainRef.current = Promise.resolve();
     setPartner(p);
