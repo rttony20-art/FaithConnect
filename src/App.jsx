@@ -9,7 +9,7 @@ import { ImageViewer, ZoomableImage } from "./ImageViewer.jsx";
 import AvatarFace from "./avatar/AvatarFace.jsx";
 import AvatarCreator from "./avatar/AvatarCreator.jsx";
 import { isAvatarCode } from "./avatar/code.js";
-import { Heart, MessageCircle, Phone, Video, Mic, MicOff, PhoneOff, Send, User, ChevronLeft, Check, X, Camera, VideoOff, Square, SkipForward, Menu, LogOut, Info, Shield, HelpCircle, Eye, EyeOff, Home, UserPlus, Sun, Moon, Percent, MoreVertical, ArrowRight, Compass } from "lucide-react";
+import { Heart, MessageCircle, Phone, Video, Mic, MicOff, PhoneOff, Send, User, ChevronLeft, Check, X, Camera, VideoOff, Square, SkipForward, Menu, LogOut, Info, Shield, HelpCircle, Eye, EyeOff, Home, UserPlus, Sun, Moon, Percent, MoreVertical, ArrowRight, Compass, Trash2, Pause } from "lucide-react";
 
 /* ---------- design tokens ----------
 Ink Navy #16233F (dark surfaces), Ivory #F8F4EA (light surfaces),
@@ -1811,23 +1811,7 @@ function ChatScreen({ myId, myProfile, other, onBack, onRead }) {
     }
   }
 
-  async function startRecording() {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio:true });
-      const mr = new MediaRecorder(stream);
-      chunks.current = [];
-      mr.ondataavailable = e => chunks.current.push(e.data);
-      mr.onstop = async () => {
-        const blob = new Blob(chunks.current, { type:"audio/webm" });
-        const reader = new FileReader();
-        reader.onloadend = () => sendMessage("voice", reader.result);
-        reader.readAsDataURL(blob);
-        stream.getTracks().forEach(t => t.stop());
-      };
-      mr.start(); mediaRecorder.current = mr; setRecording(true);
-    } catch { setCallErr("Microphone access was blocked — voice notes need mic permission."); }
-  }
-  function stopRecording() { mediaRecorder.current?.stop(); setRecording(false); }
+  function startRecording() { setCallErr(""); setRecording(true); }
 
   async function setupPeer(mode) {
     const pc = new RTCPeerConnection({ iceServers: await getIceServers(iceAuth) });
@@ -2025,11 +2009,15 @@ function ChatScreen({ myId, myProfile, other, onBack, onRead }) {
           <button onClick={cancelEdit} style={{ background:"none", border:"none", cursor:"pointer", display:"flex" }} aria-label="Cancel editing"><X size={16} color="#D6AE6E" /></button>
         </div>
       )}
+      {recording ? (
+        <VoiceRecorderBar maxSecs={120} onSend={(url) => { setRecording(false); sendMessage("voice", url); }} onCancel={() => setRecording(false)} onError={msg => { setRecording(false); setCallErr(msg); }} />
+      ) : (
       <div style={{ ...composer, flexShrink:0, paddingBottom:"calc(10px + env(safe-area-inset-bottom))" }}>
-        {!editingId && <button onClick={recording ? stopRecording : startRecording} style={{ ...iconBtnLight, background:recording ? "#B5616B" : "var(--fc-bubble)" }}>{recording ? <Square size={17} color="#fff" /> : <Mic size={18} color="var(--fc-card-text)" />}</button>}
+        {!editingId && <button onClick={startRecording} style={{ ...iconBtnLight, background:"var(--fc-bubble)" }} aria-label="Record voice note"><Mic size={18} color="var(--fc-card-text)" /></button>}
         <input value={text} onChange={e=>setText(e.target.value)} onKeyDown={e=>{ if(e.key==="Enter" && text.trim()) sendMessage("text", text.trim()); }} placeholder={editingId ? "Edit your message…" : "Type a message…"} autoCorrect="on" autoCapitalize="sentences" spellCheck={true} autoComplete="off" enterKeyHint="send" style={{ flex:1, border:"none", outline:"none", fontFamily:"Inter, sans-serif", fontSize:14.5, background:"transparent", color:"var(--fc-card-text)", padding:"10px 4px", minWidth:0 }} />
         <button onClick={() => text.trim() && sendMessage("text", text.trim())} style={iconBtnLight}><Send size={18} color="#B8935F" /></button>
       </div>
+      )}
       {actionMsg && (
         <div onClick={() => setActionMsg(null)} style={{ position:"fixed", inset:0, zIndex:40, background:"rgba(0,0,0,.55)", display:"flex", alignItems:"flex-end", justifyContent:"center", padding:"16px 16px calc(16px + env(safe-area-inset-bottom))" }}>
           <div onClick={e => e.stopPropagation()} style={{ width:"100%", maxWidth:420, background:"#1B2140", border:"1px solid rgba(255,255,255,.14)", borderRadius:16, overflow:"hidden" }}>
@@ -2051,6 +2039,113 @@ function ChatScreen({ myId, myProfile, other, onBack, onRead }) {
 }
 
 /* ---------------- FELLOWSHIP (random believer connect) ---------------- */
+// WhatsApp-style voice recorder: shows the time and a moving sound wave while you speak,
+// with Delete (bin), Pause/Resume and Send. Used in Messages and in Meet someone chat.
+function VoiceRecorderBar({ onSend, onCancel, onError, maxSecs = 120, maxBytes = 0 }) {
+  const [secs, setSecs] = useState(0);
+  const [paused, setPaused] = useState(false);
+  const [levels, setLevels] = useState(() => Array(36).fill(0.08));
+  const R = useRef({ mr:null, stream:null, ctx:null, chunks:[], acc:0, since:0, send:false, dead:false, timer:null });
+
+  function finish() {
+    const r = R.current;
+    clearInterval(r.timer);
+    try { r.ctx?.close(); } catch {}
+    r.stream?.getTracks().forEach(t => t.stop());
+  }
+  useEffect(() => {
+    const r = R.current;
+    (async () => {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio:true });
+        if (r.dead) { stream.getTracks().forEach(t => t.stop()); return; }
+        r.stream = stream;
+        const type = ["audio/webm;codecs=opus", "audio/webm", "audio/mp4"].find(t => window.MediaRecorder?.isTypeSupported?.(t));
+        const mr = new MediaRecorder(stream, type ? { mimeType:type, audioBitsPerSecond:24000 } : { audioBitsPerSecond:24000 });
+        r.mr = mr; r.chunks = [];
+        mr.ondataavailable = e => { if (e.data?.size) r.chunks.push(e.data); };
+        mr.onstop = () => {
+          finish();
+          if (!r.send || r.dead) return;
+          const blob = new Blob(r.chunks, { type: mr.mimeType || type || "audio/webm" });
+          if (maxBytes && blob.size > maxBytes) { onError?.("That voice note is too long. Keep it shorter."); return; }
+          const dur = Math.max(1, Math.round(r.acc / 1000));
+          const reader = new FileReader();
+          reader.onloadend = () => onSend(reader.result, dur);
+          reader.readAsDataURL(blob);
+        };
+        try {
+          const AC = window.AudioContext || window.webkitAudioContext;
+          r.ctx = new AC();
+          const src = r.ctx.createMediaStreamSource(stream);
+          r.an = r.ctx.createAnalyser(); r.an.fftSize = 256;
+          src.connect(r.an);
+        } catch {}
+        mr.start(250);
+        r.since = Date.now(); r.acc = 0;
+        const buf = new Uint8Array(128);
+        r.timer = setInterval(() => {
+          if (mr.state === "recording") {
+            const total = r.acc + (Date.now() - r.since);
+            setSecs(Math.floor(total / 1000));
+            if (total >= maxSecs * 1000) doSend();
+          }
+          let lvl = 0.05;
+          if (r.an && mr.state === "recording") {
+            r.an.getByteTimeDomainData(buf);
+            let peak = 0; for (let i = 0; i < buf.length; i++) peak = Math.max(peak, Math.abs(buf[i] - 128));
+            lvl = Math.min(1, 0.08 + peak / 60);
+          }
+          setLevels(prev => [...prev.slice(1), lvl]);
+        }, 100);
+      } catch (e) {
+        r.dead = true;
+        onError?.(mediaErrorText(e).replace("Camera or microphone", "Microphone"));
+      }
+    })();
+    return () => { r.dead = true; try { if (r.mr && r.mr.state !== "inactive") r.mr.stop(); } catch {} finish(); };
+  }, []);
+
+  function doSend() {
+    const r = R.current;
+    if (!r.mr || r.mr.state === "inactive") return;
+    if (r.mr.state === "recording") r.acc += Date.now() - r.since;
+    r.send = true;
+    try { r.mr.stop(); } catch {}
+  }
+  function doCancel() {
+    const r = R.current;
+    r.send = false; r.dead = true;
+    try { if (r.mr && r.mr.state !== "inactive") r.mr.stop(); } catch {}
+    finish();
+    onCancel?.();
+  }
+  function togglePause() {
+    const r = R.current;
+    if (!r.mr) return;
+    if (r.mr.state === "recording") { r.acc += Date.now() - r.since; try { r.mr.pause(); } catch {} setPaused(true); }
+    else if (r.mr.state === "paused") { r.since = Date.now(); try { r.mr.resume(); } catch {} setPaused(false); }
+  }
+  const mm = Math.floor(secs / 60), ss = String(secs % 60).padStart(2, "0");
+  return (
+    <div style={{ flexShrink:0, background:"var(--fc-card)", borderTop:"1px solid var(--fc-card-border)", padding:"12px 14px calc(12px + env(safe-area-inset-bottom))", fontFamily:"Inter, sans-serif" }}>
+      <div style={{ display:"flex", alignItems:"center", gap:12, marginBottom:12 }}>
+        <div style={{ fontSize:18, fontWeight:600, color:"var(--fc-card-text)", minWidth:48 }}>{mm}:{ss}</div>
+        <div style={{ flex:1, height:34, display:"flex", alignItems:"center", gap:2, overflow:"hidden" }}>
+          {levels.map((v, i) => <div key={i} style={{ flex:1, minWidth:2, height:`${Math.round(10 + v * 90)}%`, borderRadius:2, background:"#D6AE6E", opacity: paused ? 0.4 : 1 }} />)}
+        </div>
+      </div>
+      <div style={{ display:"flex", alignItems:"center", gap:12 }}>
+        <button onClick={doCancel} aria-label="Delete voice note" style={{ width:46, height:46, borderRadius:"50%", border:"none", background:"rgba(181,97,107,.25)", display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", flexShrink:0 }}><Trash2 size={20} color="#E3A6A6" /></button>
+        <button onClick={togglePause} style={{ flex:1, height:46, borderRadius:23, border:"none", background:"var(--fc-bubble)", color:"var(--fc-card-text)", fontSize:15, fontWeight:600, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", gap:8 }}>
+          {paused ? <><Mic size={18} color="var(--fc-card-text)" /> Resume</> : <><Pause size={18} color="var(--fc-card-text)" /> Pause</>}
+        </button>
+        <button onClick={doSend} aria-label="Send voice note" style={{ width:50, height:50, borderRadius:"50%", border:"none", background:"#B8935F", display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", flexShrink:0 }}><Send size={20} color="#fff" /></button>
+      </div>
+    </div>
+  );
+}
+
 function mediaErrorText(e) {
   const n = e?.name || "";
   if (n === "NotAllowedError" || n === "SecurityError") return "Camera or microphone is blocked. Tap the lock icon next to the web address, open Permissions, and allow Camera and Microphone. Then try again.";
@@ -2158,7 +2253,7 @@ function RandomConnectScreen({ myId, myProfile, onlinePeople = [], onBack, varia
   }, [messages]);
 
   function clearAll() {
-    if (noteRecRef.current) cancelNote();
+    setNoteRecording(false);
     clearInterval(searchPollRef.current); clearInterval(chatPollRef.current); clearInterval(callPollRef.current);
     clearTimeout(revealTimer.current);
     const ch = matchChannelRef.current;
@@ -2423,38 +2518,11 @@ function RandomConnectScreen({ myId, myProfile, onlinePeople = [], onBack, varia
   }
 
   // Voice notes in the temporary chat: sent straight to the other person, never saved.
-  async function startNote() {
-    if (noteRecRef.current || partnerLeft || !matchChannelRef.current) return;
-    setCallErr("");
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio:true });
-      const type = ["audio/webm;codecs=opus", "audio/webm", "audio/mp4"].find(t => window.MediaRecorder?.isTypeSupported?.(t));
-      const mr = new MediaRecorder(stream, type ? { mimeType:type, audioBitsPerSecond:24000 } : { audioBitsPerSecond:24000 });
-      noteChunksRef.current = []; noteCancelRef.current = false;
-      const startedAt = Date.now();
-      mr.ondataavailable = e => { if (e.data?.size) noteChunksRef.current.push(e.data); };
-      mr.onstop = () => {
-        stream.getTracks().forEach(t => t.stop());
-        clearInterval(noteTimerRef.current); noteRecRef.current = null; setNoteRecording(false); setNoteSecs(0);
-        if (noteCancelRef.current) return;
-        const blob = new Blob(noteChunksRef.current, { type: mr.mimeType || type || "audio/webm" });
-        if (blob.size > 150000) { setCallErr("That voice note is too long. Keep it under 30 seconds."); return; }
-        const dur = Math.max(1, Math.round((Date.now() - startedAt) / 1000));
-        const reader = new FileReader();
-        reader.onloadend = () => sendNote(reader.result, dur);
-        reader.readAsDataURL(blob);
-      };
-      mr.start();
-      noteRecRef.current = mr; setNoteRecording(true); setNoteSecs(0);
-      noteTimerRef.current = setInterval(() => {
-        const secs = Math.round((Date.now() - startedAt) / 1000);
-        setNoteSecs(secs);
-        if (secs >= 30) stopNote();
-      }, 500);
-    } catch (e) { setCallErr(mediaErrorText(e).replace("Camera or microphone", "Microphone")); }
+  function startNote() {
+    if (partnerLeft || !matchChannelRef.current) return;
+    setCallErr(""); setNoteRecording(true);
   }
-  function stopNote() { try { noteRecRef.current?.stop(); } catch {} }
-  function cancelNote() { noteCancelRef.current = true; clearInterval(noteTimerRef.current); stopNote(); }
+  function cancelNote() { setNoteRecording(false); }
   async function sendNote(audio, dur) {
     if (!matchChannelRef.current || !matchSessionRef.current) return;
     const msg = { id:`${myId}-${Date.now()}-${genId()}`, sender:myId, type:"voice", audio, dur, ts:Date.now() };
@@ -2763,13 +2831,15 @@ function RandomConnectScreen({ myId, myProfile, onlinePeople = [], onBack, varia
           <div style={{ height:1, flexShrink:0 }} />
         </div>
         {callErr && <div style={{ flexShrink:0, padding:"6px 16px", background:"var(--fc-bg)", color:"#E3A6A6", fontSize:12.5, fontFamily:"Inter, sans-serif", textAlign:"center" }}>{callErr}</div>}
+        {noteRecording ? (
+          <VoiceRecorderBar maxSecs={30} maxBytes={150000} onSend={(url, dur) => { setNoteRecording(false); sendNote(url, dur); }} onCancel={() => setNoteRecording(false)} onError={msg => { setNoteRecording(false); setCallErr(msg); }} />
+        ) : (
         <div style={{ ...composer, flexShrink:0, paddingBottom:"calc(10px + env(safe-area-inset-bottom))" }}>
           <input value={text} disabled={partnerLeft} onChange={e=>setText(e.target.value)} onKeyDown={e => e.key === "Enter" && sendRandomMsg()} placeholder={partnerLeft ? "They left the chat" : "Type a message…"} style={{ flex:1, border:"none", outline:"none", fontFamily:"Inter, sans-serif", fontSize:14.5, background:"transparent", color:"var(--fc-card-text)", padding:"10px 4px", minWidth:0 }} />
-          {noteRecording && <div style={{ fontFamily:"Inter, sans-serif", fontSize:13, color:"#E3A6A6", whiteSpace:"nowrap" }}>● {Math.floor(noteSecs/60)}:{String(noteSecs%60).padStart(2,"0")}</div>}
-          {noteRecording && <button onClick={cancelNote} style={iconBtnLight} aria-label="Cancel voice note"><X size={18} color="var(--fc-card-text)" /></button>}
-          <button onClick={noteRecording ? stopNote : startNote} disabled={partnerLeft} style={{ ...iconBtnLight, background: noteRecording ? "#B5616B" : "var(--fc-bubble)" }} aria-label={noteRecording ? "Send voice note" : "Record voice note"}>{noteRecording ? <Send size={17} color="#fff" /> : <Mic size={18} color="var(--fc-card-text)" />}</button>
-          {!noteRecording && <button onClick={sendRandomMsg} style={iconBtnLight}><Send size={18} color="#B8935F" /></button>}
+          <button onClick={startNote} disabled={partnerLeft} style={{ ...iconBtnLight, background:"var(--fc-bubble)" }} aria-label="Record voice note"><Mic size={18} color="var(--fc-card-text)" /></button>
+          <button onClick={sendRandomMsg} style={iconBtnLight}><Send size={18} color="#B8935F" /></button>
         </div>
+        )}
       </div>
     );
   }
