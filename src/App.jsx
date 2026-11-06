@@ -2089,6 +2089,8 @@ function RandomConnectScreen({ myId, myProfile, onlinePeople = [], onBack, varia
   const noteCancelRef = useRef(false);
   const [needsTap, setNeedsTap] = useState(false); // the browser blocked autoplay of the other person's video
   const [linkInfo, setLinkInfo] = useState("");
+  const [callLog, setCallLog] = useState([]); // short step-by-step notes shown while a call is connecting (for finding problems)
+  const candCountRef = useRef({ host:0, srflx:0, relay:0 });
   const [remoteCamOff, setRemoteCamOff] = useState(false); // the other person turned their camera off
   const callSentRef = useRef({ offer:null, answer:null, candidates:[] });
   const remoteCandidatesRef = useRef([]);
@@ -2328,7 +2330,7 @@ function RandomConnectScreen({ myId, myProfile, onlinePeople = [], onBack, varia
 
   function connectTo(p, m) {
     stageRef.current = "connected"; setPartnerLeft(false);
-    setRemoteCamOff(false); setCamOn(true); setNeedsTap(false); setLinkInfo(""); peerReadyRef.current = false; callStateRef.current = null; remoteCandidatesRef.current = []; callChainRef.current = Promise.resolve();
+    setRemoteCamOff(false); setCamOn(true); setNeedsTap(false); setLinkInfo(""); setCallLog([]); candCountRef.current = { host:0, srflx:0, relay:0 }; peerReadyRef.current = false; callStateRef.current = null; remoteCandidatesRef.current = []; callChainRef.current = Promise.resolve();
     setPartner(p);
     setSessionId(null);
     setStage("connected");
@@ -2484,14 +2486,19 @@ function RandomConnectScreen({ myId, myProfile, onlinePeople = [], onBack, varia
     const iAmCaller = myId < p.id;
     const icePromise = getIceServers(iceAuth); // fetched while the match session is being set up
     try {
+      logStep(iAmCaller ? "you call first" : "you answer");
       await waitForMatchSession(p, m);
+      logStep("1 match ready");
       let stream = localStreamRef.current;
       if (!stream || !stream.getTracks().some(t => t.readyState === "live")) {
         stream = await navigator.mediaDevices.getUserMedia({ audio:true, video:m === "video" });
       }
       localStreamRef.current = stream;
       if (m === "video" && localVideoRef.current) localVideoRef.current.srcObject = stream;
-      const pc = new RTCPeerConnection({ iceServers: await icePromise });
+      logStep("2 camera/mic ok");
+      const servers = await icePromise;
+      logStep(`3 relay servers: ${servers.length > 1 ? "yes" : "NO"}`);
+      const pc = new RTCPeerConnection({ iceServers: servers });
       pcRef.current = pc;
       callSentRef.current = { offer:null, answer:null, candidates:[] };
       remoteCandidatesRef.current = [];
@@ -2505,6 +2512,7 @@ function RandomConnectScreen({ myId, myProfile, onlinePeople = [], onBack, varia
       const onState = () => {
         const st = pc.connectionState || pc.iceConnectionState;
         setLinkInfo(`${st} · relay ${iceHasTurn() ? "on" : "off"}`);
+        logStep(`link: ${st}`);
         if (st === "connected" || st === "completed") { setCallStatus("active"); setCallErr(""); }
         else if (st === "failed") setCallErr("Could not connect the " + (m === "video" ? "video" : "call") + ". Check the internet on both devices, then press Next to try again.");
       };
@@ -2513,6 +2521,8 @@ function RandomConnectScreen({ myId, myProfile, onlinePeople = [], onBack, varia
       if (m === "video" && localVideoRef.current) localVideoRef.current.srcObject = stream;
       pc.onicecandidate = e => {
         if (!e.candidate) return;
+        const kind = /typ (host|srflx|relay)/.exec(e.candidate.candidate || "")?.[1];
+        if (kind) { candCountRef.current[kind]++; const c = candCountRef.current; logStep(`paths: host ${c.host} · stun ${c.srflx} · relay ${c.relay}`); }
         const signal = { type:"ice", candidate:e.candidate };
         callSentRef.current.candidates.push(signal);
         sendCallSignal(signal);
@@ -2529,13 +2539,17 @@ function RandomConnectScreen({ myId, myProfile, onlinePeople = [], onBack, varia
           if (!cur || cur.connectionState === "connected" || cur.iceConnectionState === "connected" || cur.iceConnectionState === "completed") { clearInterval(callPollRef.current); return; }
           sendCallSignal({ type:"ready" });
         };
-        ping();
+        ping(); logStep("→ ready sent");
         callPollRef.current = setInterval(ping, 1000);
       }
     } catch(e) {
       console.error(e);
       setCallErr(mediaErrorText(e));
     }
+  }
+
+  function logStep(text) {
+    setCallLog(prev => (prev[prev.length - 1] === text ? prev : [...prev, text].slice(-12)));
   }
 
   function playRemote() {
@@ -2575,6 +2589,7 @@ function RandomConnectScreen({ myId, myProfile, onlinePeople = [], onBack, varia
       await pc.setLocalDescription(offer);
       callSentRef.current.offer = { type:"offer", caller:myId, mode:callStateRef.current?.mode, offer:pc.localDescription || offer };
     }
+    logStep("→ offer sent");
     await sendCallSignal(callSentRef.current.offer);
     for (const c of callSentRef.current.candidates) await sendCallSignal(c); // resend what was gathered before
   }
@@ -2597,6 +2612,7 @@ function RandomConnectScreen({ myId, myProfile, onlinePeople = [], onBack, varia
     if (signal.type === "ready") {
       // the callee is listening: (re)send the offer
       peerReadyRef.current = true;
+      logStep("← other side ready");
       if (pcRef.current && callStateRef.current?.caller === myId) await sendOffer();
       return;
     }
@@ -2616,15 +2632,18 @@ function RandomConnectScreen({ myId, myProfile, onlinePeople = [], onBack, varia
         }
         return;
       }
+      logStep("← offer received");
       await pc.setRemoteDescription(signal.offer);
       const answer = await pc.createAnswer();
       await pc.setLocalDescription(answer);
       callSentRef.current.answer = { type:"answer", caller:signal.caller, answer:pc.localDescription || answer };
       callSentRef.current.answerAt = Date.now();
+      logStep("→ answer sent");
       await sendCallSignal(callSentRef.current.answer);
       await addRemoteCandidates();
     } else if (signal.type === "answer" && callStateRef.current?.caller === myId) {
       if (pc.remoteDescription) return;
+      logStep("← answer received");
       await pc.setRemoteDescription(signal.answer);
       await addRemoteCandidates();
     } else if (signal.type === "ice" && signal.candidate) {
@@ -2808,6 +2827,7 @@ function RandomConnectScreen({ myId, myProfile, onlinePeople = [], onBack, varia
           <div style={{ fontFamily:"Inter, sans-serif", fontSize:13, color:"#B8935F", marginTop:4 }}>{partnerLeft ? "The other person left. Press Next to find someone else." : callStatus === "connecting" ? "Connecting…" : "Connected"}</div>
         </div>
         {needsTap && !partnerLeft && <button onClick={() => { setNeedsTap(false); playRemote(); }} style={{ ...primaryBtn, position:"absolute", top:"42%", padding:"12px 26px" }}>Tap to start video</button>}
+        {callStatus !== "active" && callLog.length > 0 && !partnerLeft && <div style={{ position:"absolute", top:118, left:16, right:16, textAlign:"center", fontFamily:"Inter, sans-serif", fontSize:10.5, lineHeight:1.5, color:"rgba(248,244,234,.5)" }}>{callLog.join("  ·  ")}</div>}
         {linkInfo && <div style={{ position:"absolute", top:96, fontFamily:"Inter, sans-serif", fontSize:11, color:"rgba(248,244,234,.55)" }}>{linkInfo}</div>}
         {callErr && <div style={{position:"absolute", bottom:190, color:"#E3A6A6", fontSize:12.5, fontFamily:"Inter, sans-serif", textAlign:"center", padding:"0 30px"}}>{callErr}</div>}
         <div style={{ position:"absolute", bottom:30, display:"flex", gap:18 }}>
