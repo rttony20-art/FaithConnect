@@ -2497,12 +2497,13 @@ function RandomConnectScreen({ myId, myProfile, onlinePeople = [], onBack, varia
       remoteStreamRef.current = remoteStream;
       pc.ontrack = e => {
         if (!remoteStream.getTracks().some(t => t.id === e.track.id)) remoteStream.addTrack(e.track);
+        e.track.onunmute = () => playRemote();
         playRemote();
       };
       const onState = () => {
         const st = pc.connectionState || pc.iceConnectionState;
         setLinkInfo(`${st} · relay ${iceHasTurn() ? "on" : "off"}`);
-        if (st === "connected" || st === "completed") { setCallStatus("active"); setCallErr(""); }
+        if (st === "connected" || st === "completed") { setCallStatus("active"); setCallErr(""); playRemote(); setTimeout(playRemote, 800); }
         else if (st === "failed") setCallErr("Could not connect the " + (m === "video" ? "video" : "call") + ". Check the internet on both devices, then press Next to try again.");
       };
       pc.onconnectionstatechange = onState;
