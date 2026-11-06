@@ -2554,7 +2554,7 @@ function RandomConnectScreen({ myId, myProfile, onlinePeople = [], onBack, varia
 
   function playRemote() {
     const remote = remoteStreamRef.current;
-    if (!remote) return;
+    if (!remote || remote.getTracks().length === 0) return; // nothing has arrived from the other person yet
     const el = remoteVideoRef.current || remoteAudioRef.current;
     if (!el) return;
     el.srcObject = remote;
