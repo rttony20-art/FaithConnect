@@ -2785,11 +2785,12 @@ function RandomConnectScreen({ myId, myProfile, onlinePeople = [], onBack, varia
             {[["chat","Chat",MessageCircle],["voice","Voice",Phone],["video","Video",Video]].map(([key,label,Icon]) => (
               <button key={key} onClick={() => setMode(key)} style={{
                 display:"flex", flexDirection:"column", alignItems:"center", gap:6, padding:"14px 18px", borderRadius:14,
-                border: mode===key ? "1.5px solid #B8935F" : "1.5px solid rgba(255,255,255,.15)",
-                background: mode===key ? "rgba(184,147,95,.15)" : "transparent", cursor:"pointer"
+                border: mode===key ? "1.5px solid #E3BE7A" : "1.5px solid rgba(255,255,255,.15)",
+                background: mode===key ? "#9A7020" : "transparent", cursor:"pointer",
+                boxShadow: mode===key ? "0 4px 16px rgba(154,112,32,.45)" : "none", transition:"background .15s, box-shadow .15s"
               }}>
-                <Icon size={20} color={mode===key ? "#B8935F" : "#D6AE6E"} />
-                <span style={{ fontFamily:"Inter, sans-serif", fontSize:12.5, color: mode===key ? "#B8935F" : "#D6AE6E" }}>{label}</span>
+                <Icon size={20} color={mode===key ? "#FFF8E6" : "#D6AE6E"} />
+                <span style={{ fontFamily:"Inter, sans-serif", fontSize:12.5, fontWeight: mode===key ? 600 : 400, color: mode===key ? "#FFF8E6" : "#D6AE6E" }}>{label}</span>
               </button>
             ))}
           </div>
