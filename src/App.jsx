@@ -1632,6 +1632,7 @@ function ChatScreen({ myId, myProfile, other, onBack, onRead }) {
   const remoteAudioRef = useRef(null);
   const answeredIce = useRef(new Set());
   const chatChannelRef = useRef(null);
+  const chatChannelPromiseRef = useRef(null);
   const callStateRef = useRef(null);
   const pendingOfferRef = useRef(null);
   const myIceRef = useRef([]);
@@ -1660,8 +1661,16 @@ function ChatScreen({ myId, myProfile, other, onBack, onRead }) {
     } catch (e) { console.error("FaithConnect load messages failed", e); }
   }
 
-  async function ensureChannel() {
-    if (chatChannelRef.current) return chatChannelRef.current;
+  // One connection at a time: if several parts of the screen ask for the live channel while it is
+  // still connecting, they all wait for the same one (two connections to the same room fight each other).
+  function ensureChannel() {
+    if (chatChannelRef.current) return Promise.resolve(chatChannelRef.current);
+    if (!chatChannelPromiseRef.current) {
+      chatChannelPromiseRef.current = openChannel().catch(e => { chatChannelPromiseRef.current = null; throw e; });
+    }
+    return chatChannelPromiseRef.current;
+  }
+  async function openChannel() {
     const client = await getRealtimeClient();
     const channel = client.channel(`faithconnect-${cid}`, {
       config: { broadcast: { self: false, ack: true } }
@@ -1724,6 +1733,7 @@ function ChatScreen({ myId, myProfile, other, onBack, onRead }) {
       window.removeEventListener("fc-new-message", onVisible);
       const ch = chatChannelRef.current;
       chatChannelRef.current = null;
+      chatChannelPromiseRef.current = null;
       if (ch) { try { ch.unsubscribe(); } catch {} }
       teardown();
     };
