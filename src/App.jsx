@@ -1636,6 +1636,10 @@ function ChatScreen({ myId, myProfile, other, onBack, onRead }) {
   const callStateRef = useRef(null);
   const pendingOfferRef = useRef(null);
   const myIceRef = useRef([]);
+  const remoteCandRef = useRef([]);   // candidates that arrived before the call was ready for them
+  const iceSentRef = useRef(0);       // how many of my candidates were already sent
+  const iceTimerRef = useRef(null);
+  const answerTimerRef = useRef(null);
   // teardown() (runs when leaving the chat or ending a call) needs these two.
   const remoteStreamRef = useRef(null);
   const pendingCallSignalsRef = useRef([]);
@@ -1652,7 +1656,7 @@ function ChatScreen({ myId, myProfile, other, onBack, onRead }) {
       setLoaded(true);
       setMessages(prev => {
         const ids = new Set(server.map(m => m.id));
-        const pending = prev.filter(m => m.pending && !ids.has(m.id));
+        const pending = prev.filter(m => (m.pending || (m.live && Date.now() - m.ts < 60000)) && !ids.has(m.id));
         return [...server, ...pending].sort((x, y) => x.ts - y.ts);
       });
       if (!document.hidden && rows.some(r => r.recipient_id === myId && !r.read_at)) {
@@ -1677,7 +1681,15 @@ function ChatScreen({ myId, myProfile, other, onBack, onRead }) {
     });
 
     // A "message" broadcast is only a nudge: the message itself is already saved on the server.
-    channel.on("broadcast", { event: "message" }, () => { refreshThread(); });
+    // Text messages also travel straight over the live connection (no waiting for the database),
+    // like WhatsApp. The saved copy replaces this one on the next refresh.
+    channel.on("broadcast", { event: "message" }, ({ payload }) => {
+      const m = payload?.msg;
+      if (m && m.sender && m.sender !== myId && m.id) {
+        setMessages(prev => prev.some(x => x.id === m.id) ? prev : [...prev, { ...m, live:true }].sort((x, y) => x.ts - y.ts));
+      }
+      refreshThread();
+    });
 
     channel.on("broadcast", { event: "call" }, async ({ payload }) => {
       await handleCallSignal(payload?.signal);
@@ -1786,6 +1798,10 @@ function ChatScreen({ myId, myProfile, other, onBack, onRead }) {
     };
     setMessages(prev => [...prev, msg]);
     setText(""); setCallErr("");
+    if (type === "text") {
+      // Fast path: hand the text to the other person over the open live connection right away.
+      ensureChannel().then(ch => ch.send({ type:"broadcast", event:"message", payload:{ msg:{ id:msg.id, sender:myId, type:"text", text:msg.text, ts:msg.ts } } })).catch(() => {});
+    }
     try {
       await msgApi.send({ id:msg.id, cid, from:myId, to:other.otherId, type, text:msg.text, audio:msg.content });
       setMessages(prev => prev.map(m => m.id === msg.id ? { ...m, pending:false } : m));
@@ -1823,21 +1839,59 @@ function ChatScreen({ myId, myProfile, other, onBack, onRead }) {
 
   function startRecording() { setCallErr(""); setRecording(true); }
 
+  function playRemote1to1() {
+    const stream = remoteStreamRef.current;
+    const el = remoteVideoRef.current || remoteAudioRef.current;
+    if (!stream || !el) return;
+    el.srcObject = stream;
+    const p = el.play?.();
+    if (p && p.catch) p.catch(() => {});
+  }
+  // Send my candidates in small groups (the live service drops bursts). `all` re-sends every one.
+  function flushIce(all) {
+    clearTimeout(iceTimerRef.current);
+    iceTimerRef.current = setTimeout(() => {
+      if (all) iceSentRef.current = 0;
+      const list = myIceRef.current.slice(iceSentRef.current);
+      iceSentRef.current = myIceRef.current.length;
+      if (list.length) broadcastCall({ type:"ice-batch", candidates:list, from:myId }).catch(() => {});
+    }, all ? 50 : 350);
+  }
+  async function addRemoteCand(c) {
+    const pc = pcRef.current;
+    if (pc && pc.remoteDescription) { try { await pc.addIceCandidate(c); } catch {} }
+    else remoteCandRef.current.push(c);
+  }
+  async function drainRemoteCands() {
+    const pc = pcRef.current;
+    const list = remoteCandRef.current; remoteCandRef.current = [];
+    for (const c of list) { try { await pc.addIceCandidate(c); } catch {} }
+  }
   async function setupPeer(mode) {
     const pc = new RTCPeerConnection({ iceServers: await getIceServers(iceAuth) });
     pcRef.current = pc;
+    myIceRef.current = []; iceSentRef.current = 0;
     const remoteStream = new MediaStream();
+    remoteStreamRef.current = remoteStream;
     pc.ontrack = e => {
-      remoteStream.addTrack(e.track);
-      if (remoteVideoRef.current) remoteVideoRef.current.srcObject = remoteStream;
-      if (remoteAudioRef.current) remoteAudioRef.current.srcObject = remoteStream;
+      if (!remoteStream.getTracks().some(t => t.id === e.track.id)) remoteStream.addTrack(e.track);
+      e.track.onunmute = () => playRemote1to1();
+      playRemote1to1();
     };
     pc.onicecandidate = e => {
-      if (e.candidate) {
-        myIceRef.current.push(e.candidate);
-        broadcastCall({ type:"ice", candidate:e.candidate }).catch(() => {});
+      if (e.candidate) { myIceRef.current.push(e.candidate); flushIce(false); }
+    };
+    const onState = () => {
+      const st = pc.connectionState || pc.iceConnectionState;
+      if (st === "connected" || st === "completed") {
+        clearInterval(answerTimerRef.current);
+        setCallStatus("active"); setCallErr(""); playRemote1to1(); setTimeout(playRemote1to1, 800);
+      } else if (st === "failed") {
+        setCallErr("The call could not connect. Check the internet on both phones and try again.");
       }
     };
+    pc.onconnectionstatechange = onState;
+    pc.oniceconnectionstatechange = onState;
     return pc;
   }
 
@@ -1869,21 +1923,26 @@ function ChatScreen({ myId, myProfile, other, onBack, onRead }) {
   async function handleCallSignal(signal) {
     // Some phones keep the last picture when a camera is switched off, so the other side is told.
     if (signal?.type === "cam") { if (signal.from !== myId) setRemoteCamOff(!signal.on); return; }
-    if (!signal || signal.caller === myId) return;
+    if (!signal) return;
     if (signal.type === "offer") {
+      if (signal.caller === myId) return;
       pendingOfferRef.current = signal;
       callStateRef.current = signal;
       if (!callMode) { setCallMode(signal.mode); setCallStatus("ringing"); }
       return;
     }
     if (signal.type === "answer" && pcRef.current && callStateRef.current?.caller === myId) {
-      try { await pcRef.current.setRemoteDescription(signal.answer); setCallStatus("active"); } catch (e) { console.error(e); }
+      if (pcRef.current.signalingState !== "have-local-offer") return; // answer already applied
+      try {
+        await pcRef.current.setRemoteDescription(signal.answer);
+        setCallStatus("connecting");
+        await drainRemoteCands();
+        flushIce(true); // the other phone was not listening for my candidates until it answered
+      } catch (e) { console.error(e); }
       return;
     }
-    if (signal.type === "ice" && pcRef.current) {
-      try { await pcRef.current.addIceCandidate(signal.candidate); } catch {}
-      return;
-    }
+    if (signal.type === "ice") { if (signal.from !== myId) await addRemoteCand(signal.candidate); return; }
+    if (signal.type === "ice-batch") { if (signal.from !== myId) for (const c of signal.candidates || []) await addRemoteCand(c); return; }
     if (signal.type === "ended") endCallLocal();
   }
 
@@ -1898,11 +1957,21 @@ function ChatScreen({ myId, myProfile, other, onBack, onRead }) {
       stream.getTracks().forEach(t => pc.addTrack(t, stream));
       if (state.mode === "video" && localVideoRef.current) localVideoRef.current.srcObject = stream;
       await pc.setRemoteDescription(state.offer);
+      await drainRemoteCands();
       const answer = await pc.createAnswer();
       await pc.setLocalDescription(answer);
       callStateRef.current = { ...state, status:"active" };
-      setCallStatus("active");
+      setCallStatus("connecting");
       await broadcastCall({ type:"answer", caller:state.caller, answer });
+      // A signal can get lost on a weak connection, so repeat the answer until the call connects.
+      let tries = 0;
+      clearInterval(answerTimerRef.current);
+      answerTimerRef.current = setInterval(() => {
+        const cur = pcRef.current;
+        if (!cur || ++tries > 6 || cur.connectionState === "connected") { clearInterval(answerTimerRef.current); return; }
+        broadcastCall({ type:"answer", caller:state.caller, answer }).catch(() => {});
+        flushIce(true);
+      }, 2500);
     } catch (e) { console.error(e); setCallErr("Couldn't join the call — camera/mic may be blocked."); }
   }
 
@@ -1912,6 +1981,8 @@ function ChatScreen({ myId, myProfile, other, onBack, onRead }) {
   }
 
   function teardown() {
+    clearInterval(answerTimerRef.current); clearTimeout(iceTimerRef.current);
+    remoteCandRef.current = [];
     pcRef.current?.close(); pcRef.current = null;
     localStreamRef.current?.getTracks().forEach(t => t.stop()); localStreamRef.current = null;
     remoteStreamRef.current = null;
@@ -1951,7 +2022,7 @@ function ChatScreen({ myId, myProfile, other, onBack, onRead }) {
           <div style={{ position:"absolute", top:40, color:"#F8F4EA", fontFamily:"Lora, serif", fontSize:19, textAlign:"center" }}>
             {other.otherProfile?.name}
             <div style={{ fontFamily:"Inter, sans-serif", fontSize:13, color:"#B8935F", marginTop:4 }}>
-              {callStatus === "calling" && "Calling…"}{callStatus === "ringing" && "Incoming call"}{callStatus === "active" && "Connected"}
+              {callStatus === "calling" && "Calling…"}{callStatus === "ringing" && "Incoming call"}{callStatus === "connecting" && "Connecting…"}{callStatus === "active" && "Connected"}
             </div>
           </div>
           {callErr && <div style={{position:"absolute", bottom:190, color:"#E3A6A6", fontSize:12.5, fontFamily:"Inter, sans-serif", textAlign:"center", padding:"0 30px"}}>{callErr}</div>}
