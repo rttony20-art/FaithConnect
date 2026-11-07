@@ -1732,7 +1732,7 @@ function ChatScreen({ myId, myProfile, other, onBack, onRead }) {
     const pollTick = () => {
       if (cancelled) return;
       if (!document.hidden) refreshThread();
-      pollTimer = setTimeout(pollTick, chatChannelRef.current ? 4000 : 1500);
+      pollTimer = setTimeout(pollTick, chatChannelRef.current ? 2500 : 1500);
     };
     pollTimer = setTimeout(pollTick, 1500);
     const onVisible = () => { if (!document.hidden) refreshThread(); };
