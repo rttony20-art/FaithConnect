@@ -9,7 +9,7 @@ import { ImageViewer, ZoomableImage } from "./ImageViewer.jsx";
 import AvatarFace from "./avatar/AvatarFace.jsx";
 import AvatarCreator from "./avatar/AvatarCreator.jsx";
 import { isAvatarCode } from "./avatar/code.js";
-import { Heart, MessageCircle, Phone, Video, Mic, MicOff, PhoneOff, Send, User, ChevronLeft, Check, X, Camera, VideoOff, Square, SkipForward, Menu, LogOut, Info, Shield, HelpCircle, Eye, EyeOff, Home, UserPlus, Sun, Moon, Percent, MoreVertical, ArrowRight, Compass, Trash2, Pause } from "lucide-react";
+import { Heart, MessageCircle, Phone, Video, Mic, MicOff, PhoneOff, Send, User, ChevronLeft, Check, X, Camera, VideoOff, Square, SkipForward, Menu, LogOut, Info, Shield, HelpCircle, Eye, EyeOff, Home, UserPlus, Sun, Moon, Percent, MoreVertical, ArrowRight, Compass, Trash2, Pause, CheckCheck } from "lucide-react";
 
 /* ---------- design tokens ----------
 Ink Navy #16233F (dark surfaces), Ivory #F8F4EA (light surfaces),
@@ -2065,21 +2065,38 @@ function ChatScreen({ myId, myProfile, other, onBack, onRead }) {
           </>
         )}
       </div>
-      <div ref={chatScrollRef} style={{ flex:1, minHeight:0, overflowY:"auto", WebkitOverflowScrolling:"touch", overscrollBehavior:"contain", padding:"16px 14px", background:"var(--fc-bg)", display:"flex", flexDirection:"column" }}>
+      <div ref={chatScrollRef} style={{ flex:1, minHeight:0, overflowY:"auto", WebkitOverflowScrolling:"touch", overscrollBehavior:"contain", padding:"12px 10px", background:"var(--fc-bg)", display:"flex", flexDirection:"column" }}>
         {messages.length === 0 && !loaded && <div style={{ ...emptyState, opacity:.7 }}>Loading messages…</div>}
         {messages.length === 0 && loaded && <div style={emptyState}>Say hello — your conversation starts here.</div>}
-        {messages.map(m => {
+        {messages.map((m, idx) => {
           const mine = m.sender === myId;
+          const prevM = messages[idx - 1];
+          const d = new Date(m.ts);
+          const newDay = !prevM || new Date(prevM.ts).toDateString() !== d.toDateString();
+          const firstInGroup = newDay || prevM.sender !== m.sender;
+          const today = new Date(); const yest = new Date(Date.now() - 86400000);
+          const dayLabel = d.toDateString() === today.toDateString() ? "Today" : d.toDateString() === yest.toDateString() ? "Yesterday" : d.toLocaleDateString([], { day:"numeric", month:"short", year:"numeric" });
+          const time = d.toLocaleTimeString([], { hour:"numeric", minute:"2-digit" });
+          const meta = (
+            <span style={{ float:"right", marginLeft:10, marginTop:6, display:"inline-flex", alignItems:"center", gap:3, fontSize:11, lineHeight:1, color: mine ? "rgba(255,248,230,.78)" : "var(--fc-muted, #D6AE6E)", whiteSpace:"nowrap" }}>
+              {m.edited && <span style={{ marginRight:2 }}>edited</span>}
+              {time}
+              {mine && (m.pending
+                ? <Check size={14} color="rgba(255,248,230,.5)" />
+                : m.readAt ? <CheckCheck size={15} color="#7FD4FF" /> : <CheckCheck size={15} color="rgba(255,248,230,.78)" />)}
+            </span>
+          );
           return (
-            <div key={m.id || `${m.sender}-${m.ts}`} style={{ alignSelf:mine ? "flex-end" : "flex-start", maxWidth:"75%", marginBottom:10, display:"flex", flexDirection:"column", alignItems:mine ? "flex-end" : "flex-start" }}>
-              <div onClick={() => { if (mine && m.type === "text" && !m.pending) setActionMsg(m); }} style={{ background:mine ? "#B8935F" : "var(--fc-bubble)", color:mine ? "#FAF7F0" : "var(--fc-card-text)", padding:"9px 13px", borderRadius:16, fontFamily:"Inter, sans-serif", fontSize:14.5, opacity:m.pending ? 0.6 : 1, cursor: mine && m.type === "text" ? "pointer" : "default", outline: editingId === m.id ? "2px solid #D6AE6E" : "none" }}>
-                {m.type === "voice" ? (m.content ? <audio controls src={m.content} style={{height:34, maxWidth:200}} /> : "🎙️ Voice note") : m.text}
+            <React.Fragment key={m.id || `${m.sender}-${m.ts}`}>
+              {newDay && <div style={{ alignSelf:"center", margin:"10px 0 12px", padding:"4px 12px", borderRadius:8, background:"var(--fc-bubble)", color:"var(--fc-muted, #D6AE6E)", fontFamily:"Inter, sans-serif", fontSize:12 }}>{dayLabel}</div>}
+              <div style={{ alignSelf:mine ? "flex-end" : "flex-start", maxWidth:"82%", marginTop: firstInGroup && !newDay ? 8 : 0, marginBottom:2, display:"flex", flexDirection:"column", alignItems:mine ? "flex-end" : "flex-start" }}>
+                <div onClick={() => { if (mine && m.type === "text" && !m.pending) setActionMsg(m); }} style={{ background:mine ? "#9A7430" : "var(--fc-bubble)", color:mine ? "#FFF8E6" : "var(--fc-card-text)", padding:"6px 9px 6px 10px", borderRadius: firstInGroup ? (mine ? "10px 2px 10px 10px" : "2px 10px 10px 10px") : 10, fontFamily:"Inter, sans-serif", fontSize:15, lineHeight:1.35, opacity:m.pending ? 0.8 : 1, cursor: mine && m.type === "text" ? "pointer" : "default", outline: editingId === m.id ? "2px solid #D6AE6E" : "none", wordBreak:"break-word", overflow:"hidden" }}>
+                  {m.type === "voice"
+                    ? <div><div>{m.content ? <audio controls src={m.content} style={{ height:34, maxWidth:210 }} /> : "🎙️ Voice note"}</div><div style={{ overflow:"hidden" }}>{meta}</div></div>
+                    : <>{m.text}{meta}<span style={{ display:"block", clear:"both", height:0 }} /></>}
+                </div>
               </div>
-              {m.edited && <div style={{ fontFamily:"Inter, sans-serif", fontSize:10.5, color:"#D6AE6E", marginTop:2 }}>edited</div>}
-              {mine && m.id === lastMineId && m.readAt && (
-                <div style={{ fontFamily:"Inter, sans-serif", fontSize:11, color:"#D6AE6E", marginTop:3 }}>Seen</div>
-              )}
-            </div>
+            </React.Fragment>
           );
         })}
       </div>
@@ -2093,10 +2110,13 @@ function ChatScreen({ myId, myProfile, other, onBack, onRead }) {
       {recording ? (
         <VoiceRecorderBar maxSecs={120} onSend={(url) => { setRecording(false); sendMessage("voice", url); }} onCancel={() => setRecording(false)} onError={msg => { setRecording(false); setCallErr(msg); }} />
       ) : (
-      <div style={{ ...composer, flexShrink:0, paddingBottom:"calc(10px + env(safe-area-inset-bottom))" }}>
-        {!editingId && <button onClick={startRecording} style={{ ...iconBtnLight, background:"var(--fc-bubble)" }} aria-label="Record voice note"><Mic size={18} color="var(--fc-card-text)" /></button>}
-        <input value={text} onChange={e=>setText(e.target.value)} onKeyDown={e=>{ if(e.key==="Enter" && text.trim()) sendMessage("text", text.trim()); }} placeholder={editingId ? "Edit your message…" : "Type a message…"} autoCorrect="on" autoCapitalize="sentences" spellCheck={true} autoComplete="off" enterKeyHint="send" style={{ flex:1, border:"none", outline:"none", fontFamily:"Inter, sans-serif", fontSize:14.5, background:"transparent", color:"var(--fc-card-text)", padding:"10px 4px", minWidth:0 }} />
-        <button onClick={() => text.trim() && sendMessage("text", text.trim())} style={iconBtnLight}><Send size={18} color="#B8935F" /></button>
+      <div style={{ ...composer, gap:8, background:"var(--fc-bg)", borderTop:"none", flexShrink:0, padding:"6px 8px calc(8px + env(safe-area-inset-bottom))", alignItems:"flex-end" }}>
+        <div style={{ flex:1, display:"flex", alignItems:"center", background:"var(--fc-card)", border:"1px solid var(--fc-card-border)", borderRadius:26, padding:"2px 14px", minWidth:0 }}>
+          <input value={text} onChange={e=>setText(e.target.value)} onKeyDown={e=>{ if(e.key==="Enter" && text.trim()) sendMessage("text", text.trim()); }} placeholder={editingId ? "Edit your message…" : "Message"} autoCorrect="on" autoCapitalize="sentences" spellCheck={true} autoComplete="off" enterKeyHint="send" style={{ flex:1, border:"none", outline:"none", fontFamily:"Inter, sans-serif", fontSize:16, background:"transparent", color:"var(--fc-card-text)", padding:"11px 0", minWidth:0 }} />
+        </div>
+        {text.trim() || editingId
+          ? <button onClick={() => text.trim() && sendMessage("text", text.trim())} style={{ ...iconBtnLight, width:48, height:48, background:"#9A7430" }} aria-label="Send"><Send size={20} color="#FFF8E6" /></button>
+          : <button onClick={startRecording} style={{ ...iconBtnLight, width:48, height:48, background:"#9A7430" }} aria-label="Record voice note"><Mic size={21} color="#FFF8E6" /></button>}
       </div>
       )}
       {actionMsg && (
