@@ -14,3 +14,4 @@ Order: first 200-500 real active users via churches -> premium with mobile money
 ## Other parked ideas
 - Live sessions / debates with StreamYard (Live page, request-to-join). Not now; revisit when there are many active users.
 - Prayer wall, save quiz results to profile, verse-as-picture sharing, Bible reading plan, notifications.
+- Nearby believers (decided NOT to build for now, safety risk). If ever built: opt-in only, distance bands never exact spots, hide switch, only shown to matched/connected people. Web app cannot track in background and GPS is only ~5-20 m accurate.
